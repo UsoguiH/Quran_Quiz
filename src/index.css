@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Noto Naskh Arabic', serif;
+  background-color: #f0f4f8;
+}
+
+.arabic-text {
+  font-family: 'Noto Naskh Arabic', serif;
+  font-size: 1.5rem;
+  line-height: 2.5rem;
+  font-weight: 400;
+}
+
+.custom-button {
+  --button-bg: #4a90e2;
+  --button-hover-bg: #357abd;
+  --button-active-bg: #2a5f9e;
+  --button-text: #ffffff;
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0.8em 1.5em;
+  border: none;
+  border-radius: 50px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-button:before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.custom-button:hover {
+  background: var(--button-hover-bg);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.custom-button:hover:before {
+  width: 200px;
+  height: 200px;
+}
+
+.custom-button:active {
+  background: var(--button-active-bg);
+  transform: translateY(1px);
+  box-shadow: 0 3px 6px rgba(50, 50, 93, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.custom-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Rest of the CSS remains the same */
