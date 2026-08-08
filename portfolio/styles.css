@@ -277,10 +277,18 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, var(--bg), transparent 55%);
+  /* vignette top + bottom so the portrait melts into the ground */
+  background: linear-gradient(
+    to bottom,
+    var(--bg) 0%,
+    transparent 22%,
+    transparent 68%,
+    var(--bg) 100%
+  );
 }
 .hero-bg img {
-  transform: scale(1.15);
+  transform: scale(1.12);
+  object-position: 50% 22%;
   will-change: transform;
 }
 .hero-content {
