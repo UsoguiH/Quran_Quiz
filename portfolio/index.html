@@ -13,13 +13,20 @@
       document.documentElement.classList.add("js");
     </script>
 
-    <!-- ===================== PRELOADER ===================== -->
+    <!-- ===================== PRELOADER (Archive-style reveal) ===================== -->
     <div class="preloader" id="preloader">
-      <div class="preloader-inner">
-        <div class="preloader-mark"><h1>أثر</h1></div>
-        <div class="preloader-count"><span id="count">٠٠٠</span></div>
+      <div class="preloader-images">
+        <div class="preloader-img"><img src="./public/img5.jpeg" alt="" /></div>
+        <div class="preloader-img"><img src="./public/img12.jpeg" alt="" /></div>
+        <div class="preloader-img"><img src="./public/img21.jpeg" alt="" /></div>
+        <div class="preloader-img"><img src="./public/img28.jpeg" alt="" /></div>
+        <div class="preloader-img"><img src="./public/img16.jpeg" alt="" /></div>
+        <div class="preloader-img"><img src="./public/img9.jpeg" alt="" /></div>
       </div>
-      <div class="preloader-tag"><span>استوديو تصميم</span><span>٢٠١٤ —</span></div>
+      <div class="preloader-header">
+        <h1>أثـر</h1>
+        <div class="preloader-counter"><p>٠٠٠</p></div>
+      </div>
     </div>
 
     <!-- ===================== CURSOR ===================== -->
@@ -30,12 +37,12 @@
       <a href="#top" class="nav-logo">أثر</a>
       <nav class="nav-links" aria-label="التنقّل الرئيسي">
         <a href="#work">الأعمال</a>
-        <a href="#studio">الاستوديو</a>
         <a href="#services">الخدمات</a>
+        <a href="#studio">الاستوديو</a>
         <a href="#contact">تواصل</a>
       </nav>
       <div class="nav-actions">
-        <button class="theme-toggle" id="theme-toggle" aria-label="تبديل الوضع الليلي">
+        <button class="theme-toggle" id="theme-toggle" aria-label="تبديل الوضع">
           <span class="theme-dot"></span>
         </button>
         <a href="#contact" class="btn btn-sm" data-hover>لنعمل معاً</a>
@@ -45,25 +52,25 @@
     <main id="top">
       <!-- ===================== HERO ===================== -->
       <section class="hero" id="hero">
-        <div class="hero-eyebrow" data-reveal="fade">
-          <span class="eyebrow">استوديو إبداعي مستقل</span>
-          <span class="eyebrow">مقرّه الرياض — يعمل عالمياً</span>
+        <div class="hero-bg" aria-hidden="true">
+          <img src="./public/img33.jpeg" alt="" data-hero-img />
         </div>
-
-        <h1 class="hero-title">
-          <span class="line">أثـر</span>
-        </h1>
-
-        <div class="hero-foot">
-          <p class="hero-lede" data-reveal="lines">
-            نصمّم هويّات وتجارب بصريّة تتجاوز الجمال إلى المعنى — أثرٌ يبقى بعد أن تُغمض عينيك.
-          </p>
-          <a href="#work" class="hero-scroll" data-hover>
-            <span>اكتشف الأعمال</span>
-            <span class="hero-scroll-line" aria-hidden="true"></span>
-          </a>
+        <div class="hero-content">
+          <div class="hero-eyebrow" data-hero-el>
+            <span class="eyebrow">استوديو إبداعي مستقلّ</span>
+            <span class="eyebrow">الرياض ✦ يعمل عالمياً</span>
+          </div>
+          <h1 class="hero-title"><span class="line">أثـر</span></h1>
+          <div class="hero-foot">
+            <p class="hero-lede" data-reveal="lines">
+              نصمّم هويّات وتجارب بصريّة تتجاوز الجمال إلى المعنى — أثرٌ يبقى بعد أن تُغمض عينيك.
+            </p>
+            <a href="#work" class="hero-scroll" data-hover data-hero-el>
+              <span>اكتشف الأعمال</span>
+              <span class="hero-scroll-line" aria-hidden="true"></span>
+            </a>
+          </div>
         </div>
-
         <div class="hero-marquee" aria-hidden="true">
           <div class="hero-marquee-track" id="hero-marquee">
             <span>هويّة بصريّة</span><span class="sep">✦</span>
@@ -80,80 +87,87 @@
       <section class="manifesto" id="about">
         <span class="section-index" data-reveal="fade">٠٠ — فلسفتنا</span>
         <p class="manifesto-text" data-reveal="words">
-          نؤمن أنّ التصميم الجيّد لا يُرى فحسب، بل يُشعَر به. نبدأ من الفكرة، لا من الشكل،
+          نؤمن أنّ التصميم الجيّد لا يُرى فحسب، بل يُشعَر به. نبدأ من الفكرة لا من الشكل،
           ونصوغ لكلّ علامة صوتاً بصرياً صادقاً يترك في الذاكرة أثراً.
         </p>
       </section>
 
-      <!-- ===================== SELECTED WORK ===================== -->
+      <!-- ===================== SELECTED WORK — pinned horizontal gallery ===================== -->
       <section class="work" id="work">
-        <div class="section-head">
-          <span class="section-index" data-reveal="fade">٠١ — أعمال مختارة</span>
-          <h2 class="section-title" data-reveal="words">الأعمال</h2>
-        </div>
+        <div class="work-pin">
+          <div class="work-track" id="work-track">
+            <div class="work-intro">
+              <span class="section-index">٠١ — أعمال مختارة</span>
+              <h2 class="work-heading">الأعمال</h2>
+              <span class="work-hint">مرّر للأسفل ↓</span>
+            </div>
 
-        <ul class="work-list" id="work-list">
-          <li class="work-item" data-img="./public/img5.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠١</span>
-              <span class="work-name">كسوف القمر</span>
-              <span class="work-cat">هويّة بصريّة</span>
-              <span class="work-year">٢٠٢٤</span>
-            </a>
-          </li>
-          <li class="work-item" data-img="./public/img12.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠٢</span>
-              <span class="work-name">مقرّ الزوّار</span>
-              <span class="work-cat">تصميم ويب</span>
-              <span class="work-year">٢٠٢٤</span>
-            </a>
-          </li>
-          <li class="work-item" data-img="./public/img21.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠٣</span>
-              <span class="work-name">سماوي</span>
-              <span class="work-cat">إخراج فنّي</span>
-              <span class="work-year">٢٠٢٣</span>
-            </a>
-          </li>
-          <li class="work-item" data-img="./public/img28.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠٤</span>
-              <span class="work-name">البثّ الأصلي</span>
-              <span class="work-cat">حملة</span>
-              <span class="work-year">٢٠٢٣</span>
-            </a>
-          </li>
-          <li class="work-item" data-img="./public/img33.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠٥</span>
-              <span class="work-name">عدسة الرؤية</span>
-              <span class="work-cat">تصوير</span>
-              <span class="work-year">٢٠٢٢</span>
-            </a>
-          </li>
-          <li class="work-item" data-img="./public/img9.jpeg">
-            <a href="#" data-hover>
-              <span class="work-num">٠٦</span>
-              <span class="work-name">إيقاع جماعي</span>
-              <span class="work-cat">علامة تجاريّة</span>
-              <span class="work-year">٢٠٢٢</span>
-            </a>
-          </li>
-        </ul>
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img5.jpeg" alt="كسوف القمر" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠١</span>
+                <h3>كسوف القمر</h3>
+                <span class="work-cat">هويّة بصريّة — ٢٠٢٤</span>
+              </div>
+            </article>
 
-        <!-- floating image preview follows the cursor (desktop) -->
-        <div class="work-preview" id="work-preview" aria-hidden="true">
-          <img src="" alt="" />
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img12.jpeg" alt="مقرّ الزوّار" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠٢</span>
+                <h3>مقرّ الزوّار</h3>
+                <span class="work-cat">تصميم ويب — ٢٠٢٤</span>
+              </div>
+            </article>
+
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img21.jpeg" alt="سماوي" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠٣</span>
+                <h3>سماوي</h3>
+                <span class="work-cat">إخراج فنّي — ٢٠٢٣</span>
+              </div>
+            </article>
+
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img28.jpeg" alt="البثّ الأصلي" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠٤</span>
+                <h3>البثّ الأصلي</h3>
+                <span class="work-cat">حملة — ٢٠٢٣</span>
+              </div>
+            </article>
+
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img33.jpeg" alt="عدسة الرؤية" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠٥</span>
+                <h3>عدسة الرؤية</h3>
+                <span class="work-cat">تصوير — ٢٠٢٢</span>
+              </div>
+            </article>
+
+            <article class="work-card">
+              <div class="work-media"><img src="./public/img9.jpeg" alt="إيقاع جماعي" /></div>
+              <div class="work-meta">
+                <span class="work-num">٠٦</span>
+                <h3>إيقاع جماعي</h3>
+                <span class="work-cat">علامة تجاريّة — ٢٠٢٢</span>
+              </div>
+            </article>
+
+            <div class="work-outro">
+              <a href="#" data-hover>شاهد كلّ الأعمال ↗</a>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- ===================== FEATURE (parallax) ===================== -->
+      <!-- ===================== FULL-BLEED FEATURE ===================== -->
       <section class="feature">
-        <figure class="feature-media">
+        <figure class="feature-media" data-img-reveal>
           <img src="./public/img16.jpeg" alt="لقطة من مشروع سماوي" data-parallax />
-          <figcaption class="feature-cap" data-reveal="fade">
+          <figcaption class="feature-cap">
             <span>سماوي</span><span>إخراج فنّي — ٢٠٢٣</span>
           </figcaption>
         </figure>
@@ -165,38 +179,13 @@
           <span class="section-index" data-reveal="fade">٠٢ — ما نُتقنه</span>
           <h2 class="section-title" data-reveal="words">الخدمات</h2>
         </div>
-
         <ul class="services-list">
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠١</span>
-            <h3>الهويّة البصريّة</h3>
-            <p>أنظمة علامات متكاملة: الشعار، الطباعة، اللون، والصوت البصري.</p>
-          </li>
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠٢</span>
-            <h3>تصميم الويب</h3>
-            <p>مواقع وتجارب رقميّة تفاعليّة سريعة، مبنيّة بعناية على أدقّ التفاصيل.</p>
-          </li>
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠٣</span>
-            <h3>الإخراج الفنّي</h3>
-            <p>توجيه بصري متكامل للحملات، الجلسات، والمحتوى من الفكرة إلى التنفيذ.</p>
-          </li>
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠٤</span>
-            <h3>الحركة والموشن</h3>
-            <p>هويّات متحرّكة وأنيميشن يمنح العلامة إيقاعاً وحياة.</p>
-          </li>
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠٥</span>
-            <h3>التصوير</h3>
-            <p>إنتاج بصري وفنّي: تصوير المنتج، الأزياء، والبورتريه.</p>
-          </li>
-          <li class="service" data-reveal="fade">
-            <span class="service-num">٠٦</span>
-            <h3>الاستراتيجيّة</h3>
-            <p>تحديد الموقع، السرد، والمنصّة التي يُبنى عليها كلّ قرار تصميمي.</p>
-          </li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠١</span><h3>الهويّة البصريّة</h3><p>أنظمة علامات متكاملة: الشعار، الطباعة، اللون، والصوت البصري.</p></li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠٢</span><h3>تصميم الويب</h3><p>مواقع وتجارب رقميّة تفاعليّة سريعة، مبنيّة على أدقّ التفاصيل.</p></li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠٣</span><h3>الإخراج الفنّي</h3><p>توجيه بصري متكامل للحملات والجلسات من الفكرة إلى التنفيذ.</p></li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠٤</span><h3>الحركة والموشن</h3><p>هويّات متحرّكة وأنيميشن يمنح العلامة إيقاعاً وحياة.</p></li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠٥</span><h3>التصوير</h3><p>إنتاج بصري وفنّي: تصوير المنتج، الأزياء، والبورتريه.</p></li>
+          <li class="service" data-reveal="fade"><span class="service-num">٠٦</span><h3>الاستراتيجيّة</h3><p>تحديد الموقع، السرد، والمنصّة التي يُبنى عليها كلّ قرار.</p></li>
         </ul>
       </section>
 
@@ -206,30 +195,15 @@
           <span class="section-index" data-reveal="fade">٠٣ — عن الاستوديو</span>
           <h2 class="section-title" data-reveal="words">الاستوديو</h2>
         </div>
-
         <p class="studio-text" data-reveal="lines">
-          أثر استوديو تصميم مستقلّ تأسّس عام ٢٠١٤. نعمل كفريق صغير مهووس بالتفاصيل،
-          جنباً إلى جنب مع العلامات الطموحة، لنحوّل الأفكار إلى أنظمة بصريّة حيّة —
-          من أوّل خطّ إلى آخر بكسل.
+          أثر استوديو تصميم مستقلّ تأسّس عام ٢٠١٤. فريق صغير مهووس بالتفاصيل،
+          يعمل مع العلامات الطموحة ليحوّل الأفكار إلى أنظمة بصريّة حيّة — من أوّل خطّ إلى آخر بكسل.
         </p>
-
         <div class="stats">
-          <div class="stat" data-reveal="fade">
-            <span class="stat-num" data-count="10" data-suffix="+">٠</span>
-            <span class="stat-label">سنوات من العمل</span>
-          </div>
-          <div class="stat" data-reveal="fade">
-            <span class="stat-num" data-count="120" data-suffix="+">٠</span>
-            <span class="stat-label">مشروع منجز</span>
-          </div>
-          <div class="stat" data-reveal="fade">
-            <span class="stat-num" data-count="35">٠</span>
-            <span class="stat-label">جائزة تصميم</span>
-          </div>
-          <div class="stat" data-reveal="fade">
-            <span class="stat-num" data-count="40" data-suffix="+">٠</span>
-            <span class="stat-label">عميل حول العالم</span>
-          </div>
+          <div class="stat" data-reveal="fade"><span class="stat-num" data-count="10" data-suffix="+">٠</span><span class="stat-label">سنوات من العمل</span></div>
+          <div class="stat" data-reveal="fade"><span class="stat-num" data-count="120" data-suffix="+">٠</span><span class="stat-label">مشروع منجز</span></div>
+          <div class="stat" data-reveal="fade"><span class="stat-num" data-count="35">٠</span><span class="stat-label">جائزة تصميم</span></div>
+          <div class="stat" data-reveal="fade"><span class="stat-num" data-count="40" data-suffix="+">٠</span><span class="stat-label">عميل حول العالم</span></div>
         </div>
       </section>
 
@@ -237,16 +211,16 @@
       <section class="clients" aria-label="عملاؤنا">
         <div class="marquee" id="clients-marquee">
           <div class="marquee-track">
-            <span>نون</span><span class="dot">•</span>
-            <span>أنغامي</span><span class="dot">•</span>
-            <span>طلبات</span><span class="dot">•</span>
-            <span>نمشي</span><span class="dot">•</span>
-            <span>مرسول</span><span class="dot">•</span>
-            <span>سلّة</span><span class="dot">•</span>
-            <span>جاهز</span><span class="dot">•</span>
-            <span>هنقرستيشن</span><span class="dot">•</span>
-            <span>الراجحي</span><span class="dot">•</span>
-            <span>ستارزبلاي</span><span class="dot">•</span>
+            <span>نون</span><span class="dot">✦</span>
+            <span>أنغامي</span><span class="dot">✦</span>
+            <span>طلبات</span><span class="dot">✦</span>
+            <span>نمشي</span><span class="dot">✦</span>
+            <span>مرسول</span><span class="dot">✦</span>
+            <span>سلّة</span><span class="dot">✦</span>
+            <span>جاهز</span><span class="dot">✦</span>
+            <span>هنقرستيشن</span><span class="dot">✦</span>
+            <span>الراجحي</span><span class="dot">✦</span>
+            <span>ستارزبلاي</span><span class="dot">✦</span>
           </div>
         </div>
       </section>
@@ -256,25 +230,10 @@
         <span class="section-index" data-reveal="fade">٠٤ — لنبدأ</span>
         <h2 class="contact-title" data-reveal="words">لنعمل معاً</h2>
         <a href="mailto:hello@athar.studio" class="contact-mail" data-hover>hello@athar.studio</a>
-
         <div class="contact-grid">
-          <div class="contact-col" data-reveal="fade">
-            <span class="contact-label">الاستوديو</span>
-            <p>الرياض، المملكة العربية السعودية<br />حيّ حطّين — طريق الأمير تركي</p>
-          </div>
-          <div class="contact-col" data-reveal="fade">
-            <span class="contact-label">تابعنا</span>
-            <ul class="socials">
-              <li><a href="#" data-hover>إنستغرام</a></li>
-              <li><a href="#" data-hover>بيهانس</a></li>
-              <li><a href="#" data-hover>لينكدإن</a></li>
-              <li><a href="#" data-hover>إكس</a></li>
-            </ul>
-          </div>
-          <div class="contact-col" data-reveal="fade">
-            <span class="contact-label">للأعمال</span>
-            <p>new@athar.studio<br />+٩٦٦ ٥٠ ١٢٣ ٤٥٦٧</p>
-          </div>
+          <div class="contact-col" data-reveal="fade"><span class="contact-label">الاستوديو</span><p>الرياض، المملكة العربية السعودية<br />حيّ حطّين — طريق الأمير تركي</p></div>
+          <div class="contact-col" data-reveal="fade"><span class="contact-label">تابعنا</span><ul class="socials"><li><a href="#" data-hover>إنستغرام</a></li><li><a href="#" data-hover>بيهانس</a></li><li><a href="#" data-hover>لينكدإن</a></li><li><a href="#" data-hover>إكس</a></li></ul></div>
+          <div class="contact-col" data-reveal="fade"><span class="contact-label">للأعمال</span><p>new@athar.studio<br />+٩٦٦ ٥٠ ١٢٣ ٤٥٦٧</p></div>
         </div>
       </section>
     </main>
@@ -285,7 +244,6 @@
       <button class="to-top" id="to-top" data-hover>للأعلى ↑</button>
     </footer>
 
-    <!-- ===================== SCRIPTS ===================== -->
     <script src="./vendor/gsap.min.js"></script>
     <script src="./vendor/ScrollTrigger.min.js"></script>
     <script src="./vendor/SplitText.min.js"></script>
