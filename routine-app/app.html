@@ -1,9 +1,14 @@
-<title>Cadence</title>
+<meta charset="utf-8">
+<title>إيقاع</title>
+<script>document.documentElement.setAttribute("dir","rtl");document.documentElement.setAttribute("lang","ar");</script>
 
 <style>
 @font-face{font-family:Roboto;font-weight:400;font-style:normal;font-display:swap;src:url("./fonts/roboto-latin-400-normal.woff2") format("woff2");}
 @font-face{font-family:Roboto;font-weight:500;font-style:normal;font-display:swap;src:url("./fonts/roboto-latin-500-normal.woff2") format("woff2");}
 @font-face{font-family:Roboto;font-weight:700;font-style:normal;font-display:swap;src:url("./fonts/roboto-latin-700-normal.woff2") format("woff2");}
+@font-face{font-family:"Noto Sans Arabic";font-weight:400;font-style:normal;font-display:swap;src:url("./fonts/noto-sans-arabic-arabic-400-normal.woff2") format("woff2");}
+@font-face{font-family:"Noto Sans Arabic";font-weight:500;font-style:normal;font-display:swap;src:url("./fonts/noto-sans-arabic-arabic-500-normal.woff2") format("woff2");}
+@font-face{font-family:"Noto Sans Arabic";font-weight:700;font-style:normal;font-display:swap;src:url("./fonts/noto-sans-arabic-arabic-700-normal.woff2") format("woff2");}
 
 /* ===================== M3 COLOR TOKENS — LIGHT (default) =====================
    Generated with @material/material-color-utilities, seed #0F6B5C (tonal spot) */
@@ -135,7 +140,7 @@
 /* ============================== BASE ============================== */
 *{margin:0;padding:0;box-sizing:border-box;}
 body{
-  font-family:Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-family:"Noto Sans Arabic",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
   background:var(--md-sys-color-surface-dim);
   color:var(--md-sys-color-on-surface);
   -webkit-font-smoothing:antialiased;
@@ -280,14 +285,14 @@ svg{display:block;}
 .nav-item.active .pill{color:var(--md-sys-color-on-secondary-container);}
 
 /* badge */
-.badge{position:absolute;top:2px;right:12px;min-width:16px;height:16px;padding:0 4px;
+.badge{position:absolute;top:2px;inset-inline-end:12px;min-width:16px;height:16px;padding:0 4px;
   border-radius:var(--md-sys-shape-full);background:var(--md-sys-color-error);
   color:var(--md-sys-color-on-error);font-size:11px;line-height:16px;font-weight:500;
   text-align:center;z-index:2;}
 
 /* ===================== NAVIGATION RAIL (medium) ===================== */
 .nav-rail{flex-direction:column;align-items:center;gap:12px;padding:12px 0;
-  background:var(--md-sys-color-surface);border-right:1px solid var(--md-sys-color-outline-variant);}
+  background:var(--md-sys-color-surface);border-inline-end:1px solid var(--md-sys-color-outline-variant);}
 .rail-fab{width:56px;height:56px;border-radius:var(--md-sys-shape-l);
   display:grid;place-items:center;margin-bottom:12px;
   background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);
@@ -309,7 +314,7 @@ svg{display:block;}
 
 /* ===================== NAVIGATION DRAWER (expanded) ===================== */
 .nav-drawer{flex-direction:column;gap:4px;padding:16px 12px;
-  background:var(--md-sys-color-surface);border-right:1px solid var(--md-sys-color-outline-variant);}
+  background:var(--md-sys-color-surface);border-inline-end:1px solid var(--md-sys-color-outline-variant);}
 .drawer-brand{display:flex;align-items:center;gap:12px;padding:12px 16px 20px;}
 .drawer-brand .mark{width:36px;height:36px;border-radius:var(--md-sys-shape-full);
   background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);
@@ -319,7 +324,7 @@ svg{display:block;}
   border-radius:var(--md-sys-shape-full);color:var(--md-sys-color-on-surface-variant);
   transition:background var(--md-dur-short) var(--md-ease-standard),color var(--md-dur-short) var(--md-ease-standard);}
 .drawer-item svg{width:24px;height:24px;fill:currentColor;flex:0 0 auto;}
-.drawer-item .grow{flex:1 1 auto;text-align:left;}
+.drawer-item .grow{flex:1 1 auto;text-align:start;}
 .drawer-item .count{font-variant-numeric:tabular-nums;opacity:.8;}
 .drawer-item.active{background:var(--md-sys-color-secondary-container);
   color:var(--md-sys-color-on-secondary-container);}
@@ -363,8 +368,8 @@ svg{display:block;}
 .section-head{display:flex;align-items:center;gap:8px;padding:20px 12px 8px;
   color:var(--md-sys-color-on-surface-variant);}
 .section-head svg{width:18px;height:18px;fill:currentColor;}
-.section-head .n{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.75;}
-.lin-prog{display:block;width:100%;height:14px;overflow:visible;}
+.section-head .n{margin-inline-start:auto;font-variant-numeric:tabular-nums;opacity:.75;}
+.lin-prog{display:block;width:100%;height:14px;overflow:visible;transform:scaleX(-1);}
 .lin-prog .lp-track{fill:none;stroke:var(--md-sys-color-surface-container-highest);stroke-width:4;stroke-linecap:round;}
 .lin-prog .lp-active{fill:none;stroke:var(--md-sys-color-primary);stroke-width:4;
   stroke-linecap:round;stroke-linejoin:round;}
@@ -499,13 +504,13 @@ svg{display:block;}
 /* ===================== MENU ===================== */
 .menu{position:absolute;z-index:30;min-width:180px;padding:8px 0;
   background:var(--md-sys-color-surface-container);border-radius:var(--md-sys-shape-xs);
-  box-shadow:var(--md-elev-2);transform-origin:top right;
+  box-shadow:var(--md-elev-2);transform-origin:top left;
   opacity:0;visibility:hidden;transform:scale(.85);
   transition:opacity var(--md-dur-short) var(--md-ease-standard),
              transform var(--md-dur-med) var(--md-ease-emphasized),visibility var(--md-dur-med);}
 .menu.open{opacity:1;visibility:visible;transform:scale(1);}
 .menu-item{display:flex;align-items:center;gap:12px;width:100%;height:48px;padding:0 12px;
-  color:var(--md-sys-color-on-surface);text-align:left;font-size:14px;letter-spacing:.1px;}
+  color:var(--md-sys-color-on-surface);text-align:start;font-size:14px;letter-spacing:.1px;}
 .menu-item svg{width:20px;height:20px;fill:var(--md-sys-color-on-surface-variant);}
 .menu-item.danger{color:var(--md-sys-color-error);}
 .menu-item.danger svg{fill:var(--md-sys-color-error);}
@@ -515,13 +520,13 @@ svg{display:block;}
 .slider-track{position:relative;height:16px;display:flex;align-items:center;cursor:pointer;}
 .slider-rail{position:absolute;left:0;right:0;height:16px;border-radius:8px;
   background:var(--md-sys-color-surface-container-highest);}
-.slider-fill{position:absolute;left:0;height:16px;border-radius:8px;
+.slider-fill{position:absolute;inset-inline-start:0;height:16px;border-radius:8px;
   background:var(--md-sys-color-primary);
   transition:width var(--md-dur-short) var(--md-ease-standard);}
 .slider-handle{position:absolute;width:4px;height:44px;border-radius:2px;
-  background:var(--md-sys-color-primary);transform:translateX(-50%);
+  background:var(--md-sys-color-primary);transform:translateX(50%);
   box-shadow:0 0 0 6px var(--md-sys-color-surface);
-  transition:left var(--md-dur-short) var(--md-ease-standard);}
+  transition:inset-inline-start var(--md-dur-short) var(--md-ease-standard);}
 .slider-row{display:flex;justify-content:space-between;align-items:baseline;
   color:var(--md-sys-color-on-surface-variant);}
 .slider-row b{color:var(--md-sys-color-on-surface);font-variant-numeric:tabular-nums;}
@@ -539,7 +544,7 @@ svg{display:block;}
 .radio-row.on .radio::after{transform:scale(1);}
 
 /* ===================== FAB + FAB MENU (M3 Expressive) ===================== */
-.fab-wrap{position:absolute;right:20px;bottom:100px;z-index:14;
+.fab-wrap{position:absolute;inset-inline-end:20px;bottom:100px;z-index:14;
   display:flex;flex-direction:column;align-items:flex-end;gap:12px;}
 @media (min-width:700px){.fab-wrap{bottom:24px;}}
 @media (min-width:700px) and (max-width:1059px){.fab-wrap{display:none;}}
@@ -588,7 +593,7 @@ svg{display:block;}
 .textfield:focus-within{border-bottom:2px solid var(--md-sys-color-primary);}
 .textfield input{width:100%;background:none;border:none;outline:none;padding:24px 16px 8px;
   font-size:16px;letter-spacing:.5px;color:var(--md-sys-color-on-surface);}
-.textfield .tf-label{position:absolute;left:16px;top:16px;pointer-events:none;
+.textfield .tf-label{position:absolute;inset-inline-start:16px;top:16px;pointer-events:none;
   color:var(--md-sys-color-on-surface-variant);font-size:16px;letter-spacing:.5px;
   transition:all var(--md-dur-short) var(--md-ease-standard);}
 .textfield:focus-within .tf-label,.textfield.filled .tf-label{top:8px;font-size:12px;}
@@ -624,7 +629,7 @@ svg{display:block;}
   border-radius:var(--md-sys-shape-xs);padding:14px 16px;display:flex;align-items:center;gap:8px;
   box-shadow:var(--md-elev-3);transform:translateY(150%);opacity:0;visibility:hidden;
   transition:transform var(--md-dur-med) var(--md-ease-emphasized),opacity var(--md-dur-short) linear,visibility var(--md-dur-med);}
-@media (min-width:700px){.snackbar{left:24px;right:auto;min-width:340px;bottom:24px;}}
+@media (min-width:700px){.snackbar{inset-inline-start:24px;inset-inline-end:auto;min-width:340px;bottom:24px;}}
 .snackbar.show{transform:none;opacity:1;visibility:visible;}
 .snackbar .msg{flex:1 1 auto;}
 .snackbar button{color:var(--md-sys-color-inverse-primary);padding:6px 8px;
@@ -634,7 +639,7 @@ svg{display:block;}
 .manage-item{display:flex;align-items:center;gap:16px;padding:12px;border-radius:var(--md-sys-shape-m);
   background:var(--md-sys-color-surface-container-low);}
 .manage-item.off{opacity:.55;}
-.manage-item .grow{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;}
+.manage-item .grow{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:start;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 8px;}
 .stat-card{border-radius:var(--md-sys-shape-l);padding:16px;display:flex;flex-direction:column;gap:2px;}
 .stat-card .v{font-size:32px;line-height:40px;font-weight:400;font-variant-numeric:tabular-nums;}
@@ -662,12 +667,12 @@ svg{display:block;}
   background:var(--md-sys-color-surface-container-highest);overflow:hidden;}
 .con-meter i{display:block;height:100%;width:0;border-radius:inherit;background:var(--md-sys-color-primary);
   transition:width var(--md-dur-long) var(--md-ease-emphasized);}
-.con-row .v{flex:0 0 34px;text-align:right;font-variant-numeric:tabular-nums;
+.con-row .v{flex:0 0 34px;text-align:end;font-variant-numeric:tabular-nums;
   color:var(--md-sys-color-on-surface-variant);}
 
 /* ===================== SUPPORTING PANE ===================== */
 .pane-support{flex-direction:column;background:var(--md-sys-color-surface-container-low);
-  border-left:1px solid var(--md-sys-color-outline-variant);overflow-y:auto;padding:20px;gap:4px;}
+  border-inline-start:1px solid var(--md-sys-color-outline-variant);overflow-y:auto;padding:20px;gap:4px;}
 .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 .detail-hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0 12px;text-align:center;}
 .detail-hero .big{width:72px;height:72px;border-radius:var(--md-sys-shape-full);display:grid;place-items:center;
@@ -739,47 +744,47 @@ svg{display:block;}
   <aside class="nav-drawer">
     <div class="drawer-brand">
       <span class="mark"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span>
-      <span class="title-l">Cadence</span>
+      <span class="title-l">إيقاع</span>
     </div>
     <button class="drawer-item ripple state" data-view="today">
       <svg viewBox="0 0 24 24"><use href="#i-today"/></svg>
-      <span class="grow label-l">Today</span><span class="count label-l" id="dCountToday">0</span>
+      <span class="grow label-l">اليوم</span><span class="count label-l" id="dCountToday">0</span>
     </button>
     <button class="drawer-item ripple state" data-view="routines">
       <svg viewBox="0 0 24 24"><use href="#i-list"/></svg>
-      <span class="grow label-l">Routines</span><span class="count label-l" id="dCountRt">0</span>
+      <span class="grow label-l">الروتين</span><span class="count label-l" id="dCountRt">0</span>
     </button>
     <button class="drawer-item ripple state" data-view="insights">
       <svg viewBox="0 0 24 24"><use href="#i-chart"/></svg>
-      <span class="grow label-l">Insights</span>
+      <span class="grow label-l">الإحصاءات</span>
     </button>
     <hr class="divider" style="margin:12px 8px"/>
-    <span class="drawer-section label-m">This week</span>
+    <span class="drawer-section label-m">هذا الأسبوع</span>
     <div style="padding:0 16px 8px" id="drawerMini"></div>
     <div class="drawer-foot">
       <button class="drawer-item ripple state" id="drawerTheme">
         <svg viewBox="0 0 24 24"><use href="#i-palette"/></svg>
-        <span class="grow label-l">Appearance</span>
+        <span class="grow label-l">المظهر</span>
       </button>
     </div>
   </aside>
 
   <!-- ================= NAVIGATION RAIL (medium) ================= -->
   <nav class="nav-rail">
-    <button class="rail-fab ripple state" id="railFab" aria-label="New routine">
+    <button class="rail-fab ripple state" id="railFab" aria-label="روتين جديد">
       <svg viewBox="0 0 24 24"><use href="#i-add"/></svg>
     </button>
     <button class="rail-item ripple" data-view="today">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-today"/></svg></span>
-      <span class="label-m">Today</span>
+      <span class="label-m">اليوم</span>
     </button>
     <button class="rail-item ripple" data-view="routines">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></span>
-      <span class="label-m">Routines</span>
+      <span class="label-m">الروتين</span>
     </button>
     <button class="rail-item ripple" data-view="insights">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg></span>
-      <span class="label-m">Insights</span>
+      <span class="label-m">الإحصاءات</span>
     </button>
   </nav>
 
@@ -787,20 +792,20 @@ svg{display:block;}
   <div class="pane-main">
     <header class="top-bar" id="topBar">
       <div class="tb-row">
-        <button class="icon-btn ripple state tip" id="themeBtn" data-tip="Theme" aria-label="Switch theme">
+        <button class="icon-btn ripple state tip" id="themeBtn" data-tip="المظهر" aria-label="تبديل المظهر">
           <svg viewBox="0 0 24 24"><use href="#i-moon" id="themeIcon"/></svg>
         </button>
-        <h1 class="tb-title title-l" id="barTitle">Today</h1>
+        <h1 class="tb-title title-l" id="barTitle">اليوم</h1>
         <div class="tb-actions">
-          <button class="icon-btn ripple state tip hidden" id="refreshBtn" data-tip="Recalculate" aria-label="Recalculate insights">
+          <button class="icon-btn ripple state tip hidden" id="refreshBtn" data-tip="إعادة الحساب" aria-label="إعادة حساب الإحصاءات">
             <svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg>
           </button>
-          <button class="icon-btn ripple state tip" id="tuneBtn" data-tip="Sort" aria-label="Sort routines">
+          <button class="icon-btn ripple state tip" id="tuneBtn" data-tip="ترتيب" aria-label="ترتيب الروتين">
             <svg viewBox="0 0 24 24"><use href="#i-tune"/></svg>
           </button>
         </div>
       </div>
-      <div class="tb-headline"><h2 class="headline-l" id="bigTitle">Today</h2></div>
+      <div class="tb-headline"><h2 class="headline-l" id="bigTitle">اليوم</h2></div>
     </header>
 
     <div class="body-scroll" id="scroller">
@@ -815,15 +820,15 @@ svg{display:block;}
           </div>
           <div class="hero-copy">
             <span class="label-m date" id="heroDate">&mdash;</span>
-            <span class="title-m" id="heroCount">No routines yet</span>
+            <span class="title-m" id="heroCount">لا يوجد روتين بعد</span>
             <span class="streak label-m">
               <svg viewBox="0 0 24 24"><use href="#i-flame"/></svg>
-              <span id="streakText">0 day streak</span>
+              <span id="streakText">٠ أيام متتالية</span>
             </span>
           </div>
         </div>
         <div class="section-head"><svg viewBox="0 0 24 24"><use href="#i-cal"/></svg>
-          <span class="title-s">Your week</span></div>
+          <span class="title-s">أسبوعك</span></div>
         <div class="carousel" id="carousel"></div>
         <div id="todayList"></div>
       </section>
@@ -832,17 +837,17 @@ svg{display:block;}
       <section class="view" id="view-routines">
         <label class="searchbar">
           <svg viewBox="0 0 24 24"><use href="#i-search"/></svg>
-          <input id="searchInput" type="search" placeholder="Search routines" autocomplete="off"/>
+          <input id="searchInput" type="search" placeholder="ابحث في الروتين" autocomplete="off"/>
         </label>
         <div class="segmented" id="filterSeg" style="margin:12px 0 4px">
           <button class="seg ripple selected" data-filter="all">
-            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>All</span>
+            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>الكل</span>
           </button>
           <button class="seg ripple" data-filter="on">
-            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>Active</span>
+            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>نشط</span>
           </button>
           <button class="seg ripple" data-filter="off">
-            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>Paused</span>
+            <span class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>متوقف</span>
           </button>
         </div>
         <div id="manageList"></div>
@@ -851,18 +856,18 @@ svg{display:block;}
       <!-- ---------------- INSIGHTS ---------------- -->
       <section class="view" id="view-insights">
         <div class="tabs" id="tabs">
-          <button class="tab ripple active label-l" data-range="7">Week</button>
-          <button class="tab ripple label-l" data-range="30">Month</button>
+          <button class="tab ripple active label-l" data-range="7">أسبوع</button>
+          <button class="tab ripple label-l" data-range="30">شهر</button>
           <span class="tab-ind" id="tabInd"></span>
         </div>
         <div class="stat-grid">
-          <div class="stat-card a"><span class="v" id="sCurrent">0</span><span class="label-m">Day streak</span></div>
-          <div class="stat-card b"><span class="v" id="sBest">0</span><span class="label-m">Best streak</span></div>
-          <div class="stat-card c"><span class="v" id="sRate">0%</span><span class="label-m" id="sRateLabel">Last 7 days</span></div>
-          <div class="stat-card d"><span class="v" id="sTotal">0</span><span class="label-m">Total done</span></div>
+          <div class="stat-card a"><span class="v" id="sCurrent">0</span><span class="label-m">أيام متتالية</span></div>
+          <div class="stat-card b"><span class="v" id="sBest">0</span><span class="label-m">أفضل تتابع</span></div>
+          <div class="stat-card c"><span class="v" id="sRate">0%</span><span class="label-m" id="sRateLabel">آخر ٧ أيام</span></div>
+          <div class="stat-card d"><span class="v" id="sTotal">0</span><span class="label-m">إجمالي المنجز</span></div>
         </div>
-        <div class="card"><h3 class="title-m" id="chartTitle">This week</h3><div class="chart" id="chart"></div></div>
-        <div class="card outlined"><h3 class="title-m">Consistency</h3><div id="consistency"></div></div>
+        <div class="card"><h3 class="title-m" id="chartTitle">هذا الأسبوع</h3><div class="chart" id="chart"></div></div>
+        <div class="card outlined"><h3 class="title-m">الانتظام</h3><div id="consistency"></div></div>
       </section>
     </div>
   </div>
@@ -874,15 +879,15 @@ svg{display:block;}
   <nav class="nav-bar" role="tablist">
     <button class="nav-item ripple active" data-view="today" role="tab" aria-selected="true">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-today"/></svg><span class="badge" id="navBadge">0</span></span>
-      <span class="label-m">Today</span>
+      <span class="label-m">اليوم</span>
     </button>
     <button class="nav-item ripple" data-view="routines" role="tab" aria-selected="false">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></span>
-      <span class="label-m">Routines</span>
+      <span class="label-m">الروتين</span>
     </button>
     <button class="nav-item ripple" data-view="insights" role="tab" aria-selected="false">
       <span class="pill"><svg viewBox="0 0 24 24"><use href="#i-chart"/></svg></span>
-      <span class="label-m">Insights</span>
+      <span class="label-m">الإحصاءات</span>
     </button>
   </nav>
 
@@ -890,17 +895,17 @@ svg{display:block;}
   <div class="fab-wrap">
     <div class="fab-menu" id="fabMenu">
       <button class="fab-opt ripple state" data-add="blank">
-        <svg viewBox="0 0 24 24"><use href="#i-edit"/></svg><span class="label-l">Blank routine</span>
+        <svg viewBox="0 0 24 24"><use href="#i-edit"/></svg><span class="label-l">روتين فارغ</span>
       </button>
       <button class="fab-opt ripple state" data-add="water">
-        <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg><span class="label-l">Quick: drink water</span>
+        <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg><span class="label-l">سريع: شرب الماء</span>
       </button>
       <button class="fab-opt ripple state" data-add="template">
-        <svg viewBox="0 0 24 24"><use href="#i-library"/></svg><span class="label-l">From template</span>
+        <svg viewBox="0 0 24 24"><use href="#i-library"/></svg><span class="label-l">من قالب</span>
       </button>
     </div>
-    <button class="fab ripple" id="fab" aria-label="New routine">
-      <svg viewBox="0 0 24 24"><use href="#i-add"/></svg><span class="label-l">New</span>
+    <button class="fab ripple" id="fab" aria-label="روتين جديد">
+      <svg viewBox="0 0 24 24"><use href="#i-add"/></svg><span class="label-l">جديد</span>
     </button>
   </div>
 
@@ -908,46 +913,46 @@ svg{display:block;}
   <div class="scrim" id="scrim"></div>
 
   <div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
-    <h2 class="headline-s" id="dlgTitle">New routine</h2>
+    <h2 class="headline-s" id="dlgTitle">روتين جديد</h2>
     <label class="textfield" id="tfWrap">
-      <span class="tf-label">Routine name</span>
+      <span class="tf-label">اسم الروتين</span>
       <input id="nameInput" type="text" maxlength="40" autocomplete="off"/>
     </label>
-    <span class="label-l field-label">When</span>
+    <span class="label-l field-label">الوقت</span>
     <div class="segmented" id="periodSeg"></div>
-    <span class="label-l field-label">Icon</span>
+    <span class="label-l field-label">الأيقونة</span>
     <div class="chip-row" id="iconChips"></div>
-    <span class="label-l field-label">Weekly target</span>
+    <span class="label-l field-label">الهدف الأسبوعي</span>
     <div class="slider">
-      <div class="slider-row body-m"><span>Days per week</span><b id="targetVal">7</b></div>
+      <div class="slider-row body-m"><span>أيام في الأسبوع</span><b id="targetVal">7</b></div>
       <div class="slider-track" id="targetSlider">
         <div class="slider-rail"></div><div class="slider-fill" id="targetFill"></div>
         <div class="slider-handle" id="targetHandle"></div>
       </div>
     </div>
     <div class="dialog-actions">
-      <button class="btn btn-text ripple state" id="cancelBtn">Cancel</button>
-      <button class="btn btn-filled ripple state" id="saveBtn" disabled>Add</button>
+      <button class="btn btn-text ripple state" id="cancelBtn">إلغاء</button>
+      <button class="btn btn-filled ripple state" id="saveBtn" disabled>إضافة</button>
     </div>
   </div>
 
   <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="sheet-grip"></div><div id="sheetBody"></div></div>
 
   <div class="menu" id="menu">
-    <button class="menu-item ripple state" data-act="toggle"><svg viewBox="0 0 24 24"><use href="#i-timer"/></svg>Pause routine</button>
-    <button class="menu-item ripple state" data-act="dup"><svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>Duplicate</button>
+    <button class="menu-item ripple state" data-act="toggle"><svg viewBox="0 0 24 24"><use href="#i-timer"/></svg>إيقاف مؤقت</button>
+    <button class="menu-item ripple state" data-act="dup"><svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>تكرار</button>
     <hr class="divider" style="margin:6px 0"/>
-    <button class="menu-item ripple state danger" data-act="del"><svg viewBox="0 0 24 24"><use href="#i-trash"/></svg>Delete</button>
+    <button class="menu-item ripple state danger" data-act="del"><svg viewBox="0 0 24 24"><use href="#i-trash"/></svg>حذف</button>
   </div>
 
   <div class="snackbar" id="snackbar">
     <span class="msg body-m" id="snackMsg"></span>
-    <button id="snackAction">Undo</button>
+    <button id="snackAction">تراجع</button>
   </div>
 
   <div class="loader-overlay" id="bootLoader">
     <div class="loading-indicator contained" id="bootIndicator"></div>
-    <span class="cap body-m">Loading your routines</span>
+    <span class="cap body-m">جارٍ تحميل روتينك</span>
   </div>
 </div>
 
@@ -960,15 +965,15 @@ const KEY = "cadence.v2";
 
 const ICONS = ["water","calm","task","walk","mail","book","gym","coffee","moon","star"];
 const PERIODS = [
-  {id:"morning",   label:"Morning",   icon:"sun"},
-  {id:"afternoon", label:"Afternoon", icon:"horizon"},
-  {id:"evening",   label:"Evening",   icon:"moon"}
+  {id:"morning",   label:"الصباح",     icon:"sun"},
+  {id:"afternoon", label:"بعد الظهر", icon:"horizon"},
+  {id:"evening",   label:"المساء",     icon:"moon"}
 ];
 const TEMPLATES = [
-  {name:"Ten minutes of reading", icon:"book",   period:"evening"},
-  {name:"Morning walk",           icon:"walk",   period:"morning"},
-  {name:"Plan tomorrow",          icon:"task",   period:"evening"},
-  {name:"Strength session",       icon:"gym",    period:"afternoon"}
+  {name:"عشر دقائق قراءة", icon:"book",   period:"evening"},
+  {name:"مشي صباحي",       icon:"walk",   period:"morning"},
+  {name:"خطّط ليوم غد",    icon:"task",   period:"evening"},
+  {name:"تمرين قوة",       icon:"gym",    period:"afternoon"}
 ];
 
 const dayKey = d => { const x = new Date(d); x.setHours(12,0,0,0);
@@ -979,13 +984,13 @@ const back = n => { const d = new Date(); d.setDate(d.getDate() - n); return d; 
 function seed(){
   const old = dayKey(back(45));
   const r = [
-    {id:"r1", name:"Drink a glass of water", icon:"water",  period:"morning",   active:true, created:old, target:7},
-    {id:"r2", name:"Stretch for ten minutes",icon:"calm",   period:"morning",   active:true, created:old, target:5},
-    {id:"r3", name:"Set three priorities",   icon:"task",   period:"morning",   active:true, created:old, target:5},
-    {id:"r4", name:"Walk after lunch",       icon:"walk",   period:"afternoon", active:true, created:old, target:6},
-    {id:"r5", name:"Clear the inbox",        icon:"mail",   period:"afternoon", active:true, created:old, target:5},
-    {id:"r6", name:"Read twenty pages",      icon:"book",   period:"evening",   active:true, created:old, target:7},
-    {id:"r7", name:"Lights out by eleven",   icon:"moon",   period:"evening",   active:true, created:old, target:7}
+    {id:"r1", name:"اشرب كوب ماء", icon:"water",  period:"morning",   active:true, created:old, target:7},
+    {id:"r2", name:"تمدد لعشر دقائق",icon:"calm",   period:"morning",   active:true, created:old, target:5},
+    {id:"r3", name:"حدّد ثلاث أولويات",   icon:"task",   period:"morning",   active:true, created:old, target:5},
+    {id:"r4", name:"امشِ بعد الغداء",       icon:"walk",   period:"afternoon", active:true, created:old, target:6},
+    {id:"r5", name:"أفرغ البريد الوارد",        icon:"mail",   period:"afternoon", active:true, created:old, target:5},
+    {id:"r6", name:"اقرأ عشرين صفحة",      icon:"book",   period:"evening",   active:true, created:old, target:7},
+    {id:"r7", name:"أطفئ الأنوار عند الحادية عشرة",   icon:"moon",   period:"evening",   active:true, created:old, target:7}
   ];
   const log = {};
   const ratios = [0.6,0.85,0.6,0.85,0.71,1,1,1];
@@ -1006,6 +1011,7 @@ function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch
 const activeRoutines = () => state.routines.filter(r => r.active);
 const doneOn = k => state.log[k] || [];
 const isDone = id => doneOn(TODAY).indexOf(id) !== -1;
+const AN = n => String(n).replace(/[0-9]/g, d => "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669"[+d]);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function svg(icon, size){ return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'"><use href="#i-'+icon+'"/></svg>'; }
 function doneCount(id, days){
@@ -1057,13 +1063,13 @@ document.addEventListener("pointerdown", e => {
 
 /* ------------------------- animated counter ------------------------- */
 function countTo(el, to, suffix){
-  const from = parseInt(el.textContent, 10) || 0;
-  if (REDUCED || from === to){ el.textContent = to + (suffix||""); return; }
+  const from = Number(String(el.textContent).replace(/[\u0660-\u0669]/g, c => c.charCodeAt(0)-0x0660).replace(/[^0-9]/g,"")) || 0;
+  if (REDUCED || from === to){ el.textContent = AN(to) + (suffix||""); return; }
   const t0 = performance.now(), D = 700;
   (function step(now){
     const p = Math.min(1, (now - t0) / D);
     const e = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(from + (to - from) * e) + (suffix||"");
+    el.textContent = AN(Math.round(from + (to - from) * e)) + (suffix||"");
     if (p < 1) requestAnimationFrame(step);
   })(performance.now());
 }
@@ -1243,18 +1249,18 @@ function renderCarousel(){
     const d = back(i), k = dayKey(d), isT = k === TODAY;
     html += '<div class="cara' + (isT ? " today" : "") + '">' +
       '<span class="mini">' + miniRing(ratioOn(k)) + '</span>' +
-      '<span class="d label-m">' + d.toLocaleDateString(undefined,{weekday:"short"}) + '</span></div>';
+      '<span class="d label-m">' + d.toLocaleDateString("ar-u-nu-arab",{weekday:"short"}) + '</span></div>';
   }
   const car = $("#carousel");
   car.innerHTML = html;
-  requestAnimationFrame(() => { car.scrollLeft = car.scrollWidth; });
+  requestAnimationFrame(() => { car.scrollLeft = -car.scrollWidth; });
   const mini = $("#drawerMini");
   if (mini){
     let dots = "";
     for (let i = 6; i >= 0; i--){
       const d = back(i), k = dayKey(d), full = ratioOn(k) >= 1;
       dots += '<span class="dot' + (full ? " on" : "") + '">' +
-        d.toLocaleDateString(undefined,{weekday:"narrow"}) + '</span>';
+        d.toLocaleDateString("ar-u-nu-arab",{weekday:"narrow"}) + '</span>';
     }
     mini.innerHTML = '<div class="dots" style="justify-content:flex-start">' + dots + '</div>';
   }
@@ -1265,19 +1271,19 @@ function renderToday(){
   const done = act.filter(r => isDone(r.id)).length;
   const pct = act.length ? Math.round(done / act.length * 100) : 0;
   setRing(act.length ? done / act.length : 0);
-  $("#ringLabel").textContent = pct + "%";
-  $("#heroDate").textContent = new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  $("#ringLabel").textContent = AN(pct) + "\u066A";
+  $("#heroDate").textContent = new Date().toLocaleDateString("ar-u-nu-arab",{weekday:"long",month:"long",day:"numeric"});
   $("#heroCount").textContent = act.length
-    ? (done === act.length ? "All done \u2014 nice work" : done + " of " + act.length + " done")
-    : "No routines yet";
+    ? (done === act.length ? "أنجزت كل شيء \u2014 عمل رائع" : AN(done) + " من " + AN(act.length) + " مُنجز")
+    : "لا يوجد روتين بعد";
   const st = streaks();
-  $("#streakText").textContent = st.current === 1 ? "1 day streak" : st.current + " day streak";
+  $("#streakText").textContent = st.current === 1 ? "يوم واحد متتالٍ" : AN(st.current) + " أيام متتالية";
   const remaining = act.length - done;
   const badge = $("#navBadge");
-  badge.textContent = remaining;
+  badge.textContent = AN(remaining);
   badge.style.display = remaining > 0 ? "" : "none";
-  const dt = $("#dCountToday"); if (dt) dt.textContent = remaining;
-  const dr = $("#dCountRt");    if (dr) dr.textContent = state.routines.length;
+  const dt = $("#dCountToday"); if (dt) dt.textContent = AN(remaining);
+  const dr = $("#dCountRt");    if (dr) dr.textContent = AN(state.routines.length);
 
   renderCarousel();
 
@@ -1289,7 +1295,7 @@ function renderToday(){
     const ratio = nDone / items.length;
     html += '<div class="section-head">' + svg(p.icon, 18) +
             '<span class="title-s">' + p.label + '</span>' +
-            '<span class="n label-m">' + nDone + '/' + items.length + '</span></div>' +
+            '<span class="n label-m">' + AN(nDone) + '/' + AN(items.length) + '</span></div>' +
             '<div class="sec-prog"><svg class="lin-prog" data-pct="' + ratio +
             '" data-wavy="' + (ratio > 0 && ratio < 1 ? 1 : 0) + '"></svg></div><div class="list">';
     items.forEach(r => {
@@ -1299,14 +1305,14 @@ function renderToday(){
               '" style="animation-delay:' + (idx++ * 35) + 'ms" aria-pressed="' + d + '">' +
                 '<span class="item-icon">' + svg(r.icon, 22) + '</span>' +
                 '<span class="item-text"><span class="h body-l">' + esc(r.name) + '</span>' +
-                '<span class="s body-s">' + n + ' of last 7 &#183; target ' + r.target + '</span></span>' +
+                '<span class="s body-s">' + AN(n) + ' من آخر ٧ &#183; الهدف ' + AN(r.target) + '</span></span>' +
                 '<span class="check">' + svg("check", 16) + '</span></button>';
     });
     html += '</div>';
   });
   if (!act.length){
-    html = '<div class="empty">' + svg("task", 48) + '<span class="title-m">Nothing scheduled</span>' +
-           '<span class="body-m">Add your first routine to get going.</span></div>';
+    html = '<div class="empty">' + svg("task", 48) + '<span class="title-m">لا شيء مجدول</span>' +
+           '<span class="body-m">أضف روتينك الأول للبدء.</span></div>';
   }
   $("#todayList").innerHTML = html;
   requestAnimationFrame(layoutLinear);
@@ -1322,7 +1328,7 @@ function renderManage(){
 
   if (!list.length){
     $("#manageList").innerHTML = '<div class="empty">' + svg("search", 48) +
-      '<span class="title-m">Nothing here</span><span class="body-m">Try a different search or filter.</span></div>';
+      '<span class="title-m">لا نتائج</span><span class="body-m">جرّب بحثاً أو تصفية مختلفة.</span></div>';
     return;
   }
   let html = '<div class="list" style="margin-top:12px">';
@@ -1333,10 +1339,10 @@ function renderManage(){
       '<button class="grow ripple" data-detail="' + r.id + '">' +
         '<span class="body-l">' + esc(r.name) + '</span>' +
         '<span class="body-s" style="color:var(--md-sys-color-on-surface-variant)">' +
-          p.label + ' &#183; ' + doneCount(r.id,7) + '/' + r.target + ' this week</span></button>' +
+          p.label + ' &#183; ' + AN(doneCount(r.id,7)) + '/' + AN(r.target) + ' هذا الأسبوع</span></button>' +
       '<button class="switch" data-active="' + r.id + '" role="switch" aria-checked="' + r.active +
-        '" aria-label="Enable ' + esc(r.name) + '"></button>' +
-      '<button class="icon-btn ripple state" data-menu="' + r.id + '" aria-label="More options">' +
+        '" aria-label="تفعيل ' + esc(r.name) + '"></button>' +
+      '<button class="icon-btn ripple state" data-menu="' + r.id + '" aria-label="خيارات أخرى">' +
         svg("more", 20) + '</button></div>';
   });
   $("#manageList").innerHTML = html + '</div>';
@@ -1355,10 +1361,10 @@ function renderInsights(){
   let sum = 0;
   for (let i = range - 1; i >= 0; i--) sum += ratioOn(dayKey(back(i)));
   countTo($("#sRate"), Math.round(sum / range * 100), "%");
-  $("#sRateLabel").textContent = "Last " + range + " days";
+  $("#sRateLabel").textContent = "آخر " + AN(range) + " يوماً";
   let total = 0; Object.keys(state.log).forEach(k => { total += doneOn(k).length; });
   countTo($("#sTotal"), total);
-  $("#chartTitle").textContent = range === 7 ? "This week" : "Last 30 days";
+  $("#chartTitle").textContent = range === 7 ? "هذا الأسبوع" : "آخر ٣٠ يوماً";
 
   const shown = range === 7 ? 7 : 15;
   const step = range === 7 ? 1 : 2;
@@ -1369,8 +1375,8 @@ function renderInsights(){
       '<div class="bar-track"><div class="bar-fill" data-h="' + r + '" style="transition-delay:' +
         ((shown - i/step) * 26) + 'ms"></div></div>' +
       '<span class="d label-s">' + (range === 7
-          ? d.toLocaleDateString(undefined,{weekday:"narrow"})
-          : d.getDate()) + '</span></div>';
+          ? d.toLocaleDateString("ar-u-nu-arab",{weekday:"narrow"})
+          : AN(d.getDate())) + '</span></div>';
   }
   $("#chart").innerHTML = html;
 
@@ -1379,8 +1385,8 @@ function renderInsights(){
     '<div class="con-row"><span class="ic">' + svg(x.r.icon, 18) + '</span>' +
     '<span class="nm body-m">' + esc(x.r.name) + '</span>' +
     '<span class="con-meter"><i data-w="' + Math.round(x.n / 7 * 100) + '"></i></span>' +
-    '<span class="v label-m">' + x.n + '/7</span></div>').join("")
-    : '<span class="body-m" style="color:var(--md-sys-color-on-surface-variant)">No active routines yet.</span>';
+    '<span class="v label-m">' + AN(x.n) + '/٧</span></div>').join("")
+    : '<span class="body-m" style="color:var(--md-sys-color-on-surface-variant)">لا يوجد روتين نشط بعد.</span>';
 
   requestAnimationFrame(() => {
     $$("#chart .bar-fill").forEach(el => { el.style.height = Math.max(Number(el.dataset.h), 2) + "%"; });
@@ -1396,34 +1402,34 @@ function detailHTML(r){
   for (let i = 6; i >= 0; i--){
     const d = back(i), on = doneOn(dayKey(d)).indexOf(r.id) !== -1;
     dots += '<span class="dot' + (on ? " on" : "") + '">' +
-      d.toLocaleDateString(undefined,{weekday:"narrow"}) + '</span>';
+      d.toLocaleDateString("ar-u-nu-arab",{weekday:"narrow"}) + '</span>';
   }
   return '<div class="detail-hero"><span class="big">' + svg(r.icon, 34) + '</span>' +
     '<span class="headline-s">' + esc(r.name) + '</span>' +
     '<span class="body-m" style="color:var(--md-sys-color-on-surface-variant)">' + p.label +
-    ' &#183; target ' + r.target + ' days</span></div>' +
+    ' &#183; الهدف ' + AN(r.target) + ' أيام</span></div>' +
     '<div class="dots">' + dots + '</div>' +
-    '<div class="card outlined" style="margin-top:8px"><h3 class="title-m">Move to</h3>' +
+    '<div class="card outlined" style="margin-top:8px"><h3 class="title-m">نقل إلى</h3>' +
       PERIODS.map(x => '<button class="radio-row ripple' + (x.id === r.period ? " on" : "") +
         '" data-period-set="' + x.id + '"><span class="radio"></span>' +
         '<span class="body-l">' + x.label + '</span></button>').join("") + '</div>' +
     '<div style="display:flex;gap:8px;margin-top:14px">' +
       '<button class="btn btn-tonal ripple state" style="flex:1" data-detail-toggle="' + r.id + '">' +
-        (r.active ? "Pause" : "Resume") + '</button>' +
-      '<button class="btn btn-outlined ripple state" style="flex:1" data-detail-del="' + r.id + '">Delete</button>' +
+        (r.active ? "إيقاف" : "استئناف") + '</button>' +
+      '<button class="btn btn-outlined ripple state" style="flex:1" data-detail-del="' + r.id + '">حذف</button>' +
     '</div>';
 }
 function summaryHTML(){
   const act = activeRoutines(), done = act.filter(r => isDone(r.id)).length;
   const st = streaks();
-  return '<div class="sp-head"><span class="title-m">At a glance</span></div>' +
+  return '<div class="sp-head"><span class="title-m">نظرة سريعة</span></div>' +
     '<div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-top:8px">' +
-      '<div class="stat-card a"><span class="v">' + done + '</span><span class="label-m">Done today</span></div>' +
-      '<div class="stat-card b"><span class="v">' + st.current + '</span><span class="label-m">Day streak</span></div>' +
+      '<div class="stat-card a"><span class="v">' + AN(done) + '</span><span class="label-m">أُنجز اليوم</span></div>' +
+      '<div class="stat-card b"><span class="v">' + AN(st.current) + '</span><span class="label-m">أيام متتالية</span></div>' +
     '</div>' +
-    '<div class="card outlined"><h3 class="title-m">Tips</h3>' +
+    '<div class="card outlined"><h3 class="title-m">تلميح</h3>' +
       '<p class="body-m" style="color:var(--md-sys-color-on-surface-variant)">' +
-      'Pick a routine from the Routines tab to see its history and settings here.</p></div>';
+      'اختر روتيناً من قائمة الروتين لعرض سجله وإعداداته هنا.</p></div>';
 }
 function renderSupport(){
   const pane = $("#supportPane");
@@ -1460,7 +1466,7 @@ function snack(msg, onUndo){
 $("#snackAction").addEventListener("click", () => { if (undoFn) undoFn(); $("#snackbar").classList.remove("show"); });
 
 /* ========================= NAVIGATION ========================= */
-const TITLES = { today:"Today", routines:"Routines", insights:"Insights" };
+const TITLES = { today:"اليوم", routines:"الروتين", insights:"الإحصاءات" };
 const ORDER = ["today","routines","insights"];
 let currentView = "today";
 function go(v){
@@ -1506,7 +1512,7 @@ $("#todayList").addEventListener("click", e => {
   state.log[TODAY] = list;
   save(); renderToday(); renderInsights(); renderSupport();
   const act = activeRoutines();
-  if (i === -1 && act.length && act.every(r => isDone(r.id))) snack("Every routine done today");
+  if (i === -1 && act.length && act.every(r => isDone(r.id))) snack("أنجزت كل الروتين اليوم");
 });
 
 let menuFor = null;
@@ -1525,9 +1531,9 @@ $("#manageList").addEventListener("click", e => {
     menuFor = mb.dataset.menu;
     const m = $("#menu"), app = $(".app").getBoundingClientRect(), b = mb.getBoundingClientRect();
     m.style.top  = (b.bottom - app.top + 4) + "px";
-    m.style.left = Math.max(8, b.right - app.left - 190) + "px";
+    m.style.left = Math.min(app.width - 198, Math.max(8, b.left - app.left)) + "px";
     const r = state.routines.find(x => x.id === menuFor);
-    m.querySelector('[data-act="toggle"]').lastChild.textContent = r && r.active ? "Pause routine" : "Resume routine";
+    m.querySelector('[data-act="toggle"]').lastChild.textContent = r && r.active ? "إيقاف مؤقت" : "استئناف";
     m.classList.add("open");
     e.stopPropagation();
   }
@@ -1539,18 +1545,18 @@ $("#menu").addEventListener("click", e => {
   const r = state.routines[idx];
   closeMenu();
   if (!r) return;
-  if (it.dataset.act === "toggle"){ r.active = !r.active; save(); renderAll(); snack(r.active ? "Resumed" : "Paused"); }
+  if (it.dataset.act === "toggle"){ r.active = !r.active; save(); renderAll(); snack(r.active ? "تم الاستئناف" : "تم الإيقاف"); }
   if (it.dataset.act === "dup"){
     state.routines.splice(idx + 1, 0,
-      { id:"r"+Date.now().toString(36), name:r.name+" (copy)", icon:r.icon, period:r.period,
+      { id:"r"+Date.now().toString(36), name:r.name+" (نسخة)", icon:r.icon, period:r.period,
         active:true, created:TODAY, target:r.target });
-    save(); renderAll(); snack("Duplicated");
+    save(); renderAll(); snack("تم التكرار");
   }
   if (it.dataset.act === "del"){
     state.routines.splice(idx, 1);
     if (selectedId === id) selectedId = null;
     save(); renderAll();
-    snack("Deleted " + r.name, () => { state.routines.splice(idx, 0, r); save(); renderAll(); });
+    snack("تم حذف " + r.name, () => { state.routines.splice(idx, 0, r); save(); renderAll(); });
   }
 });
 document.addEventListener("click", e => { if (!e.target.closest("#menu") && !e.target.closest("[data-menu]")) closeMenu(); });
@@ -1569,7 +1575,7 @@ document.addEventListener("click", e => {
     const r = state.routines.find(x => x.id === dt.dataset.detailToggle);
     if (r){ r.active = !r.active; save(); renderAll();
       if ($("#sheet").classList.contains("open")) $("#sheetBody").innerHTML = detailHTML(r);
-      snack(r.active ? "Resumed" : "Paused"); }
+      snack(r.active ? "تم الاستئناف" : "تم الإيقاف"); }
     return;
   }
   const dd = e.target.closest("[data-detail-del]");
@@ -1579,7 +1585,7 @@ document.addEventListener("click", e => {
     const r = state.routines[idx];
     state.routines.splice(idx, 1);
     selectedId = null; closeSheet(); save(); renderAll();
-    snack("Deleted " + r.name, () => { state.routines.splice(idx, 0, r); save(); renderAll(); });
+    snack("تم حذف " + r.name, () => { state.routines.splice(idx, 0, r); save(); renderAll(); });
   }
 });
 
@@ -1623,12 +1629,12 @@ $("#fabMenu").addEventListener("click", e => {
   const kind = o.dataset.add;
   if (kind === "blank") return openDialog();
   if (kind === "water"){
-    addRoutine("Drink a glass of water", "water", "morning", 7);
-    return snack("Added a quick routine");
+    addRoutine("اشرب كوب ماء", "water", "morning", 7);
+    return snack("تمت إضافة روتين سريع");
   }
   const t = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
   addRoutine(t.name, t.icon, t.period, 5);
-  snack("Added " + t.name);
+  snack("تمت إضافة " + t.name);
 });
 function addRoutine(name, icon, period, target){
   state.routines.push({ id:"r"+Date.now().toString(36), name, icon, period, active:true, created:TODAY, target });
@@ -1649,9 +1655,9 @@ function buildDialog(){
 function setTarget(v){
   draft.target = Math.max(1, Math.min(7, v));
   const pctv = (draft.target - 1) / 6;
-  $("#targetVal").textContent = draft.target;
+  $("#targetVal").textContent = AN(draft.target);
   $("#targetFill").style.width = (pctv * 100) + "%";
-  $("#targetHandle").style.left = (pctv * 100) + "%";
+  $("#targetHandle").style.insetInlineStart = (pctv * 100) + "%";
 }
 $("#periodSeg").addEventListener("click", e => {
   const c = e.target.closest("[data-period]"); if (!c) return;
@@ -1669,7 +1675,8 @@ $("#iconChips").addEventListener("click", e => {
   let dragging = false;
   const apply = clientX => {
     const b = track.getBoundingClientRect();
-    setTarget(Math.round(((clientX - b.left) / b.width) * 6) + 1);
+    const ratio = 1 - (clientX - b.left) / b.width;   // RTL
+    setTarget(Math.round(ratio * 6) + 1);
   };
   track.addEventListener("pointerdown", e => { dragging = true; track.setPointerCapture(e.pointerId); apply(e.clientX); });
   track.addEventListener("pointermove", e => { if (dragging) apply(e.clientX); });
@@ -1708,7 +1715,7 @@ $("#saveBtn").addEventListener("click", () => {
   if (!name) return;
   addRoutine(name, draft.icon, draft.period, draft.target);
   closeDialog();
-  snack("Added " + name);
+  snack("تمت إضافة " + name);
 });
 
 /* ========================= SORT / REFRESH / THEME ========================= */
@@ -1719,7 +1726,7 @@ $("#tuneBtn").addEventListener("click", () => {
     ? (a,b) => a.name.localeCompare(b.name)
     : (a,b) => ORDER_P.indexOf(a.period) - ORDER_P.indexOf(b.period));
   save(); renderManage();
-  snack(sortAlpha ? "Sorted A\u2013Z" : "Sorted by time of day");
+  snack(sortAlpha ? "مرتّب أبجدياً" : "مرتّب حسب الوقت");
 });
 const ORDER_P = ["morning","afternoon","evening"];
 
@@ -1728,7 +1735,7 @@ $("#refreshBtn").addEventListener("click", () => {
   if (refreshing) return;
   refreshing = true;
   $("#chart").innerHTML = '<div class="inline-load"><div class="loading-indicator" id="chartLoader"></div>' +
-                          '<span class="cap body-m">Recalculating</span></div>';
+                          '<span class="cap body-m">جارٍ إعادة الحساب</span></div>';
   const li = loadingIndicator($("#chartLoader"), 48, false);
   setTimeout(() => { li.stop(); renderInsights(); refreshing = false; }, REDUCED ? 120 : 900);
 });
@@ -1739,7 +1746,7 @@ function applyTheme(){
   if (state.theme) root.setAttribute("data-theme", state.theme); else root.removeAttribute("data-theme");
   const dark = state.theme ? state.theme === "dark" : systemDark();
   $("#themeIcon").setAttribute("href", dark ? "#i-sun" : "#i-moon");
-  $("#themeBtn").setAttribute("data-tip", dark ? "Light theme" : "Dark theme");
+  $("#themeBtn").setAttribute("data-tip", dark ? "المظهر الفاتح" : "المظهر الداكن");
 }
 function toggleTheme(){
   const dark = state.theme ? state.theme === "dark" : systemDark();

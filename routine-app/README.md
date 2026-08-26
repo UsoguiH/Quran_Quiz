@@ -1,4 +1,4 @@
-# Cadence — a routine app in Material Design 3
+# إيقاع (Cadence) — an Arabic routine app in Material Design 3
 
 A daily routine tracker built to the Material 3 spec.
 
@@ -7,8 +7,12 @@ A daily routine tracker built to the Material 3 spec.
   containers, five `surface-container` tiers, outline, inverse) generated with
   Google's own `@material/material-color-utilities` from seed `#0B57D0`
   (blue, tonal-spot scheme), for both light and dark.
-- **Typography** — Roboto, self-hosted, on the M3 type scale (display / headline /
-  title / body / label).
+- **Typography** — Noto Sans Arabic (Google's Arabic face) with Roboto as the Latin
+  fallback, self-hosted, on the M3 type scale.
+- **Localisation** — the UI is Arabic and the whole shell is RTL: navigation drawer
+  and rail mirror to the right, the supporting pane to the left, and the linear
+  progress bars fill from the right. Numbers use Arabic-Indic digits and dates are
+  formatted with the `ar-u-nu-arab` locale.
 - **Shape & elevation** — the M3 corner scale (4/8/12/16/28dp) and elevation levels.
 - **Motion** — M3 emphasized easing `cubic-bezier(0.2,0,0,1)` with 200/300/500ms durations.
 - **Components** — center-aligned top app bar, bottom navigation with the active
