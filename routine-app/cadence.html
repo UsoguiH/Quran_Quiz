@@ -220,7 +220,7 @@ svg{display:block;}
 }
 .ring{position:relative;flex:0 0 auto;width:96px;height:96px;}
 .ring svg{overflow:visible;}
-.ring path{fill:none;stroke-width:9;stroke-linecap:round;}
+.ring path{fill:none;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;}
 .ring .track{stroke:currentColor;opacity:.2;}
 .ring .value{stroke:var(--md-sys-color-primary);}
 .ring-label{position:absolute;inset:0;display:grid;place-items:center;
@@ -819,18 +819,36 @@ function arcPath(cx, cy, r, a0, a1){
   return "M" + x0.toFixed(2) + " " + y0.toFixed(2) +
          "A" + r + " " + r + " 0 " + large + " 1 " + x1.toFixed(2) + " " + y1.toFixed(2);
 }
+/* radial wave around the circle — flat at 0% and 100%, like the linear one */
+const RING_WAVES = 8, RING_AMP = 3.4;
+function wavyArc(cx, cy, r, a0, a1, amp, phase){
+  if (amp <= 0) return arcPath(cx, cy, r, a0, a1);
+  const span = a1 - a0;
+  const steps = Math.max(10, Math.round(Math.abs(span) / (Math.PI*2) * 260));
+  let d = "";
+  for (let i = 0; i <= steps; i++){
+    const t = a0 + span * (i / steps);
+    const rr = r + amp * Math.sin(RING_WAVES * t + phase);
+    d += (i ? "L" : "M") + (cx + rr*Math.cos(t)).toFixed(2) + " " + (cy + rr*Math.sin(t)).toFixed(2);
+  }
+  return d;
+}
+let ringPct = 0;
 function setRing(pct){
-  const cx = 48, cy = 48, r = 41, gap = 0.20, start = -Math.PI/2;
+  if (typeof pct === "number") ringPct = pct;
+  const cx = 48, cy = 48, r = 41, gap = 0.22, start = -Math.PI/2;
   const value = $("#ringValue"), track = $("#ringTrack");
   if (!value || !track) return;
-  const sweep = Math.PI * 2 * pct;
-  if (pct <= 0.002){
+  const p = ringPct, sweep = Math.PI * 2 * p;
+  const wavy = p > 0.002 && p < 0.998 && !REDUCED;
+  const amp = wavy ? RING_AMP : 0;
+  if (p <= 0.002){
     value.setAttribute("d", "");
-  } else if (pct >= 0.998){
+  } else if (p >= 0.998){
     value.setAttribute("d",
       arcPath(cx,cy,r,start,start+Math.PI) + arcPath(cx,cy,r,start+Math.PI,start+Math.PI*1.999));
   } else {
-    value.setAttribute("d", arcPath(cx,cy,r,start,start+sweep));
+    value.setAttribute("d", wavyArc(cx,cy,r,start,start+sweep,amp,wavePhase));
   }
   const t0 = start + sweep + gap, t1 = start + Math.PI*2 - gap;
   track.setAttribute("d", (t1 - t0) > 0.06 ? arcPath(cx,cy,r,t0,t1) : "");
@@ -870,6 +888,7 @@ function layoutLinear(){
 function waveLoop(){
   wavePhase -= 0.09;
   document.querySelectorAll('.lin-prog[data-wavy="1"]').forEach(sv => drawLinear(sv, wavePhase));
+  setRing();
   waveRaf = requestAnimationFrame(waveLoop);
 }
 window.addEventListener("resize", layoutLinear);

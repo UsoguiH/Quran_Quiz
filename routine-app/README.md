@@ -24,8 +24,9 @@ A daily routine tracker built to the Material 3 spec.
 - **Wavy linear progress** — active portion drawn as an animated sine wave with a gap,
   a flat track, and the M3 stop indicator dot. It waves while a section is in progress
   and settles flat at 0% or 100%. Shown under each time-of-day header.
-- **Circular progress** — track and active arc with rounded caps and a gap between
-  them, used for the daily ring.
+- **Wavy circular progress** — the daily ring: the active arc is a radial sine wave
+  around the circle with rounded caps and a gap before the track. Like the linear
+  one, it waves while in progress and settles to a smooth arc at 0% and 100%.
 
 ## Features
 - **Today** — routines grouped by Morning / Afternoon / Evening, a progress ring,
