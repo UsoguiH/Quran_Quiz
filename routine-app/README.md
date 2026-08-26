@@ -28,6 +28,25 @@ A daily routine tracker built to the Material 3 spec.
   around the circle with rounded caps and a gap before the track. Like the linear
   one, it waves while in progress and settles to a smooth arc at 0% and 100%.
 
+## Adaptive layout
+Follows the M3 window size classes:
+- **Compact** (<700px) - bottom navigation bar, single pane
+- **Medium** (700-1059px) - navigation rail with its own FAB
+- **Expanded** (>=1060px) - navigation drawer + main pane + supporting pane
+  showing the selected routine's detail (list-detail canonical layout)
+
+## Components
+Navigation drawer / rail / bar, large collapsing top app bar, primary tabs,
+search bar, bottom sheet, dropdown menu, slider, radio buttons, segmented
+button, chips, badge, tooltip, divider, carousel, FAB menu, extended FAB,
+filled / tonal / outlined / text buttons, filled text field, switch, checkbox,
+dialog, snackbar, and elevated / filled / outlined cards.
+
+## Motion
+Ripples on press, shared-axis X transitions between destinations, staggered
+list entrance, animated counters, staggered chart bars, spring FAB menu,
+collapsing app bar, and the sliding tab indicator.
+
 ## Features
 - **Today** — routines grouped by Morning / Afternoon / Evening, a progress ring,
   and a streak counter. Each row shows how often you hit it in the last 7 days.
