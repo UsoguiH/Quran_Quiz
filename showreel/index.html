@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قدراتي — Showreel</title>
+<style>
+/* Baloo Bhaijaan 2: the app's own face. Arabic and Latin subsets are split
+   by unicode-range so one family covers «قدراتي» and "qudrati.xyz" alike. */
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 500; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-500-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 700; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-700-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 800; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-800-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 500; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 700; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 800; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-800-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+
+/* The palette is the app's (css/style.css :root, Figma-exact). */
+:root {
+  --green: #58CC02; --green-dk: #58A700; --green-lip: #478700; --green-bg: #D7FFB8; --green-h: #71DC1A;
+  --blue: #1CB0F6;  --blue-dk: #1899D6;  --blue-light: #DDF4FF; --blue-border: #84D8FF; --blue-pale: #BFE0F0;
+  --purple: #CE82FF; --purple-dk: #A568CC; --purple-tint: #EDD1FF;
+  --gold: #FFC800;  --gold-dk: #E6A000;  --gold-shine: #FFE700; --gold-bg: #FFF4BF;
+  --red: #FF4B4B;   --red-bg: #FFDFE0;   --orange: #FF9600; --orange-bg: #FFEFD6;
+  --ink: #4B4B4B;   --gray: #777777;     --gray-icon: #AFAFAF; --line: #E5E5E5; --gray-shadow: #B7B7B7;
+  --chest: #1E3A8A;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #16181d; overflow: hidden; }
+body { font-family: 'Baloo Bhaijaan 2', sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+#stage {
+  position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+  overflow: hidden; background: #fff; transform-origin: 0 0;
+}
+.scene { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }
+.abs { position: absolute; }
+.cam { position: absolute; inset: 0; }
+
+/* word masks: Arabic is cursive, so text is revealed a word at a time from
+   behind a clip, never letter by letter (that would break the joins) */
+.mask { display: inline-block; overflow: hidden; vertical-align: top; padding: .08em .04em .22em; margin: -.08em -.04em -.22em; }
+.mask > .w { display: inline-block; }
+
+/* ---------- shared: the Duolingo lesson node (71x58 face on a 7px lip) ---------- */
+.node { position: absolute; }
+.node .lip, .node .face { position: absolute; left: 0; top: 0; width: 100%; border-radius: 50%; }
+.node .face { overflow: hidden; }
+.node .face > * { position: absolute; }
+.node .shine { border-radius: 50%; }
+.node .ico { left: 50%; top: 50%; transform: translate(-50%, -54%); }
+
+/* ============ S1 — the start node ============ */
+#s1 { background: #fff; }
+#s1node { left: 810px; top: 430px; width: 300px; height: 275px; }
+#s1node .lip  { height: 245px; top: 30px; background: var(--green-dk); }
+#s1node .face { height: 245px; background: var(--green); }
+#s1node .shine { left: 27.5px; top: 12.7px; width: 245px; height: 203px; background: var(--green-h); }
+#s1node .ico { width: 150px; }
+#s1ring { position: absolute; left: 960px; top: 567px; width: 400px; height: 380px; margin: -190px 0 0 -200px; overflow: visible; }
+.tip {
+  position: absolute; background: #fff; border: 8px solid var(--line); border-radius: 44px;
+  color: var(--green); font-weight: 800; font-size: 76px; line-height: 1; padding: 22px 48px 18px;
+  white-space: nowrap;
+}
+.tip::after, .tip::before {
+  content: ''; position: absolute; left: 50%; border-style: solid; transform: translateX(-50%);
+}
+.tip::before { bottom: -38px; border-width: 30px 28px 0; border-color: var(--line) transparent transparent; }
+.tip::after  { bottom: -26px; border-width: 22px 20px 0; border-color: #fff transparent transparent; }
+#s1tip { left: 960px; top: 338px; }
+
+/* ============ S2 — the path ============ */
+#s2 { background: #fff; }
+#s2col { position: absolute; left: 640px; top: 0; width: 0; height: 0; }
+.banner {
+  position: absolute; left: -300px; top: 80px; width: 600px; height: 124px;
+  border-radius: 22px; background: var(--green); box-shadow: 0 7px 0 var(--green-dk);
+  color: #fff; display: flex; align-items: center; gap: 22px; padding: 0 30px;
+}
+.banner .u-txt { flex: 1; }
+.banner .u-k { font-size: 25px; font-weight: 700; color: #C8F0A8; line-height: 1.2; }
+.banner h2 { margin: 0; font-size: 37px; font-weight: 800; line-height: 1.15; }
+.banner .u-div { width: 3px; align-self: stretch; margin: 18px 0; background: var(--green-dk); }
+.banner .u-side { font-size: 30px; font-weight: 800; line-height: 1; text-align: center; }
+.banner .u-side small { display: block; font-size: 20px; font-weight: 700; color: #C8F0A8; }
+#s2path { position: absolute; left: 0; top: 0; }
+.pn { position: absolute; width: 0; height: 0; }
+.pn .node { left: -54px; top: 0; width: 108px; height: 98px; }
+.pn .node .lip  { height: 88px; top: 11px; }
+.pn .node .face { height: 88px; }
+.pn .node .shine { left: 10px; top: 4.5px; width: 88px; height: 73px; }
+.pn .node .ico { width: 50px; }
+.pn .lbl {
+  position: absolute; top: 118px; left: -130px; width: 260px; text-align: center;
+  font-size: 25px; font-weight: 800; line-height: 1.3; color: var(--gray);
+}
+.st-lock .lip { background: #ADADAD; } .st-lock .face { background: #D2D2D2; } .st-lock .shine { background: transparent; }
+.st-cur  .lip { background: var(--green-dk); } .st-cur .face { background: var(--green); } .st-cur .shine { background: var(--green-h); }
+.st-done .lip { background: var(--gold-dk); } .st-done .face { background: var(--gold); } .st-done .shine { background: var(--gold-shine); }
+.pn .layer { position: absolute; inset: 0; }
+.pn .dots { position: absolute; left: -5px; top: 150px; width: 10px; }
+.pn .dots i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--line); margin: 0 0 16px; }
+#s2tip { left: 0; top: 0; font-size: 40px; padding: 10px 26px 8px; border-width: 5px; border-radius: 24px; }
+#s2tip::before { bottom: -24px; border-width: 19px 17px 0; }
+#s2tip::after  { bottom: -16px; border-width: 14px 12px 0; }
+.pchest { position: absolute; left: -62px; top: -8px; width: 124px; }
+
+.head { position: absolute; right: 120px; text-align: right; }
+.head .kick { font-size: 44px; font-weight: 800; line-height: 1.2; margin-bottom: 44px; }
+.head h1 { margin: 0; font-size: 200px; font-weight: 800; line-height: 1.02; color: var(--ink); letter-spacing: -1px; }
+.head .sub { font-size: 46px; font-weight: 700; color: var(--gray); line-height: 1.3; margin-top: 14px; }
+#s2head { top: 270px; }
+.head h1 { white-space: nowrap; }
+#s2head .kick { color: var(--green); }
+#s2head .acc { color: var(--green); }
+
+/* ============ S3 — the question ============ */
+#s3 { background: var(--blue-light); }
+#s3persp { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 620px 540px; }
+#s3card {
+  position: absolute; left: 170px; top: 44px; width: 900px; height: 980px;
+  background: #fff; border-radius: 56px; box-shadow: 0 14px 0 var(--blue-pale); overflow: hidden;
+}
+.qbar { position: absolute; top: 44px; left: 50px; right: 50px; height: 60px; display: flex; align-items: center; gap: 28px; }
+.qx { width: 40px; height: 40px; flex-shrink: 0; }
+.qprog { flex: 1; height: 30px; border-radius: 15px; background: var(--line); position: relative; overflow: hidden; }
+.qprog i { position: absolute; right: 0; top: 0; bottom: 0; width: 40%; border-radius: 15px; background: var(--green); }
+.qprog i::after { content: ''; position: absolute; left: 12px; right: 12px; top: 7px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.28); }
+.qtimer { display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 22px; border-radius: 29px; background: var(--green-bg); color: var(--green-dk); font-size: 36px; font-weight: 800; }
+.qtimer svg { width: 38px; height: 38px; }
+.qhearts { display: flex; align-items: center; gap: 10px; color: var(--red); font-size: 40px; font-weight: 800; }
+.qhearts svg { width: 46px; }
+.qprompt { position: absolute; right: 60px; top: 142px; font-size: 58px; font-weight: 800; color: var(--ink); }
+.qstem { position: absolute; right: 60px; top: 236px; font-size: 48px; font-weight: 700; color: var(--ink); }
+.choice {
+  position: absolute; right: 60px; left: 60px; height: 104px;
+  display: flex; align-items: center; gap: 26px; padding: 0 28px;
+  background: #fff; border: 5px solid var(--line); border-radius: 28px; box-shadow: 0 5px 0 var(--line);
+  font-size: 44px; font-weight: 500; color: var(--ink);
+}
+.choice .lt { width: 62px; height: 62px; border-radius: 17px; border: 5px solid var(--line); color: var(--gray-icon);
+  display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; flex-shrink: 0; }
+.choice .st { position: absolute; inset: -5px; border-radius: 28px; border: 5px solid; display: flex; align-items: center; gap: 26px; padding: 0 28px; opacity: 0; }
+.choice .st .lt { background: #fff; }
+.choice .st-sel  { border-color: var(--blue-border); background: var(--blue-light); color: var(--blue-dk); box-shadow: 0 5px 0 var(--blue-border); }
+.choice .st-sel .lt { border-color: var(--blue-border); color: var(--blue-dk); }
+.choice .st-ok   { border-color: var(--green); background: var(--green-bg); color: var(--green-dk); box-shadow: 0 5px 0 var(--green); }
+.choice .st-ok .lt { border-color: var(--green); color: var(--green-dk); }
+.qcheck { position: absolute; left: 60px; right: 60px; bottom: 44px; height: 100px; }
+.btn3d { position: absolute; inset: 0; }
+.btn3d .blip, .btn3d .bface { position: absolute; left: 0; right: 0; border-radius: 28px; }
+.btn3d .blip { top: 12px; bottom: 0; }
+.btn3d .bface { top: 0; bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: 800; letter-spacing: .5px; }
+#qchkOff .bface { background: var(--line); color: var(--gray-icon); } #qchkOff .blip { background: var(--line); }
+#qchkOn .bface  { background: var(--green); color: #fff; } #qchkOn .blip { background: var(--green-lip); }
+.fb { position: absolute; left: 0; right: 0; bottom: 0; height: 360px; background: var(--green-bg); }
+.fb .fbh { position: absolute; right: 60px; top: 50px; display: flex; align-items: center; gap: 22px; font-size: 68px; font-weight: 800; color: var(--green-dk); }
+.okb { width: 76px; height: 76px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; }
+.okb svg { width: 44px; }
+.fb .fbs { position: absolute; right: 60px; top: 146px; font-size: 34px; font-weight: 700; color: var(--green-dk); opacity: .85; }
+.touch { position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%; background: rgba(75,75,75,.28); }
+#s3head { top: 250px; width: 700px; }
+#s3head .acc { color: var(--blue); }
+#s3head .kick { color: var(--blue-dk); }
+
+/* ============ S4 — the systems ============ */
+#s4 { background: transparent; }
+.strip { position: absolute; top: 0; width: 480px; height: 1080px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.strip .ic { height: 260px; display: flex; align-items: center; justify-content: center; margin-bottom: 26px; }
+.strip .num { font-size: 210px; font-weight: 800; line-height: .95; }
+.strip .cap { font-size: 50px; font-weight: 800; margin-top: 18px; }
+
+/* ============ S5 — Qaddour wins ============ */
+#s5 { background: var(--green); }
+.title3d { color: #fff; font-weight: 800; text-align: center; white-space: nowrap; }
+#s5title { position: absolute; left: 960px; top: 48px; font-size: 176px; line-height: 1.1; text-shadow: 0 12px 0 var(--green-lip); }
+#s5shadow { position: absolute; left: 960px; top: 1022px; width: 400px; height: 52px; margin: -26px 0 0 -190px; border-radius: 50%; background: rgba(35, 80, 0, .32); }
+#s5m { position: absolute; left: 560px; top: 292px; width: 800px; height: 800px; }
+#s5m img, #s6m img, #s8m img { width: 100%; height: 100%; display: block; }
+.wcard { position: absolute; width: 350px; height: 262px; border-radius: 30px; }
+.wcard .wh { height: 78px; border-radius: 30px 30px 0 0; color: #fff; font-size: 40px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.wcard .wb { position: absolute; left: 0; right: 0; top: 70px; bottom: 0; background: #fff; border-radius: 26px; border: 8px solid; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 92px; font-weight: 800; }
+.wcard .wb svg { width: 74px; }
+#wcXP { left: 1440px; top: 470px; background: var(--gold); box-shadow: 0 10px 0 var(--gold-dk); }
+#wcXP .wh { background: var(--gold); } #wcXP .wb { border-color: var(--gold); color: var(--gold-dk); }
+#wcACC { left: 130px; top: 470px; background: var(--green-dk); box-shadow: 0 10px 0 var(--green-lip); }
+#wcACC .wh { background: var(--green-dk); } #wcACC .wb { border-color: var(--green-dk); color: var(--green-dk); }
+
+/* ============ S6 — the daily chest ============ */
+#s6 { background: transparent; }
+#s6sheet { position: absolute; left: 0; top: 0; width: 1920px; height: 1300px; background: var(--blue); border-radius: 120px 120px 0 0; }
+#s6title { position: absolute; left: 960px; top: 60px; font-size: 150px; line-height: 1.1; text-shadow: 0 11px 0 var(--blue-dk); }
+#s6glow { position: absolute; left: 960px; top: 560px; width: 1500px; height: 1500px; margin: -750px 0 0 -750px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,.55) 30%, rgba(255,255,255,0) 72%); }
+#s6rays { position: absolute; left: 960px; top: 560px; width: 2400px; height: 2400px; margin: -1200px 0 0 -1200px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.2) 0deg 9deg, rgba(255,255,255,0) 9deg 24deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 78%); mask: radial-gradient(closest-side, #000 20%, transparent 78%); }
+#s6shadow { position: absolute; left: 960px; top: 880px; width: 460px; height: 56px; margin: -28px 0 0 -230px; border-radius: 50%; background: rgba(10, 60, 110, .3); }
+#s6chest { position: absolute; left: 700px; top: 330px; width: 520px; height: 580px; }
+#s6chest svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#s6cap { position: absolute; left: 960px; top: 930px; font-size: 56px; color: #fff; }
+#s6pile { position: absolute; left: 960px; top: 760px; width: 0; height: 0; }
+#s6pile svg { position: absolute; left: 0; top: 0; width: 112px; height: 145px; margin: -72px 0 0 -56px; }
+#s6count { position: absolute; left: 960px; top: 920px; display: flex; align-items: center; gap: 22px; font-size: 128px; line-height: 1; color: #fff; text-shadow: 0 9px 0 var(--blue-dk); }
+#s6count svg { width: 84px; filter: drop-shadow(0 9px 0 var(--blue-dk)); }
+#s6wash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+
+/* ============ S7 — rank up ============ */
+#s7 { background: #fff; }
+#s7flood { position: absolute; left: 960px; top: 470px; width: 3000px; height: 3000px; margin: -1500px 0 0 -1500px; border-radius: 50%; background: var(--purple); }
+#s7strip { position: absolute; left: 960px; top: 470px; width: 0; height: 0; }
+.rk { position: absolute; width: 330px; height: 378px; margin: -189px 0 0 -165px; }
+.rk img { width: 100%; height: 100%; display: block; }
+#s7kick { position: absolute; left: 960px; top: 56px; font-size: 66px; font-weight: 800; color: var(--purple-dk); white-space: nowrap; }
+#s7name { position: absolute; left: 960px; top: 730px; height: 240px; width: 1400px; margin-left: -700px; overflow: hidden; }
+#s7name .nm { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-size: 150px; font-weight: 800; line-height: 1.5; white-space: nowrap; }
+#s7iris { position: absolute; left: 960px; top: 470px; width: 2400px; height: 2400px; margin: -1200px 0 0 -1200px; border-radius: 50%; background: var(--green); }
+
+/* ============ S8 — the end card ============ */
+#s8 { background: var(--green); }
+.dia { position: absolute; border-radius: 22%; background: rgba(255,255,255,.14); }
+#s8m { position: absolute; left: 1080px; top: 212px; width: 860px; height: 860px; }
+#s8shadow { position: absolute; left: 1600px; top: 1036px; width: 420px; height: 50px; margin: -25px 0 0 -210px; border-radius: 50%; background: rgba(35, 80, 0, .3); }
+#s8word { position: absolute; left: 640px; top: 150px; font-size: 330px; line-height: 1.15; text-shadow: 0 16px 0 var(--green-lip); }
+#s8sub { position: absolute; left: 640px; top: 560px; font-size: 64px; font-weight: 800; color: #fff; white-space: nowrap; }
+#s8pills { position: absolute; left: 640px; top: 680px; display: flex; gap: 20px; }
+.pill { padding: 12px 36px 10px; border-radius: 999px; background: rgba(255,255,255,.22); color: #fff; font-size: 46px; font-weight: 800; white-space: nowrap; }
+#s8url { position: absolute; left: 640px; top: 820px; width: 600px; height: 132px; margin-left: -300px; }
+#s8url .blip { background: var(--green-lip); border-radius: 36px; }
+#s8url .bface { background: #fff; color: var(--green); border-radius: 36px; font-size: 76px; direction: ltr; letter-spacing: 0; }
+
+/* ---------- preview chrome (hidden when rendering) ---------- */
+#ui { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  background: #0d0f13; color: #cfd3da; font: 600 14px/1 system-ui, sans-serif; direction: ltr; z-index: 9; }
+#ui button { background: #58CC02; color: #fff; border: 0; border-radius: 10px; font: 800 14px/1 system-ui; padding: 10px 16px; box-shadow: 0 3px 0 #478700; cursor: pointer; }
+#ui input { flex: 1; accent-color: #58CC02; }
+#ui span { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+.render #ui { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ================= S1 ================= -->
+  <section class="scene" id="s1">
+    <div class="cam" id="s1cam"><div class="cam" id="s1grp">
+      <svg id="s1ring" viewBox="-200 -190 400 380">
+        <ellipse rx="176" ry="166" fill="none" stroke="#E5E5E5" stroke-width="26"/>
+        <ellipse id="s1arc" rx="176" ry="166" fill="none" stroke="#58CC02" stroke-width="26" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90)"/>
+      </svg>
+      <div class="node" id="s1node">
+        <div class="lip"></div>
+        <div class="face" id="s1face"><div class="shine"></div><svg class="ico" id="s1star" viewBox="0 0 42 40"><path fill="#fff" d="M18.2665 6.04527C19.33 3.69332 22.67 3.69333 23.7335 6.04527L25.9554 10.959C26.4018 11.9462 27.3458 12.616 28.425 12.7114L33.7515 13.1819C36.4147 13.4171 37.4631 16.7555 35.4126 18.4711L31.6082 21.6541C30.7372 22.3828 30.3524 23.5408 30.6139 24.6459L31.7621 29.4978C32.3649 32.045 29.6444 34.0885 27.3659 32.8L22.4767 30.0351C21.5604 29.5169 20.4396 29.5169 19.5233 30.0351L14.6341 32.8C12.3556 34.0885 9.63514 32.045 10.2379 29.4978L11.3861 24.6459C11.6476 23.5408 11.2628 22.3828 10.3918 21.6541L6.58741 18.4711C4.53685 16.7555 5.58529 13.4171 8.2485 13.1819L13.575 12.7114C14.6542 12.616 15.5982 11.9462 16.0446 10.959L18.2665 6.04527Z"/></svg></div>
+      </div>
+      <div class="tip" id="s1tip">ابدأ</div>
+    </div></div>
+  </section>
+
+  <!-- ================= S2 ================= -->
+  <section class="scene" id="s2">
+    <div class="cam" id="s2cam">
+      <div id="s2col">
+        <div id="s2path"></div>
+        <div class="banner" id="s2banner">
+          <div class="u-txt"><div class="u-k">القسم ١، الوحدة ١</div><h2>مهارات وقوانين القدرات</h2></div>
+          <div class="u-div"></div>
+          <div class="u-side">٤<small>وحدات</small></div>
+        </div>
+      </div>
+      <div class="head" id="s2head">
+        <div class="kick"><span class="mask"><span class="w">القسم الكمي، خطوة بخطوة</span></span></div>
+        <h1><span class="mask"><span class="w">درساً</span></span></h1>
+        <h1><span class="mask"><span class="w">بعد</span></span> <span class="mask"><span class="w acc">درس</span></span></h1>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= S3 ================= -->
+  <section class="scene" id="s3">
+    <div id="s3persp">
+      <div id="s3card">
+        <div class="qbar" id="s3bar">
+          <svg class="qx" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#AFAFAF" stroke-width="3.4" stroke-linecap="round"/></svg>
+          <div class="qprog"><i id="s3prog"></i></div>
+          <div class="qtimer"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9.7" fill="#fff" stroke="#58A700" stroke-width="2.5"/><circle cx="11" cy="11.2" r="2.3" fill="#58A700"/><path id="s3hand" d="M11 11.2L15.6 7.4" stroke="#58A700" stroke-width="2" stroke-linecap="round"/></svg><span id="s3time">٠:٦٠</span></div>
+          <div class="qhearts"><svg viewBox="0 0 23 20"><path fill="#FF4B4B" d="M1.33 2.77C4.15-1.26 9.22 1.09 11.41 2.77c2.01-2.01 6.55-4.53 10.08-1.01 3.52 3.53 0 8.57-1.51 10.08-1.1 1.1-5.37 5.09-7.9 7.44a1 1 0 0 1-1.35.01L2.34 11.84C.83 10.5-1.49 6.8 1.33 2.77Z"/><circle cx="6.37" cy="7.31" r="3.02" fill="#FFB2B2"/></svg><span>٥</span></div>
+        </div>
+        <div class="qprompt"><span class="mask"><span class="w">اختر الإجابة الصحيحة:</span></span></div>
+        <div class="qstem"><span class="mask"><span class="w">ما قيمة الرقم ٧ في العدد ٤٫٢٧٥؟</span></span></div>
+        <div id="s3choices"></div>
+        <div class="qcheck" id="s3check">
+          <div class="btn3d" id="qchkOff"><div class="blip"></div><div class="bface">تحقق</div></div>
+          <div class="btn3d" id="qchkOn"><div class="blip"></div><div class="bface" id="qchkFace">تحقق</div></div>
+        </div>
+        <div class="fb" id="s3fb">
+          <div class="fbh"><div class="okb" id="s3okb"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>أحسنت!</span></div>
+          <div class="fbs">الرقم ٧ في خانة أجزاء المئة</div>
+          <div class="qcheck"><div class="btn3d" id="s3cont"><div class="blip" style="background:var(--green-lip)"></div><div class="bface" style="background:var(--green);color:#fff">متابعة</div></div></div>
+        </div>
+        <div class="touch" id="s3touch"></div>
+      </div>
+    </div>
+    <div class="head" id="s3head">
+      <div class="kick"><span class="mask"><span class="w">بأسلوب الاختبار الحقيقي</span></span></div>
+      <h1><span class="mask"><span class="w">أسئلة</span></span></h1>
+      <h1><span class="mask"><span class="w acc">أصلية</span></span></h1>
+      <div class="sub"><span class="mask"><span class="w">والحل خطوة بخطوة</span></span></div>
+    </div>
+  </section>
+
+  <!-- ================= S4 ================= -->
+  <section class="scene" id="s4">
+    <div class="strip" id="st1" style="left:1440px;background:var(--red-bg)">
+      <div class="ic" id="st1ic"><svg width="250" viewBox="0 0 23 20"><path fill="#FF4B4B" d="M1.33 2.77C4.15-1.26 9.22 1.09 11.41 2.77c2.01-2.01 6.55-4.53 10.08-1.01 3.52 3.53 0 8.57-1.51 10.08-1.1 1.1-5.37 5.09-7.9 7.44a1 1 0 0 1-1.35.01L2.34 11.84C.83 10.5-1.49 6.8 1.33 2.77Z"/><circle cx="6.37" cy="7.31" r="3.02" fill="#FFB2B2"/></svg></div>
+      <div class="num" style="color:var(--red)" id="st1n">٥</div>
+      <div class="cap" style="color:#EA2B2B">قلوب في كل درس</div>
+    </div>
+    <div class="strip" id="st2" style="left:960px;background:var(--green-bg)">
+      <div class="ic" id="st2ic"><svg width="250" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9.72" fill="#fff" stroke="#58CC02" stroke-width="2.3"/><circle cx="11" cy="11" r="2.1" fill="#58A700"/><path id="st2hand" d="M11 11L11 4.6" stroke="#58A700" stroke-width="1.9" stroke-linecap="round"/><path id="st2hand2" d="M11 11L14.4 13" stroke="#58A700" stroke-width="1.9" stroke-linecap="round"/></svg></div>
+      <div class="num" style="color:var(--green-dk)" id="st2n">٦٠</div>
+      <div class="cap" style="color:var(--green-lip)">ثانية لكل سؤال</div>
+    </div>
+    <div class="strip" id="st3" style="left:480px;background:var(--orange-bg)">
+      <div class="ic" id="st3ic"><svg width="210" viewBox="0 0 19 24" style="overflow:visible"><g id="st3flame"><path d="M0 15.45V5.69C0 3.64 1.54 3.64 2.57 4.15l2.05 1.03C5.48 3.98 7.39 1.38 8.22.56c1.03-1.03 2.05-.51 3.08.51 1.03 1.03 4.11 5.14 5.65 7.19C18.49 10.32 19 12.37 19 15.45c0 3.08-3.59 8.22-9.76 8.22C3.08 23.67 0 18.02 0 15.45Z" fill="#FF9600"/><path id="st3core" d="M6.16 13.91c.82-1.23 2.06-2.91 2.57-3.59.17-.34.72-.82 1.54 0 1.03 1.03 2.05 3.08 2.57 3.59.51.51 1.03 2.57 0 4.11-1.03 1.54-2.57 2.05-3.6 2.05-1.02 0-2.56-1.03-3.08-2.05-.51-1.03-1.03-2.57 0-4.11Z" fill="#FFC800"/></g></svg></div>
+      <div class="num" style="color:var(--orange)" id="st3n">٤٣</div>
+      <div class="cap" style="color:#E08600">يوماً متتالياً</div>
+    </div>
+    <div class="strip" id="st4" style="left:0;background:var(--blue-light)">
+      <div class="ic" id="st4ic"><svg width="200" viewBox="0 0 17 22" style="overflow:visible"><g id="st4gem"><path d="M0 15.41V6.14c0-.71.38-1.36.99-1.72L7.49.6a2 2 0 0 1 2.02 0l6.5 3.82c.61.36.99 1.01.99 1.72v9.27c0 .68-.34 1.31-.91 1.68l-6.5 4.21a2 2 0 0 1-2.17 0L.91 17.09A2 2 0 0 1 0 15.41Z" fill="#1CB0F6"/><path d="M6.93 2.58 2.15 5.86c-.68.47-.53 1.51.25 1.77l2.17.73c.27.09.57.06.81-.08l2.61-1.49c.31-.18.5-.51.5-.87V3.4c0-.8-.9-1.28-1.56-.82Z" fill="#DDF4FF"/></g></svg></div>
+      <div class="num" style="color:var(--blue)" id="st4n">٥٠</div>
+      <div class="cap" style="color:var(--blue-dk)">جوهرة كل يوم</div>
+    </div>
+  </section>
+
+  <!-- ================= S5 ================= -->
+  <section class="scene" id="s5">
+    <div class="title3d" id="s5title">أكملت الدرس!</div>
+    <div class="wcard" id="wcXP"><div class="wh">الخبرة</div><div class="wb"><svg viewBox="0 0 19 24"><path fill="#FFD900" d="M10.99.08c.6.21 1.01.78 1.01 1.42v6.65l5.49 1.5c.48.13.87.49 1.03.97.16.47.07.99-.23 1.39L9.59 23.41a1.5 1.5 0 0 1-2.69-.85l-.26-6.7-5.54-1.51A1.5 1.5 0 0 1 .32 11.97L9.32.57c.4-.5 1.07-.7 1.67-.49Z"/><path d="M6.3 10.8 1.99 12.74c-.17.08-.15.32.03.38L6.3 14.4v-3.6Z" fill="#F7C100"/></svg><span id="wcXPn">٠</span></div></div>
+    <div class="wcard" id="wcACC"><div class="wh">الدقة</div><div class="wb"><svg viewBox="0 0 24 22"><circle cx="10.4" cy="11.6" r="10.4" fill="#58CC02"/><circle cx="10.4" cy="11.6" r="3.57" fill="#ECFFDE"/><circle cx="10.4" cy="11.6" r="6.78" fill="none" stroke="#ECFFDE" stroke-width="2.5"/><path d="M15.5 3.26 15.98 6.86c.05.35.28.66.61.79l2.77 1.15c.17.07.36.04.5-.07l3.26-2.56c.3-.24.24-.71-.12-.86l-2.3-.96a1 1 0 0 1-.59-.71L19.49.77c-.08-.36-.5-.51-.8-.29l-3 2.31a.6.6 0 0 0-.2.47Z" fill="#58A700"/><path d="M10.4 11.6 20.2 4.16" stroke="#478700" stroke-width="1.5" stroke-linecap="round"/></svg><span id="wcACCn">٠٪</span></div></div>
+    <div id="s5shadow"></div>
+    <div id="s5m"><div id="s5msq" style="width:100%;height:100%"><img src="assets/mascot/qaddour-celebrate.png" alt=""></div></div>
+  </section>
+
+  <!-- ================= S6 ================= -->
+  <section class="scene" id="s6">
+    <div id="s6sheet">
+      <div id="s6rays"></div>
+      <div id="s6glow"></div>
+      <div class="title3d" id="s6title">صندوق اليوم</div>
+      <div id="s6shadow"></div>
+      <div id="s6pile"></div>
+      <div id="s6chest"><div id="s6csq" style="position:absolute;inset:0"></div></div>
+      <div class="title3d" id="s6cap">اضغط لفتحه!</div>
+      <div class="title3d" id="s6count"><svg viewBox="0 0 17 22"><path d="M0 15.41V6.14c0-.71.38-1.36.99-1.72L7.49.6a2 2 0 0 1 2.02 0l6.5 3.82c.61.36.99 1.01.99 1.72v9.27c0 .68-.34 1.31-.91 1.68l-6.5 4.21a2 2 0 0 1-2.17 0L.91 17.09A2 2 0 0 1 0 15.41Z" fill="#fff"/><path d="M6.93 2.58 2.15 5.86c-.68.47-.53 1.51.25 1.77l2.17.73c.27.09.57.06.81-.08l2.61-1.49c.31-.18.5-.51.5-.87V3.4c0-.8-.9-1.28-1.56-.82Z" fill="#DDF4FF"/></svg><span id="s6n">+٠</span></div>
+    </div>
+    <div id="s6wash"></div>
+  </section>
+
+  <!-- ================= S7 ================= -->
+  <section class="scene" id="s7">
+    <div id="s7flood"></div>
+    <div id="s7kick">ترقّيت إلى مستوى جديد</div>
+    <div id="s7strip"></div>
+    <div id="s7name"></div>
+    <div id="s7iris"></div>
+  </section>
+
+  <!-- ================= S8 ================= -->
+  <section class="scene" id="s8">
+    <div class="dia" id="d1" style="left:90px;top:70px;width:150px;height:150px"></div>
+    <div class="dia" id="d2" style="left:1030px;top:40px;width:96px;height:96px"></div>
+    <div class="dia" id="d3" style="left:160px;top:880px;width:110px;height:110px"></div>
+    <div class="dia" id="d4" style="left:1180px;top:640px;width:70px;height:70px"></div>
+    <div id="s8shadow"></div>
+    <div id="s8m"><div id="s8msq" style="width:100%;height:100%"><img src="assets/mascot/qaddour-point-nofloor.png" alt=""></div></div>
+    <div class="title3d" id="s8word"><span class="mask" style="padding-top:.02em"><span class="w">قدراتي</span></span></div>
+    <div id="s8sub"><span class="mask"><span class="w">تدرّب</span></span> <span class="mask"><span class="w">على</span></span> <span class="mask"><span class="w">القسم</span></span> <span class="mask"><span class="w">الكمي</span></span> <span class="mask"><span class="w">وأنت</span></span> <span class="mask"><span class="w">تلعب</span></span></div>
+    <div id="s8pills"><div class="pill">أسئلة أصلية</div><div class="pill">مجاني بالكامل</div><div class="pill">بدون حساب</div></div>
+    <div id="s8url"><div class="btn3d" id="s8btn"><div class="blip"></div><div class="bface" id="s8face">qudrati.xyz</div></div></div>
+  </section>
+
+</div>
+
+<div id="ui"><button id="play">▶ Play</button><input id="scrub" type="range" min="0" max="15" step="0.001" value="0"><span id="clock">0.000 s</span></div>
+<audio id="snd" src="soundtrack.wav" preload="auto"></audio>
+
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/CustomEase.min.js"></script>
+<script src="showreel.js"></script>
+</body>
+</html>
