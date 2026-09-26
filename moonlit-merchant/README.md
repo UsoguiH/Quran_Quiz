@@ -5,6 +5,24 @@ The UI borrows Minecraft's layout (hotbar, slot grids, hearts and armor rows, be
 messages, F3 debug screen) but is drawn smooth and rounded instead of pixelated. The world is rendered with a
 "shader pack" style pipeline.
 
+## Play the preview
+
+**https://claude.ai/artifact/GTLQWvSyBSa3hRGkJB7CSg**: works on desktop and on phones. On a phone, turn it sideways.
+
+## Mobile controls
+
+| Control | Action |
+| --- | --- |
+| Left side of the screen | Floating joystick (touch anywhere to move) |
+| Right side of the screen | Swipe to look around |
+| ⚔️ | Attack (hold to draw the bow) |
+| 🛡️ / 💨 | Block / dodge roll |
+| ✋ or tap the prompt | Interact / pick up |
+| 🔄 ❤️ 🌙 | Swap weapon · quick heal · hold for the Merchant Pendant |
+| 🎒 📖 ⏸ | Inventory · ledger · pause |
+| Hotbar | Tap a slot to select it, tap it again to use it |
+| Inventory | Tap to pick up/place, long-press to split a stack |
+
 ## Run it
 
 ```bash
