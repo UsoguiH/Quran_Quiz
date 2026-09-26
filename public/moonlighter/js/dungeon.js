@@ -313,6 +313,7 @@ class DungeonScene {
     this.darkCv = mkCanvas(W, H);
     this.rain = this.d.style === 'grave' ? Array.from({ length: 70 }, () => ({ x: rand(W + 60), y: rand(H), v: rand(180, 260) })) : [];
     this.music = 'dungeon';
+    HUD.reset();
     this.startFloor(0);
     this.showBanner();
     if (!S.flags.tipPendant) { S.flags.tipPendant = true; setTimeout(() => UI.open(new TipUI('pendant')), 400); }
@@ -624,10 +625,7 @@ function worldPrompt(x, y, list) {
 }
 function drawCombatHUD(sc) {
   const st = playerStats();
-  goldBadge(6, 5);
-  ctx.drawImage(heartIcon(), 32, 7);
-  hpBar(41, 7, 60, 7, S.hp / st.maxHp);
-  txt(`${Math.ceil(S.hp)}/${st.maxHp}`, 100, 21, { size: 6, align: 'right', color: '#fff', outline: '#1b1420' });
+  drawHealthHUD(5, 5);
   // weapon circles top-right
   const wx = W - 26, wy = 6;
   const circ = (x, y, r, fill) => { ell(ctx, x, y, r, r, '#1b1420'); ell(ctx, x + 1, y + 1, r - 2, r - 2, fill); };

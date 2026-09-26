@@ -13,6 +13,20 @@ const SHOP_DOOR = { x: 192, y: 214 };
 const CHEST_POS = { x: 294, y: 72 }, BED_POS = { x: 84, y: 64 };
 const SHOP_DAY_LEN = 170; // seconds
 
+// rounded speech bubble with an outline and a little tail pointing at tailX
+function roundBubble(x, y, w, h, fill, tailX) {
+  x = Math.round(x); y = Math.round(y);
+  const o = '#1b1420';
+  R(ctx, x + 2, y, w - 4, h, o); R(ctx, x, y + 2, w, h - 4, o); R(ctx, x + 1, y + 1, w - 2, h - 2, o);
+  R(ctx, x + 2, y + 1, w - 4, h - 2, fill); R(ctx, x + 1, y + 2, w - 2, h - 4, fill);
+  R(ctx, x + 2, y + h - 3, w - 4, 1, shade(fill, -0.08));
+  if (tailX !== undefined) { R(ctx, tailX - 2, y + h - 1, 4, 2, fill); R(ctx, tailX - 1, y + h + 1, 2, 1, fill); P(ctx, tailX - 3, y + h, o); P(ctx, tailX + 2, y + h, o); P(ctx, tailX - 2, y + h + 1, o); P(ctx, tailX + 1, y + h + 1, o); P(ctx, tailX - 1, y + h + 2, o); P(ctx, tailX, y + h + 2, o); }
+}
+function priceBubble(s, x, bottomY) {
+  const w = Math.max(14, textW(s, 7) + 8), h = 11;
+  roundBubble(x - w / 2, bottomY - h - 2, w, h, '#ffffff', x);
+  txt(s, x, bottomY - 5, { size: 7, align: 'center', color: '#1b1420', bold: true });
+}
 function tableCount() { return [4, 6, 8][S.invest.shop || 0]; }
 function demandMul(id) { return 1 + 0.25 * (S.pop[id] || 0); }
 function popLabel(id) { const p = S.pop[id] || 0; return p > 0.4 ? 'High' : p < -0.4 ? 'Low' : 'Neutral'; }
@@ -28,41 +42,73 @@ function renderShopBG() {
   const c = mkCanvas(W, H), g = c.getContext('2d'), rng = mulberry32(5);
   R(g, 0, 0, W, H, '#0c0808');
   const { x, y, w, h } = SHOP_ROOM;
-  // floor planks
-  R(g, x, y, w, h, '#c98a4e');
-  for (let j = y; j < y + h; j += 6) { R(g, x, j, w, 1, '#a86a38'); for (let i = x + (rng() * 20 | 0); i < x + w; i += 24 + (rng() * 20 | 0)) R(g, i, j, 1, 6, '#a86a38'); }
-  for (let i = 0; i < 80; i++) P(g, x + rng() * w, y + rng() * h, '#d89a5e');
-  // rug
-  R(g, 120, 104, 70, 46, '#8a2a2a'); R(g, 122, 106, 66, 42, '#b8403a'); R(g, 126, 110, 58, 34, '#3f8f7a'); R(g, 130, 114, 50, 26, '#b8403a');
-  for (let i = 0; i < 6; i++) { P(g, 124 + i * 12, 104, '#e8d0a0'); P(g, 124 + i * 12, 149, '#e8d0a0'); }
-  // top wall
-  R(g, x, y, w, 40, '#8a4a28'); for (let j = y; j < y + 40; j += 5) R(g, x, j, w, 1, '#6a3418');
-  for (let i = x; i < x + w; i += 22) R(g, i, y, 2, 40, '#5a2c14');
-  R(g, x, y + 38, w, 4, '#5a2c14'); R(g, x, y + 42, w, 3, 'rgba(0,0,0,0.25)');
-  // windows on the top wall
-  for (const wx of [96, 236]) { R(g, wx - 1, y + 7, 26, 20, '#3a1c10'); R(g, wx, y + 8, 24, 18, '#9ad0e8'); R(g, wx + 11, y + 8, 2, 18, '#3a1c10'); R(g, wx, y + 16, 24, 2, '#3a1c10'); R(g, wx + 2, y + 10, 4, 3, '#e8f8ff'); }
-  // shelves with jars
-  for (const sx of [140, 184]) {
-    R(g, sx, y + 20, 36, 3, '#5a2c14');
-    for (let k = 0; k < 4; k++) { const col = choice(['#3fae8f', '#d8403a', '#e8c060', '#8ad0ff', '#b88ad8']); R(g, sx + 2 + k * 9, y + 13, 6, 7, '#1b1420'); R(g, sx + 3 + k * 9, y + 14, 4, 5, col); }
+  // warm floor planks with grain and knots
+  R(g, x, y, w, h, '#cf9058');
+  for (let j = y; j < y + h; j += 7) {
+    R(g, x, j, w, 1, '#a8663a'); R(g, x, j + 1, w, 1, '#dea46a');
+    for (let i = x + (rng() * 30 | 0); i < x + w; i += 30 + (rng() * 26 | 0)) R(g, i, j, 1, 7, '#a8663a');
   }
-  // side walls
-  R(g, x, y, 10, h, '#6a3418'); R(g, x + w - 10, y, 10, h, '#6a3418');
-  for (let j = y; j < y + h; j += 5) { R(g, x, j, 10, 1, '#5a2c14'); R(g, x + w - 10, j, 10, 1, '#5a2c14'); }
-  // bottom wall with doorway
-  R(g, x, y + h - 10, w, 10, '#6a3418');
-  R(g, 176, y + h - 12, 32, 14, '#241208'); R(g, 178, y + h - 10, 28, 12, '#3a1c10');
-  // cut corners (octagonal room)
+  for (let i = 0; i < 120; i++) R(g, x + rng() * w, y + rng() * h, 2 + rng() * 5 | 0, 1, rng() < 0.5 ? '#c07e48' : '#dca068');
+  for (let i = 0; i < 14; i++) { const kx = x + rng() * w, ky = y + rng() * h; ell(g, kx, ky, 3, 2, '#9a5a32'); }
+  // big patterned rug under the tables
+  const rx = 84, ry = 70, rw = 138, rh = 118;
+  R(g, rx, ry, rw, rh, '#5a2e1c'); R(g, rx + 1, ry + 1, rw - 2, rh - 2, '#a85e36'); R(g, rx + 5, ry + 5, rw - 10, rh - 10, '#6a3822');
+  R(g, rx + 6, ry + 6, rw - 12, rh - 12, '#dcc08e');
+  g.fillStyle = '#c6a268';
+  for (let i = -rh; i < rw; i += 12) for (let t = 0; t < rh - 16; t++) { const px = rx + 8 + i + t, py = ry + 8 + t; if (px > rx + 7 && px < rx + rw - 8) g.fillRect(px, py, 1, 1); const qx = rx + rw - 9 - i - t; if (qx > rx + 7 && qx < rx + rw - 8) g.fillRect(qx, py, 1, 1); }
+  R(g, rx + 12, ry + 12, rw - 24, 1, '#8a5a36'); R(g, rx + 12, ry + rh - 13, rw - 24, 1, '#8a5a36'); R(g, rx + 12, ry + 12, 1, rh - 24, '#8a5a36'); R(g, rx + rw - 13, ry + 12, 1, rh - 24, '#8a5a36');
+  ell(g, rx + rw / 2 - 16, ry + rh / 2 - 12, 32, 24, '#a85e36'); ell(g, rx + rw / 2 - 12, ry + rh / 2 - 9, 24, 18, '#dcc08e'); ell(g, rx + rw / 2 - 5, ry + rh / 2 - 4, 10, 8, '#2aa08c');
+  for (let i = rx + 2; i < rx + rw - 2; i += 3) { R(g, i, ry - 2, 1, 2, '#efe0c0'); R(g, i, ry + rh, 1, 2, '#efe0c0'); }
+  // log walls
+  const logs = (lx, ly, lw, lh, vertical) => {
+    R(g, lx, ly, lw, lh, '#7a3e22');
+    if (vertical) for (let i = lx; i < lx + lw; i += 5) { R(g, i, ly, 4, lh, '#9a5230'); R(g, i, ly, 1, lh, '#b0663a'); }
+    else for (let j = ly; j < ly + lh; j += 6) { R(g, lx, j, lw, 5, '#9a5230'); R(g, lx, j, lw, 1, '#b8703e'); R(g, lx, j + 4, lw, 1, '#6a3420'); }
+  };
+  logs(x, y, w, 42); logs(x, y, 10, h, true); logs(x + w - 10, y, 10, h, true); logs(x, y + h - 10, w, 10);
+  R(g, x, y + 40, w, 3, '#4a2414'); g.globalAlpha = 0.28; R(g, x + 10, y + 43, w - 20, 6, '#000'); R(g, x + 10, y, 5, h, '#000'); R(g, x + w - 15, y, 5, h, '#000'); g.globalAlpha = 1;
+  // window with daylight
+  R(g, 84, y + 6, 30, 24, '#3a1c10'); R(g, 86, y + 8, 26, 20, '#a8dcf0'); R(g, 98, y + 8, 2, 20, '#3a1c10'); R(g, 86, y + 17, 26, 2, '#3a1c10'); R(g, 88, y + 10, 5, 3, '#e8f8ff'); R(g, 82, y + 29, 34, 3, '#6a3420');
+  // fireplace
+  R(g, 164, y + 2, 44, 40, '#8a4a3a'); for (let j = y + 4; j < y + 40; j += 5) for (let i = 164 + ((j / 5) % 2) * 4; i < 206; i += 8) R(g, i, j, 7, 4, '#a0584a');
+  R(g, 162, y + 2, 48, 4, '#6a3a2a'); ell(g, 172, y + 16, 28, 22, '#1a0a08'); R(g, 172, y + 27, 28, 15, '#1a0a08');
+  R(g, 176, y + 36, 20, 4, '#5a3020'); R(g, 178, y + 34, 16, 3, '#7a4428');
+  // shelves with pottery and jars
+  for (const [sx, sy] of [[222, y + 12], [222, y + 28]]) {
+    R(g, sx, sy + 8, 64, 3, '#5a2c14'); R(g, sx, sy + 8, 64, 1, '#8a4a28');
+    for (let k = 0; k < 6; k++) {
+      const col = choice(['#c86a3a', '#2aa08c', '#e8c060', '#8ad0ff', '#b88ad8', '#d84a3e']), px = sx + 3 + k * 10;
+      if (rng() < 0.5) { ell(g, px, sy, 8, 8, '#1b1420'); ell(g, px + 1, sy + 1, 6, 7, col); P(g, px + 2, sy + 2, '#fff'); }
+      else { R(g, px + 1, sy + 1, 6, 7, '#1b1420'); R(g, px + 2, sy + 2, 4, 6, col); R(g, px + 2, sy, 4, 2, '#8a5a32'); }
+    }
+  }
+  // hanging plants
+  for (const hx of [72, 312]) { R(g, hx, y, 1, 10, '#3a2010'); ell(g, hx - 6, y + 10, 13, 9, '#8a4a28'); ell(g, hx - 8, y + 6, 17, 9, '#3e7428'); ell(g, hx - 5, y + 6, 8, 5, '#5e9a34'); R(g, hx - 7, y + 14, 2, 8, '#3e7428'); R(g, hx + 5, y + 14, 2, 6, '#3e7428'); }
+  // doorway
+  R(g, 176, y + h - 12, 32, 14, '#241208'); R(g, 178, y + h - 10, 28, 12, '#3a1c10'); R(g, 178, y + h - 10, 28, 2, '#f0d890');
+  // rounded corners of the room
   g.fillStyle = '#0c0808';
   for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
     g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + sx * 26, cy); g.lineTo(cx, cy + sy * 26); g.fill();
   }
-  // counter (drawn in bg; register sprite on top)
-  R(g, 232, 142, 70, 16, '#5a2c14'); R(g, 233, 142, 68, 6, '#b8693a'); R(g, 233, 142, 68, 2, '#d88a52');
-  // plants & barrels
-  g.drawImage(barrelSprite(), 72, 172); g.drawImage(barrelSprite(), 300, 172);
+  // counter
+  R(g, 232, 142, 70, 16, '#5a2c14'); R(g, 233, 142, 68, 7, '#b8693a'); R(g, 233, 142, 68, 2, '#e09a5e'); R(g, 236, 150, 62, 1, '#7a3e22');
+  g.drawImage(barrelSprite(), 72, 172); g.drawImage(barrelSprite(), 300, 172); g.drawImage(crateSprite(), 286, 172);
   g.drawImage(bushSprite(1), 300, 46);
   return c;
+}
+// warm light that moves: fireplace flicker, window shaft, lamp glow
+function drawShopLights(t) {
+  ctx.globalCompositeOperation = 'lighter';
+  const f = 1 + Math.sin(t * 9) * 0.05 + Math.sin(t * 23) * 0.03;
+  const glow = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
+  glow(186, 46, 70 * f, 'rgba(255,150,60,0.22)');
+  glow(268, 138, 40, 'rgba(255,200,120,0.12)');
+  ctx.fillStyle = 'rgba(255,240,190,0.07)';
+  ctx.beginPath(); ctx.moveTo(86, 36); ctx.lineTo(112, 36); ctx.lineTo(170, 150); ctx.lineTo(128, 150); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  // live fire
+  for (let i = 0; i < 5; i++) { const fx = 178 + i * 4, fh = 5 + ((Math.sin(t * 11 + i * 2) + 1) * 3 | 0); R(ctx, fx, 48 - fh, 3, fh, '#f0602a'); R(ctx, fx + 1, 48 - fh + 2, 1, fh - 2, '#ffc040'); }
 }
 
 class ShopScene {
@@ -206,17 +252,16 @@ class ShopScene {
     for (let i = 0; i < tableCount(); i++) {
       const [tx, ty] = TABLE_POS[i], sh = S.shelves[i];
       if (!sh || !sh.item) continue;
-      const s = fmt(sh.price), w = textW(s, 6) + 6;
-      R(ctx, tx - w / 2, ty - 26, w, 9, '#1b1420'); R(ctx, tx - w / 2 + 1, ty - 25, w - 2, 7, '#f4ecd6'); P(ctx, tx, ty - 17, '#1b1420');
-      txt(s, tx, ty - 19.5, { size: 6, align: 'center', color: '#3a2e20' });
+      priceBubble(fmt(sh.price), tx, ty - 17);
     }
+    drawShopLights(this.t);
     for (const c of this.customers) c.drawBubble();
     drawFX(this, 0, 0);
     if (this.near) worldPrompt(this.near.x, this.near.y - 26, [['A', this.near.label]]);
     this.drawHUD();
   }
   drawHUD() {
-    goldBadge(6, 5);
+    drawHealthHUD(5, 5);
     // day/night progress bar like the balance screen
     if (this.open) {
       const x = W / 2 - 60, y = 6;
@@ -375,12 +420,12 @@ class Customer {
   }
   drawBubble() {
     if (!this.bubble) return;
-    const x = Math.round(this.x), y = Math.round(this.y) - 34;
-    R(ctx, x - 9, y - 9, 18, 16, '#1b1420'); R(ctx, x - 8, y - 8, 16, 14, '#f4ecd6'); R(ctx, x - 2, y + 6, 4, 2, '#1b1420'); R(ctx, x - 1, y + 6, 2, 1, '#f4ecd6');
+    const x = Math.round(this.x), y = Math.round(this.y) - 36;
+    roundBubble(x - 11, y - 10, 22, 18, '#f7efd8', x);
     const k = this.bubble.kind;
     if (k === '!') txt('!', x, y + 4, { size: 11, align: 'center', color: C.red, bold: true });
     else if (k === 'wait') txt('...', x, y + 2, { size: 8, align: 'center', color: C.paperDark });
     else if (k === 'thinking') { const n = 1 + Math.floor(Game.time * 3) % 3; txt('.'.repeat(n), x - 4, y + 2, { size: 8, color: C.paperDark }); }
-    else ctx.drawImage(faceIcon(k), x - 7, y - 7);
+    else ctx.drawImage(faceIcon(k), x - 7, y - 8);
   }
 }

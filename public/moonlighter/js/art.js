@@ -482,12 +482,13 @@ function fistSprite(pal) {
 
 // ---------------------------------------------------------------- props
 function tableSprite() {
-  return cached('table', () => sprite(24, 16, g => {
-    R(g, 2, 9, 3, 7, C.wood2); R(g, 19, 9, 3, 7, C.wood2);
-    R(g, 0, 2, 24, 8, C.wood); R(g, 0, 2, 24, 2, C.wood3); R(g, 0, 9, 24, 2, C.wood2);
-    R(g, 7, 4, 1, 5, C.wood2); R(g, 16, 4, 1, 5, C.wood2);
-    R(g, 3, 3, 18, 6, '#e8dcc0'); R(g, 3, 8, 18, 1, '#c8b890'); // cloth
-  }));
+  // wooden display table with a lace-edged cream cloth
+  return cached('table', () => sprite(26, 18, g => {
+    R(g, 2, 10, 3, 8, '#5a2a18'); R(g, 21, 10, 3, 8, '#5a2a18'); R(g, 3, 10, 1, 8, '#7a3e22');
+    R(g, 0, 3, 26, 9, '#8a4226'); R(g, 0, 3, 26, 2, '#b8663a'); R(g, 0, 11, 26, 2, '#5a2a18');
+    R(g, 2, 3, 22, 7, '#f0e2c0'); R(g, 2, 3, 22, 1, '#fff6e0'); R(g, 2, 9, 22, 1, '#d8c498');
+    for (let i = 2; i < 24; i += 3) { P(g, i, 10, '#f0e2c0'); P(g, i + 1, 11, '#f0e2c0'); }
+  }, '#2a1208'));
 }
 function chestSprite(open, fancy) {
   return cached(`chest_${open}_${fancy}`, () => sprite(20, 16, g => {
@@ -517,22 +518,60 @@ function lampSprite(lit) {
     R(g, 1, 0, 6, 7, '#3a3440'); R(g, 2, 1, 4, 5, lit ? '#ffe28a' : '#6a6a50'); R(g, 0, 0, 8, 1, '#3a3440');
   }));
 }
-function treeSprite(v, night) {
+// autumn trees (orange / gold / green / rust), lit from the top-left
+const TREE_PALS = [
+  ['#7a2c10', '#c0521a', '#e8842c', '#ffbe58'],
+  ['#8a5a0c', '#c8901a', '#eebc3a', '#fff08a'],
+  ['#264a1e', '#3e7428', '#5e9a34', '#98c850'],
+  ['#6a2412', '#a8381a', '#d85a26', '#ff9448'],
+];
+function treeSprite(v) {
   return cached(`tree_${v}`, () => {
-    const pals = [['#2f6a3a', '#3f8a46', '#5aac56', '#86d06a'], ['#2a5a3a', '#347a48', '#4a9a5a', '#72c07a'], ['#3a5a2a', '#4f7a34', '#6b9a40', '#96c25a']][v % 3];
-    return sprite(36, 44, g => {
-      R(g, 15, 28, 6, 15, '#5a3a22'); R(g, 15, 28, 2, 15, '#7a5232'); R(g, 12, 41, 12, 3, '#5a3a22');
-      ell(g, 2, 8, 32, 26, pals[0]); ell(g, 4, 4, 28, 26, pals[1]); ell(g, 7, 2, 20, 18, pals[2]);
-      ell(g, 10, 4, 10, 7, pals[3]);
-      for (let i = 0; i < 6; i++) { const a = i * 1.1; ell(g, 16 + Math.cos(a) * 10, 14 + Math.sin(a) * 8, 6, 5, pals[i % 2 ? 1 : 2]); }
-    });
+    const P4 = TREE_PALS[v % 4], rng = mulberry32(31 + v * 7);
+    return sprite(50, 60, g => {
+      // trunk and roots
+      R(g, 21, 36, 8, 22, '#5a3220'); R(g, 21, 36, 2, 22, '#7c4a2c'); R(g, 27, 38, 2, 20, '#452616');
+      R(g, 16, 56, 18, 3, '#5a3220'); R(g, 13, 57, 5, 2, '#4a2a18'); R(g, 32, 57, 5, 2, '#4a2a18');
+      thickLine(g, 25, 40, 14, 30, 3, '#5a3220'); thickLine(g, 25, 38, 36, 28, 3, '#5a3220');
+      const cl = [[25, 26, 21], [11, 28, 11], [39, 28, 11], [17, 15, 13], [33, 15, 13], [25, 8, 12], [25, 32, 13]];
+      for (const [x, y, r] of cl) ell(g, x - r, y - r * 0.85 + 3, r * 2, r * 1.7, P4[0]);
+      for (const [x, y, r] of cl) ell(g, x - r + 1, y - r * 0.85 + 1, r * 2 - 3, r * 1.7 - 4, P4[1]);
+      for (const [x, y, r] of cl) ell(g, x - r + 2, y - r * 0.85 + 1, r * 1.35, r * 1.05, P4[2]);
+      for (const [x, y, r] of cl.slice(3)) ell(g, x - r + 4, y - r * 0.85 + 2, r * 0.7, r * 0.45, P4[3]);
+      // leaf texture
+      for (let i = 0; i < 90; i++) { const x = 4 + rng() * 42, y = 2 + rng() * 38; P(g, x, y, rng() < 0.55 ? P4[0] : P4[2]); }
+      for (let i = 0; i < 25; i++) { const x = 8 + rng() * 26, y = 3 + rng() * 18; P(g, x, y, P4[3]); }
+    }, '#2a1408');
   });
 }
 function bushSprite(v) {
-  return cached('bush' + v, () => sprite(16, 12, g => {
-    ell(g, 0, 2, 16, 10, '#2f6a3a'); ell(g, 2, 1, 12, 8, '#3f8a46'); ell(g, 4, 1, 6, 4, '#5aac56');
-    if (v === 1) { P(g, 4, 5, '#e05050'); P(g, 10, 4, '#e05050'); P(g, 7, 7, '#e05050'); }
-  }));
+  return cached('bush' + v, () => sprite(18, 13, g => {
+    const P4 = v === 1 ? TREE_PALS[0] : TREE_PALS[2];
+    ell(g, 0, 3, 18, 10, P4[0]); ell(g, 1, 1, 15, 9, P4[1]); ell(g, 3, 1, 8, 5, P4[2]); P(g, 5, 2, P4[3]); P(g, 6, 2, P4[3]);
+    if (v === 1) { P(g, 4, 6, '#ffe070'); P(g, 11, 5, '#ffe070'); P(g, 8, 8, '#ffe070'); }
+  }, '#2a1408'));
+}
+// tall golden grass patch you can walk through
+function tallGrassSprite(v) {
+  return cached('tgrass' + v, () => sprite(44, 22, g => {
+    const rng = mulberry32(5 + v * 13);
+    const hs = []; for (let x = 0; x < 44; x++) hs.push(10 + Math.round(Math.sin(x * 0.35 + v) * 3 + rng() * 5 - (x < 3 || x > 40 ? 6 : 0)));
+    for (let x = 0; x < 44; x++) {
+      const h = Math.max(2, hs[x]);
+      R(g, x, 22 - h, 1, h, '#e2a82a');
+      R(g, x, 22 - Math.min(h, 5), 1, Math.min(h, 5), '#b8781a');
+      if (rng() < 0.45) R(g, x, 22 - h, 1, 3, '#f8d860');
+      if (rng() < 0.12) R(g, x, 22 - h - 2, 1, 2, '#fff0a0');
+      if (rng() < 0.15) R(g, x, 22 - h + 4, 1, 5, '#c88a20');
+    }
+  }, '#6a4210'));
+}
+function stumpSprite() {
+  return cached('stump', () => sprite(18, 14, g => {
+    R(g, 2, 5, 14, 8, '#6a3e22'); R(g, 2, 5, 3, 8, '#865232'); R(g, 13, 6, 3, 7, '#4a2a16');
+    ell(g, 1, 1, 16, 8, '#c8905a'); ell(g, 4, 3, 10, 4, '#a86e3c'); ell(g, 6, 4, 6, 2, '#c8905a'); P(g, 9, 4, '#8a5a2e');
+    R(g, 0, 11, 4, 2, '#6a3e22'); R(g, 14, 12, 4, 1, '#6a3e22');
+  }, '#2a1408'));
 }
 function rockSprite(pal, v = 0) {
   return cached(`rock_${pal.id}_${v}`, () => sprite(16, 15, g => {
@@ -657,7 +696,7 @@ function faceIcon(kind) { // 'ecstatic','content','expensive','angry','thinking'
     const col = { ecstatic: '#7de6ae', content: '#a8e6c0', expensive: '#e8c870', angry: '#e86a5a', thinking: '#e8dcc0' }[kind];
     ell(g, 0, 0, 12, 12, col); ell(g, 2, 1, 5, 3, shade(col, 0.4));
     const d = '#2a1c1c';
-    if (kind === 'ecstatic') { R(g, 3, 4, 2, 1, d); R(g, 7, 4, 2, 1, d); P(g, 2, 5, d); P(g, 9, 5, d); R(g, 3, 7, 6, 2, d); R(g, 4, 9, 4, 1, '#d84a3e'); }
+    if (kind === 'ecstatic') { ell(g, 2, 3, 4, 4, '#f3c552'); ell(g, 7, 3, 4, 4, '#f3c552'); P(g, 3, 4, '#fff6d0'); P(g, 8, 4, '#fff6d0'); P(g, 3, 5, '#c98d2b'); P(g, 8, 5, '#c98d2b'); R(g, 3, 8, 6, 2, d); R(g, 4, 9, 4, 1, '#d84a3e'); }
     else if (kind === 'content') { R(g, 3, 4, 2, 2, d); R(g, 7, 4, 2, 2, d); P(g, 3, 7, d); R(g, 4, 8, 4, 1, d); P(g, 8, 7, d); }
     else if (kind === 'expensive') { R(g, 3, 4, 2, 2, d); R(g, 7, 4, 2, 2, d); R(g, 3, 8, 6, 1, d); P(g, 9, 3, '#5aa0e0'); P(g, 9, 4, '#5aa0e0'); }
     else if (kind === 'angry') { P(g, 2, 3, d); P(g, 3, 4, d); P(g, 9, 3, d); P(g, 8, 4, d); R(g, 3, 5, 2, 1, d); R(g, 7, 5, 2, 1, d); R(g, 4, 8, 4, 1, d); P(g, 3, 9, d); P(g, 8, 9, d); }

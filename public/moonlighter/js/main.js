@@ -170,11 +170,14 @@ function frame(now) {
     } else if (UI.blocking()) UI.update(dt);
     else Game.scene.update(dt);
     Toasts.update(dt);
+    if (S) HUD.update(dt);
     resetCtx();
     Game.scene.draw();
     UI.draw();
     Toasts.draw();
     if (Game.fadeDir) { const a = Game.fadeDir === 1 ? Game.fadeT : 1 - Game.fadeT; ctx.globalAlpha = clamp(a, 0, 1); R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
+    Game.fxHit = Math.max(0, (Game.fxHit || 0) - dt * 3);
+    PostFX.render(fxParams());
   } catch (e) {
     console.error(e); crashed = (e && e.message) || String(e); drawError(crashed);
   }
@@ -191,6 +194,7 @@ async function boot() {
   } catch (e) { /* offline: fall back to monospace */ }
   _mcache.clear();
   skinTouchButtons();
+  PostFX.init();
   Game.setScene(new TitleScene());
   window.__game = { Game, get S() { return S; }, UI, Input };
   requestAnimationFrame(frame);

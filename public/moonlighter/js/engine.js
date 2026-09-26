@@ -32,6 +32,7 @@ function resize() {
   else { wrap.style.alignItems = 'center'; wrap.style.paddingTop = '0'; }
   resetCtx();
   if (typeof Input !== 'undefined') Input.layoutTouch();
+  if (typeof PostFX !== 'undefined') PostFX.resize();
 }
 function resetCtx() {
   ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
@@ -117,7 +118,7 @@ const Store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-const OPTS = Object.assign({ shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false },
+const OPTS = Object.assign({ fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false },
   Store.get('mk_opts', {}));
 function saveOpts() { Store.set('mk_opts', OPTS); }
 

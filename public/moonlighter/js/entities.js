@@ -13,6 +13,12 @@ function drawSpr(img, x, y, o = {}) {
   ctx.drawImage(img, dx, dy);
   ctx.globalAlpha = 1;
 }
+// long skewed sun shadow of a sprite (town, daytime)
+function castSprShadow(img, x, y, a = 0.26) {
+  const sil = cached('sil_' + (img.__sid || (img.__sid = Math.random())), () => whiteOf(img, '#000'));
+  ctx.save(); ctx.globalAlpha = a; ctx.transform(1, 0, -0.62, -0.34, x, y); ctx.drawImage(sil, -img.width / 2, -img.height); ctx.restore();
+}
+function sunOut() { return Game.scene instanceof TownScene && S.phase === 'day'; }
 function shadow(x, y, w = 12, a = 0.3) { ctx.globalAlpha = a; ell(ctx, Math.round(x - w / 2), Math.round(y - 2), w, 4, '#000'); ctx.globalAlpha = 1; }
 
 // ---------------------------------------------------------------- effects
@@ -77,6 +83,7 @@ class Player {
     this.state = 'idle'; this.st = 0; this.anim = 0; this.inv = 0; this.combo = 0; this.queued = false;
     this.rollCd = 0; this.lastSafe = { x, y }; this.hitList = new Set(); this.charge = 0; this.flash = 0; this.stepT = 0;
     this.kx = 0; this.ky = 0; this.trail = []; this.trailT = 0;
+    this.stam = 100; this.stamCd = 0; this.exhausted = false;
   }
   get weapon() { const line = S.equip.w[S.equip.active] || S.equip.w[0]; return line; }
   update(dt, sc, mode) {
@@ -84,6 +91,10 @@ class Player {
     this.inv = Math.max(0, this.inv - dt); this.rollCd = Math.max(0, this.rollCd - dt); this.flash = Math.max(0, this.flash - dt);
     this.st += dt;
     for (const t of this.trail) t.life -= dt; this.trail = this.trail.filter(t => t.life > 0);
+    // stamina: dash and run spend it, it refills after a short pause
+    this.stamCd = Math.max(0, this.stamCd - dt);
+    if (this.stamCd <= 0 && this.state !== 'run' && this.state !== 'roll') this.stam = Math.min(100, this.stam + 48 * dt);
+    if (this.exhausted && this.stam > 35) this.exhausted = false;
     const ax = Input.axis();
     const moving = Math.hypot(ax.x, ax.y) > 0.2;
     const world = sc.world;
@@ -152,7 +163,8 @@ class Player {
     // --- free movement
     if (moving) {
       this.dir = dirFromVec(ax.x, ax.y);
-      const running = Input.runHeld();
+      const running = Input.runHeld() && !this.exhausted;
+      if (running) { this.stam -= 16 * dt; this.stamCd = 0.45; if (this.stam <= 0) { this.stam = 0; this.exhausted = true; } }
       const sp = st.speed * (running ? 1.55 : 1);
       moveBody(this, ax.x * sp * dt, ax.y * sp * dt, world);
       if (this.state !== (running ? 'run' : 'walk')) this.anim = 0;
@@ -180,6 +192,8 @@ class Player {
     toast(WEAPON_LINES[this.weapon].names[S.gear[this.weapon]]);
   }
   startRoll(ax, sc) {
+    if (this.stam < 18) { HUD.shake = 0.15; return; }
+    this.stam -= 22; this.stamCd = 0.55;
     let vx = ax.x, vy = ax.y;
     if (Math.hypot(vx, vy) < 0.2) { vx = DIRV[this.dir][0]; vy = DIRV[this.dir][1]; }
     const l = Math.hypot(vx, vy); this.rvx = vx / l; this.rvy = vy / l;
@@ -277,13 +291,13 @@ class Player {
     }
     const st = playerStats();
     const dmg = Math.max(1, Math.round(amount * (1 - st.def / 100)));
-    S.hp -= dmg; this.inv = 0.8; this.flash = 0.2;
+    S.hp -= dmg; this.inv = 0.8; this.flash = 0.2; HUD.onHit(dmg); Game.fxHit = 1;
     FX.text(sc, this.x, this.y - 24, '-' + dmg, '#ff7a6a');
     sfx('hurt'); sc.shake(4); sc.hitstop = 0.06;
     if (OPTS.vibration && navigator.vibrate) navigator.vibrate(40);
     if (from) { const a = Math.atan2(this.y - from.y, this.x - from.x); this.kx = Math.cos(a) * 140; this.ky = Math.sin(a) * 140; }
     if (this.state !== 'fall') { this.state = 'hurt'; this.st = 0; }
-    if (S.hp <= 0) { S.hp = 0; this.state = 'dead'; this.st = 0; sc.onPlayerDeath && sc.onPlayerDeath(from); }
+    if (S.hp <= 0) { S.hp = 0; this.state = 'dead'; this.st = 0; HUD.onDeath(); sc.onPlayerDeath && sc.onPlayerDeath(from); }
     return true;
   }
   draw(ox, oy) {
@@ -319,6 +333,7 @@ class Player {
     const drawWeaponFirst = this.dir === 1 || this.dir === 2 && false;
     if ((atk || this.state === 'block' || this.state === 'charge') && drawWeaponFirst) this.drawWeapon(x, y);
     const img = heroSprite(this.dir, frame, pose);
+    if (sunOut()) castSprShadow(img, x, y);
     drawSpr(img, x, y + 1);
     if (this.flash > 0) drawSpr(whiteOf(img), x, y + 1, { alpha: 0.7 });
     if ((atk || this.state === 'block' || this.state === 'charge') && !drawWeaponFirst) this.drawWeapon(x, y);
