@@ -432,3 +432,40 @@ export const EMBLEM_ROWS = [
 export function emblemSprite(col: string): HTMLCanvasElement {
   return sprite(`emblem:${col}`, EMBLEM_ROWS, { c: col });
 }
+
+/* ---------- grilling and cutscene props ---------- */
+
+const Q_ROWS: Record<'numbers' | 'proof' | 'story', string[]> = {
+  numbers: ['...c...', '.ccccc.', 'cc.c...', '.ccccc.', '...c.cc', '.ccccc.', '...c...'],
+  proof: ['..c.c..', '.ccccc.', 'cc...cc', '.c...c.', 'cc...cc', '.ccccc.', '..c.c..'],
+  story: ['.cc.cc.', 'ccccccc', 'ccccccc', 'ccccccc', '.ccccc.', '..ccc..', '...c...'],
+};
+
+export const Q_COLOR: Record<'numbers' | 'proof' | 'story', string> = {
+  numbers: '#c98a1c',
+  proof: '#2c5a8a',
+  story: '#c8452f',
+};
+
+export function qIcon(type: 'numbers' | 'proof' | 'story'): HTMLCanvasElement {
+  return sprite(`q:${type}`, Q_ROWS[type], { c: Q_COLOR[type] });
+}
+
+export function envelopeSprite(): HTMLCanvasElement {
+  return sprite(
+    'envelope',
+    [
+      'oooooooooooooo',
+      'oTttttttttttTo',
+      'otTttttttttTto',
+      'ottTttttttTtto',
+      'otttTttttTttto',
+      'ottttTyyTtttto',
+      'otttttyyttttto',
+      'otttttttttttto',
+      'otttttttttttto',
+      'oooooooooooooo',
+    ],
+    { t: '#1f9e87', T: '#13695b', y: '#f2b134' },
+  );
+}

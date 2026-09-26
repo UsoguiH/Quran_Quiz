@@ -1,37 +1,30 @@
 import {
-  EXTRA_TOPICS,
-  OPENERS,
   PRODUCTS,
   SHARKS,
   SHARK_ORDER,
-  TOPIC_ASKERS,
   fairValue,
-  money,
-  questionText,
-  type AnswerKind,
-  type OpenerId,
   type ProductId,
+  type QType,
   type SharkId,
   type Strength,
-  type Topic,
 } from './data';
-import type { SfxName } from './sfx';
 
 export type Phase =
   | 'title'
+  | 'cut-intro'
   | 'workshop'
   | 'ask'
-  | 'hallway'
-  | 'doors'
-  | 'intro'
-  | 'opener'
-  | 'qa'
+  | 'cut-walkin'
+  | 'pitch'
+  | 'demo'
+  | 'grill'
   | 'offers'
-  | 'negotiate'
-  | 'deal'
+  | 'haggle'
+  | 'cut-deal'
+  | 'cut-nodeal'
+  | 'cut-later'
   | 'epilogue';
 
-export type Speaker = SharkId | 'you' | 'producer' | 'narrator';
 export type BubbleKind = 'happy' | 'love' | 'meh' | 'angry' | 'ask' | 'dots' | 'out' | 'offer';
 
 export interface Bubble {
@@ -40,13 +33,8 @@ export interface Bubble {
   sub?: string;
 }
 
-export interface Line {
-  id: number;
-  who: Speaker;
-  text: string;
-  bubbles?: Partial<Record<SharkId, Bubble>>;
-  sfx?: SfxName;
-}
+export type PitchGrade = 'perfect' | 'good' | 'miss';
+export type GrillOutcome = 'nailed' | 'wrong' | 'hit';
 
 export interface Offer {
   shark: SharkId;
@@ -54,11 +42,22 @@ export interface Offer {
   equity: number;
   royalty?: number;
   loan?: number;
+  /** Lowest equity this Shark will shake on. Hidden from the player. */
   minEquity: number;
+  /** The haggle bar can't go below what you originally asked for. */
+  floor: number;
   patience: number;
 }
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export interface Stats {
+  pitch: PitchGrade[];
+  catches: number;
+  throws: number;
+  nailed: number;
+  asked: number;
+}
 
 export interface Result {
   deal: Offer | null;
@@ -68,28 +67,22 @@ export interface Result {
   ratio: number;
   grade: Grade;
   title: string;
-  good: number;
   outs: number;
-  headline: string;
 }
 
 export interface GameState {
   phase: Phase;
-  queue: Line[];
-  after: Phase | null;
-  seq: number;
   seed: number;
   product: ProductId;
   browse: ProductId;
   ask: { amount: number; equity: number };
   sharks: Record<SharkId, { interest: number; out: boolean }>;
-  confidence: number;
-  opener: OpenerId | null;
-  topics: Topic[];
-  qIndex: number;
-  asker: SharkId | null;
-  good: number;
+  nerve: number;
+  stats: Stats;
+  caught: SharkId[];
   offers: Offer[];
+  /** Order in which the Sharks announce offers or drop out. */
+  reveal: { shark: SharkId; offer: boolean }[];
   deal: Offer | null;
   result: Result | null;
 }
@@ -97,21 +90,23 @@ export interface GameState {
 export type Action =
   | { type: 'start' }
   | { type: 'toTitle' }
+  | { type: 'cutDone' }
   | { type: 'browse'; id: ProductId }
   | { type: 'pickProduct' }
   | { type: 'back' }
   | { type: 'setAsk'; amount?: number; equity?: number }
   | { type: 'confirmAsk' }
-  | { type: 'advance' }
-  | { type: 'openDoors' }
-  | { type: 'enterTank' }
-  | { type: 'opener'; id: OpenerId }
-  | { type: 'answer'; kind: AnswerKind }
-  | { type: 'accept'; shark: SharkId }
-  | { type: 'counter'; shark: SharkId; equity: number }
+  | { type: 'pitch'; grade: PitchGrade }
+  | { type: 'demo'; shark: SharkId | null }
+  | { type: 'grill'; shark: SharkId; outcome: GrillOutcome; strength: Strength }
+  | { type: 'next' }
+  | { type: 'sharkWalks'; shark: SharkId }
+  | { type: 'shake'; shark: SharkId; equity: number }
   | { type: 'walk' };
 
-export const QUESTION_COUNT = 5;
+export const PITCH_BEATS = 3;
+export const SAMPLES = 5;
+export const QUESTIONS = 9;
 
 const DEFAULT_ASK: Record<ProductId, { amount: number; equity: number }> = {
   glow: { amount: 150000, equity: 15 },
@@ -125,27 +120,20 @@ const freshSharks = () =>
 export function initialState(seed = Date.now() | 0): GameState {
   return {
     phase: 'title',
-    queue: [],
-    after: null,
-    seq: 0,
     seed,
     product: 'glow',
     browse: 'glow',
     ask: { ...DEFAULT_ASK.glow },
     sharks: freshSharks(),
-    confidence: 3,
-    opener: null,
-    topics: [],
-    qIndex: 0,
-    asker: null,
-    good: 0,
+    nerve: 3,
+    stats: { pitch: [], catches: 0, throws: 0, nailed: 0, asked: 0 },
+    caught: [],
     offers: [],
+    reveal: [],
     deal: null,
     result: null,
   };
 }
-
-/* ---------- helpers that mutate a draft ---------- */
 
 function rand(s: GameState): number {
   s.seed = (s.seed + 0x6d2b79f5) | 0;
@@ -155,12 +143,7 @@ function rand(s: GameState): number {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
-const pick = <T,>(s: GameState, list: T[]): T => list[Math.floor(rand(s) * list.length)];
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
-
-function say(s: GameState, who: Speaker, text: string, extra: Partial<Omit<Line, 'id' | 'who' | 'text'>> = {}) {
-  s.queue.push({ id: ++s.seq, who, text, ...extra });
-}
 
 export const askValuation = (ask: { amount: number; equity: number }) => ask.amount / (ask.equity / 100);
 
@@ -168,143 +151,67 @@ export function greedOf(s: Pick<GameState, 'product' | 'ask'>): number {
   return askValuation(s.ask) / fairValue(PRODUCTS[s.product]);
 }
 
-const inSharks = (s: GameState) => SHARK_ORDER.filter((id) => !s.sharks[id].out);
+export const inSharks = (s: Pick<GameState, 'sharks'>) => SHARK_ORDER.filter((id) => !s.sharks[id].out);
 
-function reactionBubble(delta: number): Bubble {
-  if (delta >= 10) return { kind: 'love' };
-  if (delta >= 3) return { kind: 'happy' };
-  if (delta >= -3) return { kind: 'meh' };
-  return { kind: 'angry' };
+/** How hard a question type hits this product. Greedy asks make the numbers tougher. */
+export function strengthFor(s: Pick<GameState, 'product' | 'ask'>, q: QType): Strength {
+  const base = PRODUCTS[s.product].grill[q];
+  if (q === 'numbers' && greedOf(s) > 1.6) return base === 'strong' ? 'ok' : 'weak';
+  return base;
 }
 
-function strengthFor(s: GameState, topic: Topic): Strength {
-  if (topic === 'valuation') {
-    const g = greedOf(s);
-    return g <= 1.15 ? 'strong' : g <= 1.6 ? 'ok' : 'weak';
-  }
-  return PRODUCTS[s.product].strengths[topic] ?? 'ok';
-}
-
-const BASE: Record<AnswerKind, Record<Strength, number>> = {
-  honest: { strong: 10, ok: 5, weak: -3 },
-  bold: { strong: 12, ok: 4, weak: -10 },
-  dodge: { strong: -8, ok: -8, weak: -8 },
+const bump = (s: GameState, id: SharkId, d: number) => {
+  s.sharks[id].interest = clamp(Math.round(s.sharks[id].interest + d), 0, 100);
 };
+
+const nerveMult = (s: GameState) => 0.7 + s.nerve * 0.1;
 
 function checkOuts(s: GameState, threshold: number) {
   inSharks(s).forEach((id) => {
-    if (s.sharks[id].interest < threshold) {
-      s.sharks[id].out = true;
-      say(s, id, pick(s, SHARKS[id].outLines), { bubbles: { [id]: { kind: 'out' } }, sfx: 'out' });
-    }
+    if (s.sharks[id].interest < threshold) s.sharks[id].out = true;
   });
 }
 
-function goTo(s: GameState, phase: Phase) {
-  s.phase = phase;
-  s.after = null;
-  enterPhase(s, phase);
-}
-
-function enterPhase(s: GameState, phase: Phase) {
+function buildOffers(s: GameState) {
   const p = PRODUCTS[s.product];
-  switch (phase) {
-    case 'qa': {
-      const topic = s.topics[s.qIndex];
-      const live = inSharks(s);
-      s.asker = TOPIC_ASKERS[topic].find((id) => live.includes(id)) ?? live[0] ?? null;
-      break;
+  const fair = fairValue(p);
+  const askVal = askValuation(s.ask);
+  s.offers = [];
+  s.reveal = [];
+  inSharks(s).forEach((id) => {
+    const st = s.sharks[id];
+    const shark = SHARKS[id];
+    if (st.interest < 50) {
+      st.out = true;
+      s.reveal.push({ shark: id, offer: false });
+      return;
     }
-    case 'offers': {
-      s.asker = null;
-      say(s, 'narrator', 'The questions stop. The Sharks lean back. Time for offers.');
-      const fair = fairValue(p);
-      const askVal = askValuation(s.ask);
-      inSharks(s).forEach((id) => {
-        const st = s.sharks[id];
-        const shark = SHARKS[id];
-        if (st.interest < 50) {
-          st.out = true;
-          say(s, id, pick(s, shark.outLines), { bubbles: { [id]: { kind: 'out' } }, sfx: 'out' });
-          return;
-        }
-        const sharkVal = Math.min(fair * (0.55 + st.interest / 150), askVal);
-        let amount = s.ask.amount;
-        let equity = (amount / sharkVal) * 100;
-        let floor = s.ask.equity;
-        const offer: Offer = { shark: id, amount, equity: 0, minEquity: 0, patience: shark.patience };
-        if (shark.style === 'royalty') {
-          equity -= 4;
-          offer.royalty = 1;
-        } else if (shark.style === 'cash') {
-          amount = Math.round((amount * 1.25) / 5000) * 5000;
-          offer.amount = amount;
-          equity = (amount / sharkVal) * 100;
-          floor = s.ask.equity * (amount / s.ask.amount);
-        } else if (shark.style === 'loan') {
-          offer.loan = amount / 2;
-          equity = (amount / 2 / sharkVal) * 100 + 2;
-          floor = s.ask.equity / 2;
-        }
-        const eq = clamp(Math.round(equity), Math.ceil(floor), 60);
-        const flex = 0.1 + (st.interest - 50) / 200;
-        offer.equity = eq;
-        offer.minEquity = clamp(Math.round(eq * (1 - flex)), Math.ceil(floor), eq);
-        s.offers.push(offer);
-        say(s, id, offerLine(offer), {
-          bubbles: { [id]: { kind: 'offer', text: money(offer.amount), sub: `${eq}%` } },
-          sfx: 'offer',
-        });
-      });
-      if (s.offers.length === 0) {
-        say(s, 'narrator', 'Not a single offer. The room goes quiet.');
-        s.after = 'deal';
-      } else {
-        say(
-          s,
-          'narrator',
-          s.offers.length === 1
-            ? 'One offer on the table. Your move.'
-            : `${s.offers.length} offers on the table. The Sharks are watching you. Your move.`,
-        );
-        s.after = 'negotiate';
-      }
-      break;
+    const sharkVal = Math.min(fair * (0.55 + st.interest / 150), askVal);
+    let amount = s.ask.amount;
+    let equity = (amount / sharkVal) * 100;
+    let floor = s.ask.equity;
+    const offer: Offer = { shark: id, amount, equity: 0, minEquity: 0, floor: 0, patience: shark.patience };
+    if (shark.style === 'royalty') {
+      equity -= 4;
+      offer.royalty = 1;
+    } else if (shark.style === 'cash') {
+      amount = Math.round((amount * 1.25) / 5000) * 5000;
+      offer.amount = amount;
+      equity = (amount / sharkVal) * 100;
+      floor = s.ask.equity * (amount / s.ask.amount);
+    } else if (shark.style === 'loan') {
+      offer.loan = amount / 2;
+      equity = (amount / 2 / sharkVal) * 100 + 2;
+      floor = s.ask.equity / 2;
     }
-    case 'deal': {
-      s.asker = null;
-      if (s.deal) {
-        const shark = SHARKS[s.deal.shark];
-        say(s, s.deal.shark, "Come here! Let's go make some money together.", {
-          bubbles: { [s.deal.shark]: { kind: 'love' } },
-          sfx: 'deal',
-        });
-        say(s, 'narrator', `You shake hands with ${shark.name}. The other Sharks clap.`);
-        say(s, 'you', 'I did it. I actually did it.');
-      } else {
-        say(s, 'you', 'Thank you, Sharks. I still believe in this.', { sfx: 'out' });
-        say(s, 'narrator', 'You walk out of the Tank without a deal. The doors close behind you.');
-      }
-      s.after = 'epilogue';
-      break;
-    }
-    case 'epilogue': {
-      s.result = computeResult(s);
-      say(s, 'narrator', 'Six months later...');
-      say(s, 'narrator', s.result.headline, { sfx: ['S', 'A', 'B'].includes(s.result.grade) ? 'deal' : 'blip' });
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-function offerLine(o: Offer): string {
-  const m = money(o.amount);
-  if (o.royalty) return `${m} for ${o.equity}%, plus a $1 royalty on every unit until I've made my money back.`;
-  if (o.loan) return `${m}. Half as a loan at 8%, and the other half for ${o.equity}% of the company.`;
-  if (SHARKS[o.shark].style === 'cash') return `I'll give you more than you asked for. ${m} for ${o.equity}%.`;
-  return `I'll give you ${m} for ${o.equity}%.`;
+    const eq = clamp(Math.round(equity), Math.ceil(floor), 60);
+    const flex = 0.1 + (st.interest - 50) / 200;
+    offer.equity = eq;
+    offer.floor = Math.min(eq, Math.ceil(floor));
+    offer.minEquity = clamp(Math.round(eq * (1 - flex)), offer.floor, eq);
+    s.offers.push(offer);
+    s.reveal.push({ shark: id, offer: true });
+  });
 }
 
 const BOOST: Record<SharkId, (cat: string) => number> = {
@@ -323,22 +230,18 @@ const TITLES: Record<SharkId, string> = {
   nova: 'Clean-Label Contender',
 };
 
-const HEADLINES: Record<SharkId, string> = {
-  rex: 'Rex got you into 1,200 stores. Your garage is now a warehouse.',
-  goldfin: 'Mr. Goldfin collects his royalty every month. He sends a card that just says "More."',
-  coral: 'Coral put you on her home shopping show. You sold out in nine minutes.',
-  tiger: "Tiger's team rebuilt your app. Downloads went through the roof.",
-  nova: 'Nova got you a clean-label certification and a spot on 500 new shelves.',
-};
+/** Points for playing the rounds well; they become post-show buzz. */
+export function performance(st: Stats): number {
+  const pitch = st.pitch.reduce((n, g) => n + (g === 'perfect' ? 2 : g === 'good' ? 1 : 0), 0);
+  return pitch + st.catches + st.nailed;
+}
 
 function computeResult(s: GameState): Result {
   const p = PRODUCTS[s.product];
   const deal = s.deal;
-  // what the company would be worth in six months with no show at all
   const gf = 1 + (p.growth / 100) * 3;
   const baseline = fairValue(p) * gf;
-  // every answer that landed adds a little post-show buzz
-  const buzz = 1 + s.good * 0.03;
+  const buzz = 1 + performance(s.stats) * 0.012;
   const boost = (deal ? BOOST[deal.shark](p.category) : 1.15) * buzz;
   const revenue6 = (p.sales / 2) * gf * boost;
   let companyValue = baseline * boost;
@@ -356,9 +259,6 @@ function computeResult(s: GameState): Result {
     : grade === 'C'
       ? 'Walked Away Wiser'
       : 'Back to the Garage';
-  const headline = deal
-    ? HEADLINES[deal.shark]
-    : 'Your episode aired anyway. The website crashed from orders for two days.';
   return {
     deal,
     revenue6,
@@ -367,13 +267,11 @@ function computeResult(s: GameState): Result {
     ratio,
     grade,
     title,
-    good: s.good,
     outs: SHARK_ORDER.filter((id) => s.sharks[id].out).length,
-    headline,
   };
 }
 
-/* ---------- reducer ---------- */
+const NEXT_ROUND: Partial<Record<Phase, Phase>> = { pitch: 'demo', demo: 'grill', grill: 'offers', offers: 'haggle' };
 
 export function reducer(state: GameState, action: Action): GameState {
   const s: GameState = structuredClone(state);
@@ -386,10 +284,23 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'start': {
       if (s.phase !== 'title' && s.phase !== 'epilogue') return state;
       const n = initialState(s.seed);
-      n.phase = 'workshop';
-      say(n, 'narrator', 'Your garage. 2:14 AM. Tomorrow you walk into the Tank.');
-      say(n, 'narrator', "Three prototypes, one pitch. Pick the product you'll bet everything on.");
+      n.phase = 'cut-intro';
       return n;
+    }
+
+    case 'cutDone': {
+      const next: Partial<Record<Phase, Phase>> = {
+        'cut-intro': 'workshop',
+        'cut-walkin': 'pitch',
+        'cut-deal': 'cut-later',
+        'cut-nodeal': 'cut-later',
+        'cut-later': 'epilogue',
+      };
+      const to = next[s.phase];
+      if (!to) return state;
+      s.phase = to;
+      if (to === 'cut-later') s.result = computeResult(s);
+      return s;
     }
 
     case 'browse':
@@ -397,11 +308,10 @@ export function reducer(state: GameState, action: Action): GameState {
       return s;
 
     case 'pickProduct':
-      if (s.phase !== 'workshop' || s.queue.length) return state;
+      if (s.phase !== 'workshop') return state;
       s.product = s.browse;
       s.ask = { ...DEFAULT_ASK[s.product] };
       s.phase = 'ask';
-      say(s, 'narrator', `${PRODUCTS[s.product].name} it is. Now the hard part: how much do you ask for, and for what slice?`);
       return s;
 
     case 'back':
@@ -424,190 +334,103 @@ export function reducer(state: GameState, action: Action): GameState {
         if (sh.dislikes.includes(p.category)) i -= 12;
         s.sharks[id] = { interest: clamp(Math.round(i), 5, 95), out: false };
       });
-      s.phase = 'hallway';
-      say(s, 'producer', "Hey! I'm Pia, I produce your segment. You're up in two minutes.");
-      say(s, 'producer', p.tips[0]);
-      say(s, 'producer', p.tips[1]);
-      if (greed > 1.6) say(s, 'producer', 'And that valuation is spicy. Be ready to defend it.');
-      else if (greed < 0.95) say(s, 'producer', 'Your ask is modest. The Sharks will like that.');
-      say(s, 'producer', 'Walk to the doors when you’re ready. Breathe.');
+      s.phase = 'cut-walkin';
       return s;
     }
 
-    case 'openDoors':
-      if (s.phase !== 'hallway' || s.queue.length) return state;
-      s.phase = 'doors';
-      return s;
-
-    case 'enterTank':
-      if (s.phase !== 'doors') return state;
-      s.phase = 'intro';
-      say(s, 'narrator', 'The doors swing open. Five Sharks watch you walk to your mark.', {
-        bubbles: Object.fromEntries(SHARK_ORDER.map((id) => [id, { kind: 'dots' }])),
-      });
-      say(
-        s,
-        'you',
-        `Hi Sharks! I'm the founder of ${p.name}, and I'm seeking ${money(s.ask.amount)} for ${s.ask.equity}% of my company.`,
-      );
-      say(s, 'you', p.tagline);
-      s.after = 'opener';
-      return s;
-
-    case 'advance': {
-      if (!s.queue.length) return state;
-      s.queue.shift();
-      if (!s.queue.length && s.after) goTo(s, s.after);
+    case 'pitch': {
+      if (s.phase !== 'pitch' || s.stats.pitch.length >= PITCH_BEATS) return state;
+      s.stats.pitch.push(action.grade);
+      const d = action.grade === 'perfect' ? 7 : action.grade === 'good' ? 3 : -4;
+      SHARK_ORDER.forEach((id) => bump(s, id, d * (d > 0 ? nerveMult(s) : 1) + (rand(s) * 2 - 1)));
+      if (action.grade === 'perfect') s.nerve = clamp(s.nerve + 1, 0, 5);
+      if (action.grade === 'miss') s.nerve = clamp(s.nerve - 1, 0, 5);
       return s;
     }
 
-    case 'opener': {
-      if (s.phase !== 'opener' || s.queue.length) return state;
-      const op = OPENERS.find((o) => o.id === action.id)!;
-      s.opener = op.id;
-      say(s, 'you', op.line);
-      const bubbles: Partial<Record<SharkId, Bubble>> = {};
-      SHARK_ORDER.forEach((id) => {
-        const d = Math.round((op.effects[id] ?? 0) * (0.8 + rand(s) * 0.4));
-        s.sharks[id].interest = clamp(s.sharks[id].interest + d, 0, 100);
-        bubbles[id] = reactionBubble(d);
-      });
-      const best = SHARK_ORDER.reduce((a, b) => ((op.effects[a] ?? 0) >= (op.effects[b] ?? 0) ? a : b));
-      say(s, best, pick(s, SHARKS[best].goodLines), { bubbles, sfx: 'blip' });
-      const extras = [...EXTRA_TOPICS].sort(() => rand(s) - 0.5);
-      s.topics = ['sales', 'margin', extras[0], 'valuation', extras[1]];
-      s.qIndex = 0;
-      s.after = 'qa';
-      return s;
-    }
-
-    case 'answer': {
-      if (s.phase !== 'qa' || s.queue.length || !s.asker) return state;
-      const topic = s.topics[s.qIndex];
-      const strength = strengthFor(s, topic);
-      const base = BASE[action.kind][strength];
-      const confMult = 0.7 + s.confidence * 0.1;
-      const asker = s.asker;
-      const bubbles: Partial<Record<SharkId, Bubble>> = {};
-      let askerDelta = 0;
-      inSharks(s).forEach((id) => {
-        const sh = SHARKS[id];
-        const w = sh.weights[action.kind];
-        let d = base;
-        if (base > 0) d = base * w * confMult + (sh.loves.includes(p.category) ? 2 : 0);
-        else if (action.kind === 'bold') d = base * (2.2 - w);
-        else if (action.kind === 'dodge') d = base * w;
-        if (id === asker) d *= 1.6;
-        d = Math.round(d + (rand(s) * 4 - 2));
-        s.sharks[id].interest = clamp(s.sharks[id].interest + d, 0, 100);
-        if (id === asker) askerDelta = d;
-        else if (Math.abs(d) >= 8) bubbles[id] = reactionBubble(d);
-      });
-      bubbles[asker] = reactionBubble(askerDelta);
-      const good = askerDelta > 2;
-      if (good) s.good += 1;
-      s.confidence = clamp(s.confidence + (good ? 1 : -1), 0, 5);
-      const q = questionText(topic, p, s.ask);
-      say(s, 'you', q.answers[action.kind]);
-      say(s, asker, pick(s, good ? SHARKS[asker].goodLines : SHARKS[asker].badLines), {
-        bubbles,
-        sfx: good ? 'good' : 'bad',
-      });
-      checkOuts(s, 22);
-      s.qIndex += 1;
-      if (inSharks(s).length === 0) {
-        say(s, 'narrator', 'All five Sharks are out.');
-        s.deal = null;
-        s.after = 'deal';
-      } else if (s.qIndex < QUESTION_COUNT) {
-        s.after = 'qa';
-      } else {
-        s.after = 'offers';
-      }
-      return s;
-    }
-
-    case 'accept': {
-      if (s.phase !== 'negotiate' || s.queue.length) return state;
-      const o = s.offers.find((x) => x.shark === action.shark);
-      if (!o) return state;
-      s.deal = o;
-      say(s, 'you', `${SHARKS[o.shark].short}, you've got a deal!`);
-      s.after = 'deal';
-      return s;
-    }
-
-    case 'counter': {
-      if (s.phase !== 'negotiate' || s.queue.length) return state;
-      const o = s.offers.find((x) => x.shark === action.shark);
-      if (!o) return state;
-      const sh = SHARKS[o.shark];
-      const eq = Math.round(action.equity);
-      say(s, 'you', `${sh.short}, would you do ${money(o.amount)} for ${eq}%?`);
-      if (eq >= o.minEquity) {
-        s.deal = { ...o, equity: eq };
-        say(s, o.shark, 'You drive a hard bargain. Fine. Deal!', {
-          bubbles: { [o.shark]: { kind: 'love' } },
-          sfx: 'good',
-        });
-        s.after = 'deal';
+    case 'demo': {
+      if (s.phase !== 'demo' || s.stats.throws >= SAMPLES) return state;
+      s.stats.throws += 1;
+      const id = action.shark;
+      if (!id || s.sharks[id].out) {
+        inSharks(s).forEach((o) => bump(s, o, -1));
         return s;
       }
-      if (o.patience > 0) {
-        o.patience -= 1;
-        o.equity = Math.max(o.minEquity, Math.round((o.equity + eq) / 2));
-        say(
-          s,
-          o.shark,
-          o.patience === 0
-            ? `${money(o.amount)} for ${o.equity}%. That's my final offer.`
-            : `I'll meet you partway. ${money(o.amount)} for ${o.equity}%.`,
-          { bubbles: { [o.shark]: { kind: 'offer', text: money(o.amount), sub: `${o.equity}%` } }, sfx: 'offer' },
-        );
+      s.stats.catches += 1;
+      const first = !s.caught.includes(id);
+      if (first) s.caught.push(id);
+      const loves = SHARKS[id].loves.includes(p.category);
+      bump(s, id, first ? (loves ? 10 : 6) * nerveMult(s) : 2);
+      return s;
+    }
+
+    case 'grill': {
+      if (s.phase !== 'grill') return state;
+      const { shark, outcome, strength } = action;
+      if (outcome === 'nailed') {
+        s.stats.nailed += 1;
+        s.stats.asked += 1;
+        const gain = strength === 'strong' ? 9 : strength === 'weak' ? 10 : 7;
+        bump(s, shark, gain * nerveMult(s));
+        inSharks(s).forEach((o) => o !== shark && bump(s, o, 1));
+        s.nerve = clamp(s.nerve + 1, 0, 5);
+      } else if (outcome === 'wrong') {
+        bump(s, shark, -5);
+        s.nerve = clamp(s.nerve - 1, 0, 5);
       } else {
-        s.offers = s.offers.filter((x) => x !== o);
-        s.sharks[o.shark].out = true;
-        say(s, o.shark, "No. I told you that was final. I'm out.", {
-          bubbles: { [o.shark]: { kind: 'out' } },
-          sfx: 'out',
-        });
+        s.stats.asked += 1;
+        bump(s, shark, -9);
+        inSharks(s).forEach((o) => o !== shark && bump(s, o, -2));
+        s.nerve = clamp(s.nerve - 1, 0, 5);
       }
-      s.offers.forEach((other) => {
-        if (other.shark === o.shark) return;
-        const st = s.sharks[other.shark];
-        st.interest -= 4;
-        if (st.interest < 50) {
-          st.out = true;
-          say(s, other.shark, "Too much haggling. My offer's off the table.", {
-            bubbles: { [other.shark]: { kind: 'out' } },
-            sfx: 'out',
-          });
-        }
-      });
-      s.offers = s.offers.filter((x) => !s.sharks[x.shark].out);
-      if (s.offers.length === 0) {
-        say(s, 'narrator', 'Every offer is gone.');
+      checkOuts(s, 22);
+      return s;
+    }
+
+    case 'next': {
+      const to = NEXT_ROUND[s.phase];
+      if (!to) return state;
+      if (to === 'offers') buildOffers(s);
+      if (to === 'haggle' && s.offers.length === 0) {
         s.deal = null;
-        s.after = 'deal';
+        s.phase = 'cut-nodeal';
+        return s;
+      }
+      s.phase = to;
+      return s;
+    }
+
+    case 'sharkWalks': {
+      if (s.phase !== 'haggle') return state;
+      s.sharks[action.shark].out = true;
+      s.offers = s.offers.filter((o) => o.shark !== action.shark);
+      // the rest of the panel cools on you
+      s.offers.forEach((o) => {
+        bump(s, o.shark, -4);
+        if (s.sharks[o.shark].interest < 50) s.sharks[o.shark].out = true;
+      });
+      s.offers = s.offers.filter((o) => !s.sharks[o.shark].out);
+      if (s.offers.length === 0) {
+        s.deal = null;
+        s.phase = 'cut-nodeal';
       }
       return s;
     }
 
-    case 'walk': {
-      if (s.phase !== 'negotiate' || s.queue.length) return state;
-      s.deal = null;
-      say(s, 'you', "Thank you, Sharks, but I'm going to walk away.", {
-        bubbles: Object.fromEntries(s.offers.map((o) => [o.shark, { kind: 'meh' }])),
-      });
-      s.after = 'deal';
+    case 'shake': {
+      if (s.phase !== 'haggle') return state;
+      const o = s.offers.find((x) => x.shark === action.shark);
+      if (!o || action.equity < o.minEquity) return state;
+      s.deal = { ...o, equity: action.equity };
+      s.phase = 'cut-deal';
       return s;
     }
+
+    case 'walk':
+      if (s.phase !== 'haggle') return state;
+      s.deal = null;
+      s.phase = 'cut-nodeal';
+      return s;
   }
   return state;
-}
-
-export function currentQuestion(s: GameState) {
-  if (s.phase !== 'qa' || !s.asker) return null;
-  const topic = s.topics[s.qIndex];
-  return { topic, asker: s.asker, ...questionText(topic, PRODUCTS[s.product], s.ask) };
 }

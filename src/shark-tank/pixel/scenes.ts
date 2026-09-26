@@ -21,11 +21,17 @@ export interface View {
   selected: ProductId;
   focusOnly: boolean;
   sharks: Record<SharkId, { interest: number; out: boolean }>;
+  /** Shark whose mouth animates (the one firing a question). */
   speaking: string | null;
   doorStart: number | null;
   celebrate: boolean;
-  dim: boolean;
   epilogue: boolean;
+  /** What your first-person hand is holding in the Tank. */
+  hand: 'cards' | 'sample' | 'none';
+  /** Sharks holding one of your samples. */
+  caught: SharkId[];
+  /** Hide the workshop's product-selection arrow (cutscenes). */
+  hideCursor?: boolean;
   boxes: number;
   dealShark: SharkId | null;
   reducedMotion: boolean;
@@ -49,17 +55,17 @@ export const PRODUCER_POS = { x: 300, y: 138 };
 
 type Ctx = CanvasRenderingContext2D;
 
-const rect = (c: Ctx, x: number, y: number, w: number, h: number, col: string) => {
+export const rect = (c: Ctx, x: number, y: number, w: number, h: number, col: string) => {
   c.fillStyle = col;
   c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 };
 
-const hash = (n: number) => {
+export const hash = (n: number) => {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
 };
 
-function disc(c: Ctx, cx: number, cy: number, r: number, col: string) {
+export function disc(c: Ctx, cx: number, cy: number, r: number, col: string) {
   c.fillStyle = col;
   for (let dy = -r; dy <= r; dy++) {
     const dx = Math.floor(Math.sqrt(r * r - dy * dy));
@@ -67,14 +73,14 @@ function disc(c: Ctx, cx: number, cy: number, r: number, col: string) {
   }
 }
 
-function glow(c: Ctx, cx: number, cy: number, r: number, col: string, alpha: number, steps = 4) {
+export function glow(c: Ctx, cx: number, cy: number, r: number, col: string, alpha: number, steps = 4) {
   c.save();
   c.globalAlpha = alpha;
   for (let i = 0; i < steps; i++) disc(c, cx, cy, Math.round(r * (1 - i / steps)), col);
   c.restore();
 }
 
-function dither(c: Ctx, x: number, y: number, w: number, h: number, col: string, parity = 0) {
+export function dither(c: Ctx, x: number, y: number, w: number, h: number, col: string, parity = 0) {
   c.fillStyle = col;
   for (let j = 0; j < h; j++)
     for (let i = (j + parity) % 2; i < w; i += 2) c.fillRect(x + i, y + j, 1, 1);
@@ -99,7 +105,7 @@ function cached(key: string, draw: (c: Ctx) => void) {
   return l;
 }
 
-function blit(c: Ctx, img: HTMLCanvasElement, x: number, y: number, scale = 1) {
+export function blit(c: Ctx, img: HTMLCanvasElement, x: number, y: number, scale = 1) {
   c.drawImage(img, Math.round(x), Math.round(y), img.width * scale, img.height * scale);
 }
 
@@ -350,9 +356,7 @@ function paintTank(c: Ctx, t: number, v: View) {
     c.restore();
     c.drawImage(img, 0, 0, SHARK_W, 20, Math.round(x), s.top + bob, SHARK_W * 2, 40);
     c.drawImage(img, 0, 20, SHARK_W, SHARK_H - 20, Math.round(x), s.top + 40, SHARK_W * 2, (SHARK_H - 20) * 2);
-    if (talking) {
-      rect(c, s.x - 1, s.top - 6 + bob, 2, 2, '#ffe98a');
-    }
+    if (v.caught.includes(id)) blit(c, productSprite(v.product), s.x - 6, s.top + 32, 1);
   });
 
   // product on the pedestal
@@ -361,24 +365,7 @@ function paintTank(c: Ctx, t: number, v: View) {
   glow(c, 33, 170, 18, '#ffd66b', 0.12, 3);
   blit(c, p, 15, 145 + bob, 3);
 
-  // first-person hand holding cue cards
-  const hb = still ? 0 : Math.round(Math.sin(t / 500) * 1.5);
-  const hx = 330;
-  const hy = 176 + hb;
-  rect(c, hx - 1, hy - 1, 44, 32, INK);
-  rect(c, hx, hy, 42, 30, '#f4ead2');
-  rect(c, hx + 4, hy - 4, 42, 30, INK);
-  rect(c, hx + 5, hy - 3, 40, 28, '#fbf3dc');
-  for (let l = 0; l < 4; l++) rect(c, hx + 9, hy + 3 + l * 5, 24 - l * 4, 1, '#9a8a70');
-  rect(c, hx + 9, hy + 3, 3, 1, '#c8452f');
-  // thumb and hand
-  rect(c, hx + 16, hy + 18, 20, 30, INK);
-  rect(c, hx + 17, hy + 19, 18, 30, '#e0a878');
-  rect(c, hx + 12, hy + 16, 10, 8, INK);
-  rect(c, hx + 13, hy + 17, 8, 6, '#f0c29a');
-  rect(c, hx + 17, hy + 19, 18, 2, '#f0c29a');
-  rect(c, hx + 17, hy + 36, 18, 12, '#2c4a7a');
-  rect(c, hx + 17, hy + 36, 18, 2, '#e8dcc0');
+  if (v.hand !== 'none') firstPersonHand(c, t, v, still);
 
   // floating dust in the light
   if (!still) {
@@ -393,13 +380,33 @@ function paintTank(c: Ctx, t: number, v: View) {
   }
 
   if (v.celebrate) confetti(c, t, still);
-  if (v.dim) {
-    c.fillStyle = 'rgba(8,14,22,0.5)';
-    c.fillRect(0, 0, W, H);
-  }
 }
 
-function confetti(c: Ctx, t: number, still: boolean) {
+/** Your right hand at the bottom of the frame, holding cue cards or a sample. */
+function firstPersonHand(c: Ctx, t: number, v: View, still: boolean) {
+  const hb = still ? 0 : Math.round(Math.sin(t / 500) * 1.5);
+  const hx = 330;
+  const hy = 176 + hb;
+  if (v.hand === 'cards') {
+    rect(c, hx - 1, hy - 1, 44, 32, INK);
+    rect(c, hx, hy, 42, 30, '#f4ead2');
+    rect(c, hx + 4, hy - 4, 42, 30, INK);
+    rect(c, hx + 5, hy - 3, 40, 28, '#fbf3dc');
+    for (let l = 0; l < 4; l++) rect(c, hx + 9, hy + 3 + l * 5, 24 - l * 4, 1, '#9a8a70');
+    rect(c, hx + 9, hy + 3, 3, 1, '#c8452f');
+  } else {
+    blit(c, productSprite(v.product), hx + 6, hy - 8, 3);
+  }
+  rect(c, hx + 16, hy + 18, 20, 30, INK);
+  rect(c, hx + 17, hy + 19, 18, 30, '#e0a878');
+  rect(c, hx + 12, hy + 16, 10, 8, INK);
+  rect(c, hx + 13, hy + 17, 8, 6, '#f0c29a');
+  rect(c, hx + 17, hy + 19, 18, 2, '#f0c29a');
+  rect(c, hx + 17, hy + 36, 18, 12, '#c98a1c');
+  rect(c, hx + 17, hy + 36, 18, 2, '#e8dcc0');
+}
+
+export function confetti(c: Ctx, t: number, still: boolean) {
   const cols = ['#1f9e87', '#f2b134', '#c8452f', '#f4e6c4', '#5fd0b3'];
   for (let i = 0; i < 90; i++) {
     const sp = 20 + hash(i) * 30;
@@ -707,7 +714,7 @@ function paintWorkshop(c: Ctx, t: number, v: View) {
     if (dimmed) c.globalAlpha = 0.35;
     blit(c, productSprite(id), x - 12, 82 - bob, 2);
     c.restore();
-    if (chosen && !v.epilogue) {
+    if (chosen && !v.epilogue && !v.hideCursor) {
       const ay = 70 + (still ? 0 : Math.round(Math.sin(t / 180) * 2));
       c.fillStyle = INK;
       for (let j = 0; j < 6; j++) c.fillRect(x - 6 + j, ay + j, 13 - j * 2, 1);
@@ -874,16 +881,21 @@ function paintTitle(c: Ctx, t: number, v: View) {
   }
 }
 
-export function paint(c: Ctx, t: number, v: View) {
+/** Paints a scene without the vignette, so cutscenes can zoom it. */
+export function paintScene(c: Ctx, t: number, v: View) {
   c.imageSmoothingEnabled = false;
   if (v.scene === 'tank') paintTank(c, t, v);
   else if (v.scene === 'hallway') paintHallway(c, t, v);
   else if (v.scene === 'workshop') paintWorkshop(c, t, v);
   else paintTitle(c, t, v);
+}
+
+export function paint(c: Ctx, t: number, v: View) {
+  paintScene(c, t, v);
   vignette(c);
 }
 
-function vignette(c: Ctx) {
+export function vignette(c: Ctx) {
   c.drawImage(
     cached('vignette', (cc) => {
       cc.fillStyle = '#0a0706';

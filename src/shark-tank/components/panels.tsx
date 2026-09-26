@@ -1,114 +1,12 @@
-import { useEffect, useRef, useState, type Dispatch } from 'react';
-import {
-  OPENERS,
-  PRODUCTS,
-  PRODUCT_ORDER,
-  SHARKS,
-  TOPIC_LABEL,
-  fairValue,
-  money,
-  type AnswerKind,
-  type SharkId,
-} from '../data';
-import {
-  QUESTION_COUNT,
-  askValuation,
-  currentQuestion,
-  greedOf,
-  type Action,
-  type GameState,
-  type Line,
-} from '../game';
-import { coinSprite, portrait, productSprite } from '../pixel/sprites';
+import { type Dispatch } from 'react';
+import { PRODUCTS, PRODUCT_ORDER, SHARKS, fairValue, money } from '../data';
+import { PITCH_BEATS, QUESTIONS, SAMPLES, askValuation, greedOf, type Action, type GameState } from '../game';
+import { coinSprite, productSprite } from '../pixel/sprites';
 import { sfx } from '../sfx';
-import { APrompt, Dial, KeyBadge, Sprite } from './ui';
+import { APrompt, Sprite } from './ui';
+import { isConfirm, useKeys } from './stage';
 
 type D = Dispatch<Action>;
-
-const isConfirm = (e: KeyboardEvent) => e.key === 'Enter' || e.key === ' ' || e.key.toLowerCase() === 'a';
-
-function useKeys(handler: (e: KeyboardEvent) => void) {
-  const ref = useRef(handler);
-  ref.current = handler;
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' && e.key !== 'Enter') return;
-      if (tag === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return;
-      if (e.repeat && isConfirm(e)) return;
-      ref.current(e);
-    };
-    window.addEventListener('keydown', fn);
-    return () => window.removeEventListener('keydown', fn);
-  }, []);
-}
-
-const speakerName = (who: Line['who']) => {
-  if (who === 'you') return 'You';
-  if (who === 'producer') return 'Pia · Producer';
-  if (who === 'narrator') return null;
-  return SHARKS[who].name;
-};
-
-/* ---------- dialog ---------- */
-
-export function DialogPanel({ line, dispatch, reduced }: { line: Line; dispatch: D; reduced: boolean }) {
-  const [shown, setShown] = useState(reduced ? line.text.length : 0);
-  const done = shown >= line.text.length;
-
-  useEffect(() => {
-    if (line.sfx) sfx(line.sfx);
-    if (reduced) {
-      setShown(line.text.length);
-      return;
-    }
-    setShown(0);
-    const len = line.text.length;
-    const id = window.setInterval(() => {
-      setShown((n) => {
-        if (n >= len) {
-          window.clearInterval(id);
-          return n;
-        }
-        return n + 1;
-      });
-    }, 22);
-    return () => window.clearInterval(id);
-  }, [line.id, line.text, line.sfx, reduced]);
-
-  useEffect(() => {
-    if (shown > 0 && shown < line.text.length && shown % 5 === 0) sfx('type');
-  }, [shown, line.text.length]);
-
-  const next = () => {
-    if (!done) setShown(line.text.length);
-    else {
-      sfx('blip');
-      dispatch({ type: 'advance' });
-    }
-  };
-  useKeys((e) => {
-    if (isConfirm(e)) {
-      e.preventDefault();
-      next();
-    }
-  });
-
-  const name = speakerName(line.who);
-  const tabClass = line.who === 'you' ? 'is-you' : line.who === 'producer' ? 'is-producer' : '';
-  return (
-    <div className="st-card st-dialog" onClick={next} role="group" aria-label="Dialog">
-      {name && <div className={`st-tab ${tabClass}`}>{name}</div>}
-      <p className={`st-dialog-text ${line.who === 'narrator' ? 'is-narrator' : ''}`} aria-live="polite">
-        {line.text.slice(0, shown)}
-        <span className="st-ghost">{line.text.slice(shown)}</span>
-      </p>
-      <div className="st-card-foot">
-        <APrompt small label={done ? 'Continue' : 'Skip'} />
-      </div>
-    </div>
-  );
-}
 
 /* ---------- workshop: product picker ---------- */
 
@@ -126,7 +24,7 @@ export function ProductPanel({ s, dispatch }: { s: GameState; dispatch: D }) {
   useKeys((e) => {
     if (e.key === 'ArrowLeft') go(-1);
     else if (e.key === 'ArrowRight') go(1);
-    else if (isConfirm(e)) {
+    else if (isConfirm(e) && !e.repeat) {
       e.preventDefault();
       choose();
     }
@@ -198,7 +96,7 @@ export function AskPanel({ s, dispatch }: { s: GameState; dispatch: D }) {
     dispatch({ type: 'confirmAsk' });
   };
   useKeys((e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.repeat) {
       e.preventDefault();
       confirm();
     } else if (e.key === 'Escape') dispatch({ type: 'back' });
@@ -260,205 +158,6 @@ export function AskPanel({ s, dispatch }: { s: GameState; dispatch: D }) {
   );
 }
 
-/* ---------- choices (opener, questions) ---------- */
-
-interface Choice {
-  key: string;
-  label: string;
-  tag?: string;
-  onPick: () => void;
-}
-
-function ChoiceList({ choices }: { choices: Choice[] }) {
-  const [cursor, setCursor] = useState(0);
-  useKeys((e) => {
-    if (e.key === 'ArrowDown') setCursor((c) => (c + 1) % choices.length);
-    else if (e.key === 'ArrowUp') setCursor((c) => (c - 1 + choices.length) % choices.length);
-    else if (/^[1-9]$/.test(e.key) && Number(e.key) <= choices.length) choices[Number(e.key) - 1].onPick();
-    else if (isConfirm(e)) {
-      e.preventDefault();
-      choices[cursor].onPick();
-    }
-  });
-  return (
-    <ul className="st-choices">
-      {choices.map((c, i) => (
-        <li key={c.key}>
-          <button
-            type="button"
-            className={`st-choice ${i === cursor ? 'is-on' : ''}`}
-            onMouseEnter={() => setCursor(i)}
-            onFocus={() => setCursor(i)}
-            onClick={c.onPick}
-          >
-            <KeyBadge k={String(i + 1)} />
-            <span className="st-choice-label">{c.label}</span>
-            {c.tag && <span className={`st-chip is-${c.tag.toLowerCase()}`}>{c.tag}</span>}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function OpenerPanel({ dispatch }: { dispatch: D }) {
-  return (
-    <div className="st-card st-choice-card">
-      <Dial done={0} total={QUESTION_COUNT} />
-      <div className="st-tab is-you">You</div>
-      <p className="st-dialog-text">How do you open your pitch?</p>
-      <ChoiceList
-        choices={OPENERS.map((o) => ({
-          key: o.id,
-          label: `${o.label}: “${o.line}”`,
-          onPick: () => {
-            sfx('confirm');
-            dispatch({ type: 'opener', id: o.id });
-          },
-        }))}
-      />
-    </div>
-  );
-}
-
-const KIND_TAG: Record<AnswerKind, string> = { honest: 'Honest', bold: 'Bold', dodge: 'Dodge' };
-
-export function QuestionPanel({ s, dispatch }: { s: GameState; dispatch: D }) {
-  const q = currentQuestion(s);
-  if (!q) return null;
-  const kinds: AnswerKind[] = ['honest', 'bold', 'dodge'];
-  return (
-    <div className="st-card st-choice-card">
-      <Dial done={s.qIndex} total={QUESTION_COUNT} />
-      <div className="st-tab">
-        {SHARKS[q.asker].name} · {TOPIC_LABEL[q.topic]}
-      </div>
-      <p className="st-dialog-text">{q.q}</p>
-      <ChoiceList
-        key={s.qIndex}
-        choices={kinds.map((k) => ({
-          key: k,
-          label: q.answers[k],
-          tag: KIND_TAG[k],
-          onPick: () => {
-            sfx('confirm');
-            dispatch({ type: 'answer', kind: k });
-          },
-        }))}
-      />
-    </div>
-  );
-}
-
-/* ---------- negotiation ---------- */
-
-export function NegotiatePanel({ s, dispatch }: { s: GameState; dispatch: D }) {
-  const [open, setOpen] = useState<SharkId | null>(null);
-  const [counter, setCounter] = useState(0);
-  const [confirmWalk, setConfirmWalk] = useState(false);
-  const offer = s.offers.find((o) => o.shark === open);
-  const lo = Math.max(1, Math.floor(s.ask.equity / 2));
-
-  const startCounter = (id: SharkId) => {
-    const o = s.offers.find((x) => x.shark === id)!;
-    sfx('select');
-    setOpen(id);
-    setCounter(Math.max(lo, o.equity - 3));
-  };
-
-  return (
-    <div className="st-card st-negotiate">
-      <Dial done={QUESTION_COUNT} total={QUESTION_COUNT} />
-      <div className="st-tab is-you">Your move</div>
-      <p className="st-muted st-ask-ref">
-        You asked {money(s.ask.amount)} for {s.ask.equity}%
-      </p>
-      <ul className="st-offers">
-        {s.offers.map((o) => {
-          const sh = SHARKS[o.shark];
-          const extra = o.royalty ? ' + $1/unit royalty' : o.loan ? ` (${money(o.loan)} as a loan)` : '';
-          return (
-            <li key={o.shark} className={`st-offer ${open === o.shark ? 'is-open' : ''}`}>
-              <div className="st-offer-row">
-                <Sprite img={portrait(o.shark, 'happy')} scale={1.25} className="st-face" />
-                <div className="st-offer-terms">
-                  <b>{sh.name}</b>
-                  <span>
-                    {money(o.amount)} for {o.equity}%{extra}
-                  </span>
-                  <span className="st-patience" aria-label={`Patience ${o.patience}`}>
-                    Patience {'●'.repeat(o.patience)}
-                    {'○'.repeat(Math.max(0, sh.patience - o.patience))}
-                  </span>
-                </div>
-                <div className="st-offer-actions">
-                  <button
-                    type="button"
-                    className="st-btn is-teal"
-                    onClick={() => {
-                      sfx('confirm');
-                      dispatch({ type: 'accept', shark: o.shark });
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <button type="button" className="st-btn" onClick={() => startCounter(o.shark)}>
-                    Counter
-                  </button>
-                </div>
-              </div>
-              {open === o.shark && offer && (
-                <div className="st-counter">
-                  <label className="st-slider" htmlFor="st-counter">
-                    <span>Counter at</span>
-                    <b>{counter}%</b>
-                    <input
-                      id="st-counter"
-                      type="range"
-                      min={lo}
-                      max={Math.max(lo, offer.equity - 1)}
-                      value={counter}
-                      onChange={(e) => setCounter(Number(e.target.value))}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="st-btn is-teal"
-                    onClick={() => {
-                      sfx('confirm');
-                      setOpen(null);
-                      dispatch({ type: 'counter', shark: o.shark, equity: counter });
-                    }}
-                  >
-                    Propose {counter}%
-                  </button>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="st-card-foot">
-        {confirmWalk ? (
-          <>
-            <span className="st-muted">Leave every offer behind?</span>
-            <button type="button" className="st-btn" onClick={() => setConfirmWalk(false)}>
-              Stay
-            </button>
-            <button type="button" className="st-btn is-red" onClick={() => dispatch({ type: 'walk' })}>
-              Walk away
-            </button>
-          </>
-        ) : (
-          <button type="button" className="st-link" onClick={() => setConfirmWalk(true)}>
-            Walk away without a deal
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ---------- epilogue ---------- */
 
 export function ResultsPanel({ s, best, dispatch }: { s: GameState; best: string | null; dispatch: D }) {
@@ -468,13 +167,14 @@ export function ResultsPanel({ s, best, dispatch }: { s: GameState; best: string
     dispatch({ type: 'start' });
   };
   useKeys((e) => {
-    if (isConfirm(e)) {
+    if (isConfirm(e) && !e.repeat) {
       e.preventDefault();
       again();
     }
   });
   if (!r) return null;
   const p = PRODUCTS[s.product];
+  const perfects = s.stats.pitch.filter((g) => g === 'perfect').length;
   return (
     <div className="st-card st-results">
       <div className="st-tab">Six months later · {p.name}</div>
@@ -493,21 +193,29 @@ export function ResultsPanel({ s, best, dispatch }: { s: GameState; best: string
       </div>
       <dl className="st-stats">
         <div>
-          <dt>6-mo revenue</dt>
-          <dd>{money(r.revenue6)}</dd>
+          <dt>Your stake</dt>
+          <dd>{money(r.stake)}</dd>
         </div>
         <div>
           <dt>Company value</dt>
           <dd>{money(r.companyValue)}</dd>
         </div>
         <div>
-          <dt>Your stake</dt>
-          <dd>{money(r.stake)}</dd>
+          <dt>Perfect beats</dt>
+          <dd>
+            {perfects}/{PITCH_BEATS}
+          </dd>
         </div>
         <div>
-          <dt>Answers landed</dt>
+          <dt>Samples caught</dt>
           <dd>
-            {r.good}/{QUESTION_COUNT}
+            {s.stats.catches}/{SAMPLES}
+          </dd>
+        </div>
+        <div>
+          <dt>Questions blocked</dt>
+          <dd>
+            {s.stats.nailed}/{QUESTIONS}
           </dd>
         </div>
         <div>
