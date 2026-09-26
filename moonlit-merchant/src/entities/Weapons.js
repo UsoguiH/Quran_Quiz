@@ -164,9 +164,9 @@ function buildTrail() {
         if (d < 0.0 || d > uLen) discard;
         float t = 1.0 - d / uLen;
         float r = length(vP.xy);
-        float rt = clamp((r - 0.3) / 0.7, 0.0, 1.0);
+        float rt = clamp((r - 0.5) / 0.5, 0.0, 1.0);
         float edge = smoothstep(0.0, 0.35, rt) * smoothstep(1.0, 0.85, rt);
-        float alpha = t * t * edge * uOpacity * (0.3 + 0.7 * rt);
+        float alpha = t * t * edge * uOpacity * (0.2 + 0.8 * rt) * 0.75;
         gl_FragColor = vec4(uColor * alpha, alpha);
       }
     `,
@@ -186,8 +186,8 @@ function buildTrail() {
 // windshield wiper around a pivot below the view, so the whole slash arc is
 // visible on screen.
 const SWING = {
-  sword: { pivot: new THREE.Vector3(0.12, -0.95, -1.0), offset: 0.2, radius: 1.0 },
-  great: { pivot: new THREE.Vector3(0.15, -1.25, -1.2), offset: 0.26, radius: 1.45 },
+  sword: { pivot: new THREE.Vector3(0.08, -0.72, -0.95), offset: 0.2, radius: 1.0 },
+  great: { pivot: new THREE.Vector3(0.1, -0.85, -1.15), offset: 0.26, radius: 1.4 },
 };
 
 const _m = new THREE.Matrix4();
@@ -250,7 +250,7 @@ export class Weapons {
       if (w.type === 'bow') m = buildBow(w.tier);
       else m = buildSword(w.tier, w.type === 'great');
       m.visible = false;
-      if (w.type !== 'bow') m.scale.setScalar(0.72);
+      m.scale.setScalar(w.type === 'bow' ? 0.78 : 0.72);
       this.holder.add(m);
       this.models[id] = m;
     }
@@ -402,7 +402,7 @@ export class Weapons {
 
     // --------------------------------------------------------- bow
     if (type === 'bow') {
-      this.holder.position.set(0.1, -0.16, -0.62);
+      this.holder.position.set(0.2, -0.2, -0.72);
       const bw = this.models[this.currentId];
       const d = this.state === 'draw' ? easeOut(this.draw) : 0;
       this.holder.rotation.set(0, 0.1, 0.35 - d * 0.25);
@@ -460,13 +460,13 @@ export class Weapons {
     const patterns =
       type === 'great'
         ? [
-            [-1.35, 1.35, -0.55, 0.15],
-            [1.35, -1.35, -0.55, -0.15],
+            [-1.15, 1.15, -0.35, 0.15],
+            [1.15, -1.15, -0.35, -0.15],
           ]
         : [
-            [-1.25, 1.2, -0.45, 0.25],
-            [1.2, -1.25, -0.45, -0.25],
-            [-0.9, 1.4, -1.0, 0.5],
+            [-1.1, 1.05, -0.3, 0.25],
+            [1.05, -1.1, -0.3, -0.25],
+            [-0.8, 1.2, -0.75, 0.45],
           ];
     const p = patterns[c % patterns.length];
     this.swingFrom = p[0];
@@ -476,7 +476,7 @@ export class Weapons {
     this.combo = (c + 1) % patterns.length;
     this.comboTimer = SPEC[type].dur + 0.35;
     const col = this.models[this.currentId]?.userData.color ?? new THREE.Color(1, 1, 1);
-    this.trail.material.uniforms.uColor.value.copy(col).lerp(new THREE.Color(1, 1, 1), 0.55).multiplyScalar(1.6);
+    this.trail.material.uniforms.uColor.value.copy(col).lerp(new THREE.Color(1, 1, 1), 0.55).multiplyScalar(1.2);
     this.game.audio.play(type === 'great' ? 'heavySwing' : 'swing');
     this.lastComboIndex = c;
   }

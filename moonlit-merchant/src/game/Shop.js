@@ -384,7 +384,18 @@ export class ShopManager {
         game.audio.play('bell');
       }
     }
-    for (const c of this.customers) c.update(dt);
+    const pp = game.player.pos;
+    for (const c of this.customers) {
+      c.update(dt);
+      // customers gently push the player aside instead of walking through them
+      const dx = pp.x - c.pos.x;
+      const dz = pp.z - c.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.7 && d > 1e-4) {
+        pp.x += (dx / d) * (0.7 - d);
+        pp.z += (dz / d) * (0.7 - d);
+      }
+    }
     const gone = this.customers.filter((c) => c.gone);
     gone.forEach((c) => c.dispose());
     this.customers = this.customers.filter((c) => !c.gone);

@@ -7,3 +7,9 @@ https://quran-quiz-test.netlify.app
 
 Contributing:
 We welcome contributions from the community! If you'd like to add new features, improve the existing code, or fix bugs, please feel free to submit a pull request.
+
+---
+
+### Moonlit Merchant 3D
+
+This repository also contains **[Moonlit Merchant 3D](moonlit-merchant/README.md)**, a first-person shopkeeper and dungeon-crawler game inspired by *Moonlighter*, built with three.js. Run it with `cd moonlit-merchant && npm install && npm run dev`.

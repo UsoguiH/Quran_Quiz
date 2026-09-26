@@ -956,7 +956,7 @@ export class Village extends Area {
     gr.uExposure.value = 1.0 + night * 0.35;
     gr.uSaturation.value = 1.12 - night * 0.2;
     gr.uTint.value.setRGB(1 - night * 0.08, 1 - night * 0.04, 1 + night * 0.08);
-    game.engine.updateSunScreen(s.sunDir, useSun ? dayI * 1.2 : 0);
+    game.engine.updateSunScreen(s.sunDir, useSun ? dayI * 0.8 : 0);
     this.viewLight.hemi = 0.35 + 0.8 * s.day;
     this.viewLight.sun = 0.3 + 1.3 * dayI;
     this.lightState = s;
