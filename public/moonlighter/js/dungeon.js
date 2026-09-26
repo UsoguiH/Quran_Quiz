@@ -120,7 +120,120 @@ function buildRoomTiles(r, rng) {
 }
 
 // ---------------------------------------------------------------- room art
+// ---------------------------------------------------------------- themed rooms (graveyard / void temple)
+function roomDoorOpenings(g, r, P2) {
+  const arch = (x, y, w, h) => { R(g, x - 3, y, w + 6, h, P2.brickHi); R(g, x, y, w, h, '#050408'); R(g, x - 5, y, 4, h, shade(P2.brickHi, 0.1)); R(g, x + w + 1, y, 4, h, shade(P2.brickHi, 0.1)); };
+  if (r.doors.U) arch(176, 0, 32, 32);
+  if (r.doors.D) arch(176, 208, 32, 16);
+  if (r.doors.L) { R(g, 0, 94, 16, 36, P2.brickHi); R(g, 0, 96, 14, 32, '#050408'); }
+  if (r.doors.R) { R(g, 368, 94, 16, 36, P2.brickHi); R(g, 370, 96, 14, 32, '#050408'); }
+}
+function pitTiles(g, t, P2, rng, voidStyle) {
+  for (let y = 0; y < RR; y++) for (let x = 0; x < RC; x++) {
+    if (t[y][x] !== T_PIT) continue;
+    const px = x * TILE, py = y * TILE;
+    if (!voidStyle) R(g, px, py, TILE, TILE, P2.pit);
+    const up = t[y - 1] && t[y - 1][x] !== T_PIT;
+    if (up && !voidStyle) { R(g, px, py, TILE, 6, P2.edge); for (let i = 0; i < TILE; i += 2) if (rng() < 0.5) P(g, px + i, py + 6, P2.edge); }
+  }
+}
+function renderGraveRoom(r, d) {
+  const P2 = d.room, f = d.foe, t = r.tiles;
+  const c = mkCanvas(RC * TILE, RR * TILE), g = c.getContext('2d'), rng = mulberry32(r.seed || 7);
+  const lights = [], flames = [];
+  R(g, 0, 0, c.width, c.height, P2.floor);
+  for (let i = 0; i < 30; i++) { g.globalAlpha = 0.6; ell(g, rng() * 384, 30 + rng() * 180, 24 + rng() * 70, 12 + rng() * 30, rng() < 0.5 ? P2.floor2 : P2.floor3); }
+  g.globalAlpha = 1;
+  // cracked earth
+  for (let i = 0; i < 38; i++) { let x = rng() * 384, y = 34 + rng() * 170; for (let k = 0; k < 12; k++) { P(g, x, y, '#241b15'); x += rng() < 0.5 ? 1 : 0; y += rng() < 0.6 ? 1 : 0; if (rng() < 0.2) x -= 2; } }
+  // worn flagstones
+  for (let i = 0; i < 18; i++) { const x = 20 + rng() * 340, y = 40 + rng() * 160, w = 8 + rng() * 10 | 0, h = 5 + rng() * 5 | 0; R(g, x, y, w, h, '#4a3c30'); R(g, x, y, w, 1, '#5a4a3a'); R(g, x, y + h, w, 1, '#221a14'); }
+  // grass tufts and fallen leaves
+  for (let i = 0; i < 46; i++) { const x = 18 + rng() * 348, y = 36 + rng() * 168; const gcol = rng() < 0.5 ? '#3a7a3a' : '#57a24a'; P(g, x, y, gcol); P(g, x - 1, y - 1, gcol); P(g, x + 1, y - 2, gcol); P(g, x + 2, y, gcol); }
+  for (let i = 0; i < 40; i++) P(g, 18 + rng() * 348, 36 + rng() * 168, rng() < 0.5 ? '#c8702a' : '#a8502a');
+  pitTiles(g, t, P2, rng);
+  // rounded cobble walls
+  const cobble = (x0, y0, w, h) => {
+    R(g, x0, y0, w, h, P2.brickDark);
+    for (let y = y0; y < y0 + h; y += 7) for (let x = x0 - ((y / 7) % 2) * 5; x < x0 + w; x += 10) {
+      const sx = Math.max(x0, x), sw = Math.min(10, x0 + w - sx, x + 10 - x0);
+      if (sw < 3) continue;
+      ell(g, sx, y, sw, 7, rng() < 0.2 ? P2.brickHi : P2.brick); R(g, sx + 2, y + 1, Math.max(1, sw - 5), 1, P2.brickHi);
+    }
+  };
+  cobble(0, 0, 384, 32); cobble(0, 32, 16, 176); cobble(368, 32, 16, 176); cobble(0, 208, 384, 16);
+  g.globalAlpha = 0.4; R(g, 16, 32, 352, 6, '#000'); R(g, 16, 32, 5, 176, '#000'); R(g, 363, 32, 5, 176, '#000'); g.globalAlpha = 1;
+  roomDoorOpenings(g, r, P2);
+  // dead trees leaning over the walls
+  for (const [x, y, s] of [[30, 30, 1], [354, 34, -1], [26, 206, 1], [360, 204, -1]]) {
+    thickLine(g, x, y, x + 6 * s, y - 20, 5, f.tree); thickLine(g, x + 3 * s, y - 12, x + 18 * s, y - 22, 3, f.tree); thickLine(g, x + 4 * s, y - 16, x - 6 * s, y - 28, 2, f.tree); thickLine(g, x, y, x + 14 * s, y + 4, 3, f.tree);
+  }
+  // obstacles become graves with candles, rune pillars or dead shrubs
+  for (let y = 0; y < RR; y++) for (let x = 0; x < RC; x++) {
+    if (t[y][x] !== T_ROCK) continue;
+    const cx = x * TILE + 8, by = y * TILE + 15, k = rng();
+    if (k < 0.55) { candleGrave(g, cx, by, f, rng() < 0.6 ? 0 : 1); flames.push([cx, by - 4]); lights.push([cx, by - 6, 46, '#ffb050']); }
+    else if (k < 0.8) { R(g, cx - 4, by - 15, 8, 15, f.stone); R(g, cx + 2, by - 15, 2, 15, f.stone2); R(g, cx - 5, by - 1, 10, 2, f.stone2); R(g, cx - 1, by - 12, 2, 8, f.rune); R(g, cx - 3, by - 10, 6, 1, f.rune); lights.push([cx, by - 8, 30, f.rune]); }
+    else { thickLine(g, cx, by, cx - 5, by - 12, 3, f.tree); thickLine(g, cx, by, cx + 6, by - 10, 3, f.tree); thickLine(g, cx, by, cx + 1, by - 14, 2, f.tree); }
+  }
+  // wall candles
+  for (const lx of [80, 304]) { R(g, lx - 3, 16, 7, 10, f.stone2); R(g, lx - 1, 18, 3, 4, '#e8e0c8'); flames.push([lx, 18]); lights.push([lx, 20, 50, '#ffb050']); }
+  r.lights = lights; r.flames = flames;
+  return c;
+}
+function renderVoidRoom(r, d) {
+  const P2 = d.room, f = d.foe, t = r.tiles;
+  const c = mkCanvas(RC * TILE, RR * TILE), g = c.getContext('2d'), rng = mulberry32(r.seed || 7);
+  const lights = [], flames = [];
+  R(g, 0, 0, c.width, c.height, '#140a22');
+  for (let i = 0; i < 26; i++) { g.globalAlpha = 0.5; ell(g, rng() * 384, rng() * 224, 30 + rng() * 90, 20 + rng() * 50, rng() < 0.5 ? '#24123a' : '#2e1648'); }
+  g.globalAlpha = 1;
+  for (let i = 0; i < 120; i++) P(g, rng() * 384, rng() * 224, rng() < 0.7 ? '#8a7aa8' : '#ffffff');
+  const floorAt = (x, y) => t[y] && t[y][x] !== undefined && (t[y][x] === T_FLOOR || t[y][x] === T_ROCK);
+  // platform side faces then tiles
+  for (let y = 0; y < RR; y++) for (let x = 0; x < RC; x++) {
+    if (!floorAt(x, y)) continue;
+    const px = x * TILE, py = y * TILE;
+    if (!floorAt(x, y + 1)) { R(g, px, py + TILE, TILE, 6, P2.floor3); R(g, px, py + TILE + 6, TILE, 2, '#2a1e38'); for (let i = 2; i < TILE; i += 5) R(g, px + i, py + TILE, 1, 6, '#3e4444'); }
+  }
+  for (let y = 0; y < RR; y++) for (let x = 0; x < RC; x++) {
+    if (!floorAt(x, y)) continue;
+    const px = x * TILE, py = y * TILE, v = rng();
+    R(g, px, py, TILE, TILE, '#2e3236');
+    R(g, px + 1, py + 1, TILE - 2, TILE - 2, v < 0.15 ? P2.floor2 : P2.floor);
+    R(g, px + 1, py + 1, TILE - 2, 1, '#8e9696'); R(g, px + 1, py + 1, 1, TILE - 2, '#8e9696');
+    R(g, px + 1, py + TILE - 2, TILE - 2, 1, P2.floor3); R(g, px + TILE - 2, py + 1, 1, TILE - 2, P2.floor3);
+    if (v > 0.85) { P(g, px + 5, py + 6, P2.floor3); P(g, px + 6, py + 7, P2.floor3); P(g, px + 7, py + 7, P2.floor3); }
+  }
+  // crimson arches with horns along the top, braziers between them
+  for (let i = 0; i < 4; i++) {
+    const ax = 40 + i * 101;
+    if (Math.abs(ax - 192) < 30 && r.doors.U) continue;
+    ell(g, ax - 11, 4, 22, 30, '#3a3e44'); ell(g, ax - 8, 7, 16, 26, P2.deco); R(g, ax - 8, 20, 16, 12, P2.deco);
+    thickLine(g, ax - 12, 30, ax - 4, 0, 3, '#4a4e56'); thickLine(g, ax + 12, 30, ax + 4, 0, 3, '#4a4e56');
+    R(g, ax - 12, 28, 24, 4, '#3a3e44');
+  }
+  for (const bx of [92, 292]) { R(g, bx - 4, 18, 9, 10, '#5a6068'); R(g, bx - 5, 17, 11, 2, '#7a8088'); flames.push([bx, 16]); lights.push([bx, 16, 52, '#ff8a3a']); }
+  // obstacles become pillars with fire bowls
+  for (let y = 0; y < RR; y++) for (let x = 0; x < RC; x++) {
+    if (t[y][x] !== T_ROCK) continue;
+    const cx = x * TILE + 8, by = y * TILE + 15;
+    R(g, cx - 5, by - 12, 10, 12, '#5a6068'); R(g, cx - 5, by - 12, 10, 2, '#8a9098'); R(g, cx + 3, by - 10, 2, 10, '#3e4248'); R(g, cx - 6, by - 1, 12, 2, '#3e4248');
+    flames.push([cx, by - 13]); lights.push([cx, by - 14, 44, '#ff8a3a']);
+  }
+  r.lights = lights; r.flames = flames;
+  return c;
+}
+function drawFlames(sc, ox, oy) {
+  const fl = sc.room.flames; if (!fl) return;
+  for (const [x, y] of fl) {
+    const k = Math.sin(sc.t * 13 + x) > 0 ? 1 : 0, h = 3 + ((Math.sin(sc.t * 9 + y) + 1) * 1.2 | 0);
+    R(ctx, x - 1 - ox, y - h - oy, 3, h, '#f0602a'); R(ctx, x - ox, y - h - 1 - k - oy, 1, h, '#ffc040'); P(ctx, x - ox, y - 2 - oy, '#fff4c0');
+  }
+}
 function renderRoomBG(r, d) {
+  if (d.style === 'grave') return renderGraveRoom(r, d);
+  if (d.style === 'void') return renderVoidRoom(r, d);
   const P2 = d.room, rp = d.rock;
   const c = mkCanvas(RC * TILE, RR * TILE), g = c.getContext('2d');
   const rng = mulberry32(r.seed || 7);
@@ -196,7 +309,9 @@ class DungeonScene {
     this.dIdx = dIdx; this.d = DUNGEONS[dIdx]; this.floor = 0; this.kills = 0;
     this.player = new Player(192, 190);
     this.parts = []; this.texts = []; this.rings = []; this.projs = []; this.pickups = []; this.enemies = []; this.props = [];
-    this.shakeT = 0; this.shakeA = 0; this.hitstop = 0; this.pendantT = 0; this.bannerT = 0; this.slide = null;
+    this.shakeT = 0; this.shakeA = 0; this.hitstop = 0; this.pendantT = 0; this.bannerT = 0; this.slide = null; this.t = 0;
+    this.darkCv = mkCanvas(W, H);
+    this.rain = this.d.style === 'grave' ? Array.from({ length: 70 }, () => ({ x: rand(W + 60), y: rand(H), v: rand(180, 260) })) : [];
     this.music = 'dungeon';
     this.startFloor(0);
     this.showBanner();
@@ -292,6 +407,8 @@ class DungeonScene {
     this.pickups.push(new Pickup(x, y, { id: it.id, n, curse }));
   }
   update(dt) {
+    this.t += dt;
+    for (const d of this.rain) { d.y += d.v * dt; d.x -= d.v * 0.35 * dt; if (d.y > H) { d.y = -6; d.x = rand(W + 60); } }
     if (this.slide) { this.slide.t += dt; if (this.slide.t >= this.slide.dur) this.slide = null; return; }
     if (this.hitstop > 0) { this.hitstop -= dt; return; }
     this.bannerT = Math.max(0, this.bannerT - dt);
@@ -409,9 +526,32 @@ class DungeonScene {
     for (const e of list) e.draw(ox, oy);
     for (const pr of this.projs) pr.draw(ox, oy);
     drawFX(this, ox, oy);
+    if (this.d.dark) this.drawDark(ox, oy);
+    drawFlames(this, ox, oy);
+    for (const d of this.rain) { ctx.globalAlpha = 0.45; R(ctx, d.x, d.y, 1, 2, '#7ad8c0'); R(ctx, d.x - 1, d.y + 2, 1, 2, '#7ad8c0'); ctx.globalAlpha = 1; }
     // interaction prompt
     if (this.near && this.player.state !== 'dead') worldPrompt(this.near.x - ox, this.near.y - oy - 26, [['A', this.near.interact]]);
     this.drawHUD();
+  }
+  drawDark(ox, oy) {
+    const g = this.darkCv.getContext('2d');
+    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+    g.fillStyle = `rgba(6,4,14,${this.d.dark})`; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'destination-out';
+    const hole = (x, y, r, a = 1) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.55})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+    const flick = 1 + Math.sin(this.t * 8) * 0.04;
+    hole(this.player.x - ox, this.player.y - 10 - oy, 78);
+    for (const [x, y, r] of this.room.lights || []) hole(x - ox, y - oy, r * flick, 0.95);
+    for (const p of this.projs) hole(p.x - ox, p.y - oy, 18, 0.8);
+    if (this.boss && !this.boss.dead) hole(this.boss.x - ox, this.boss.y - 40 - oy, 40, 0.6);
+    for (const pr of this.props) if (pr instanceof Pool || (pr instanceof Stairs && pr.kind === 'portal')) hole(pr.x - ox, pr.y - oy, 40, 0.8);
+    ctx.drawImage(this.darkCv, 0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [x, y, r, col] of this.room.lights || []) {
+      const sx = x - ox, sy = y - oy, gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 0.6 * flick);
+      gr.addColorStop(0, (col || '#ffb050') + '38'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
   drawDoors(ox, oy) {
     const closed = this.room.closed, P2 = this.d.room;
@@ -472,11 +612,15 @@ function floorScroll(cx, y, text, col, floor, small) {
   if (floor >= 0 && floor <= 2) for (let i = 0; i < 3; i++) ell(ctx, cx - 10 + i * 8, y + 34, 4, 4, i <= floor ? C.mint : '#3a3a4a');
 }
 function worldPrompt(x, y, list) {
-  let w = 6; list.forEach(([b, l]) => w += 14 + textW(l, 7));
-  x = clamp(x, w / 2 + 2, W - w / 2 - 2);
-  ctx.globalAlpha = 0.85; R(ctx, x - w / 2, y - 9, w, 12, '#1b1420'); ctx.globalAlpha = 1;
-  let xx = x - w / 2 + 3;
-  list.forEach(([b, l]) => { const bw = btnGlyph(xx, y + 0.5, b); txt(l, xx + bw + 3, y, { size: 7, color: '#efe3c5' }); xx += bw + 6 + textW(l, 7); });
+  // cream rounded pill with a pixel button, like the in-world prompts of the genre
+  let w = 8; list.forEach(([b, l]) => w += 18 + textW(l, 7));
+  x = Math.round(clamp(x, w / 2 + 2, W - w / 2 - 2)); y = Math.round(y);
+  const x0 = x - w / 2, y0 = y - 11, h = 16;
+  ctx.globalAlpha = 0.35; R(ctx, x0 + 2, y0 + 3, w, h, '#000'); ctx.globalAlpha = 1;
+  R(ctx, x0 + 2, y0, w - 4, h, PK.outline); R(ctx, x0, y0 + 2, w, h - 4, PK.outline); R(ctx, x0 + 1, y0 + 1, w - 2, h - 2, PK.outline);
+  R(ctx, x0 + 2, y0 + 1, w - 4, h - 2, '#efe3c5'); R(ctx, x0 + 1, y0 + 2, w - 2, h - 4, '#efe3c5'); R(ctx, x0 + 2, y0 + h - 3, w - 4, 2, '#d8c9a0');
+  let xx = x0 + 4;
+  list.forEach(([b, l]) => { const bw = btnGlyph(xx, y + 1, b); txt(l, xx + bw + 4, y, { size: 7, color: '#4a3b28' }); xx += bw + 8 + textW(l, 7); });
 }
 function drawCombatHUD(sc) {
   const st = playerStats();

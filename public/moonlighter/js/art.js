@@ -671,3 +671,110 @@ function skullIcon(col) {
 function keyIcon(col) {
   return cached('key' + col, () => fromRows(['.222......', '2..2222222', '2..2...2.2', '.222......'], { 2: col }));
 }
+
+// ---------------------------------------------------------------- dark-fantasy foes (critters, eyes, brutes, rune stones, haunted tree)
+function thickLine(g, x0, y0, x1, y1, w, c) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+  g.fillStyle = c;
+  for (let i = 0; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t, ww = Math.max(1, Math.round(w * (1 - t * 0.6))); g.fillRect(Math.round(x - ww / 2), Math.round(y - ww / 2), ww, ww); }
+}
+// furry black blob with glowing eyes and a toothy grin
+function critterSprite(f, frame, size = 1) {
+  return cached(`critter_${f.id}_${frame}_${size}`, () => {
+    const s = size;
+    return sprite(16 * s + 2, 15 * s + 2, g => {
+      g.translate(1, 1);
+      const k = frame % 3;
+      let ex = s, ey = 2 * s, ew = 14 * s, eh = 12 * s;
+      if (k === 1) { ex = 0; ey = 4 * s; ew = 16 * s; eh = 10 * s; }
+      if (k === 2) { ex = 2 * s; ey = 0; ew = 12 * s; eh = 14 * s; }
+      ell(g, ex, ey, ew, eh, f.fur);
+      const r = mulberry32(11 + s * 7 + k);
+      const n = 26 * s;
+      for (let i = 0; i < n; i++) {
+        const a = i / n * Math.PI * 2, len = 0.5 + r() * 1.6 * s;
+        const px = ex + ew / 2 + Math.cos(a) * (ew / 2 + len), py = ey + eh / 2 + Math.sin(a) * (eh / 2 + len);
+        if (r() < 0.7) P(g, px, py, f.fur);
+      }
+      for (let i = 0; i < 10 * s; i++) { const a = -Math.PI * (0.25 + r() * 0.5), d = r() * 0.8; P(g, ex + ew / 2 + Math.cos(a) * ew / 2 * d - 2 * s, ey + eh / 2 + Math.sin(a) * eh / 2 * d, f.fur2); }
+      const cy = Math.round(ey + eh * 0.36);
+      R(g, ex + ew * 0.26, cy, 2 * s, 2 * s, f.eye); R(g, ex + ew * 0.62, cy, 2 * s, 2 * s, f.eye);
+      const my = Math.round(ey + eh * 0.6), mx = Math.round(ex + ew * 0.24), mw = Math.round(ew * 0.52);
+      R(g, mx, my, mw, 3 * s, '#07050a');
+      for (let i = 0; i < mw; i += 2 * s) { R(g, mx + i, my, s, s, f.teeth); R(g, mx + i + s, my + 2 * s, s, s, f.teeth); }
+    }, '#07050a');
+  });
+}
+// floating one-eyed blood blob with little horns
+function eyeBlobSprite(f, frame) {
+  return cached(`eyeblob_${f.id}_${frame}`, () => sprite(14, 17, g => {
+    R(g, 2, 1, 2, 3, f.blob2); P(g, 1, 0, f.blob2); R(g, 10, 1, 2, 3, f.blob2); P(g, 12, 0, f.blob2);
+    ell(g, 0, 2, 14, 12, f.blob2); ell(g, 1, 2, 12, 10, f.blob); ell(g, 3, 3, 4, 3, shade(f.blob, 0.3));
+    R(g, 5, 13, 2, 2 + (frame % 2), f.blob2); R(g, 8, 13, 1, 1 + ((frame + 1) % 2), f.blob2);
+    ell(g, 4, 5, 6, 6, '#f4ecdc'); R(g, 5 + (frame >> 1) % 2, 7, 3, 3, '#1a0a10'); P(g, 6 + (frame >> 1) % 2, 7, '#ffffff');
+  }, '#1a0610'));
+}
+// horned hooded brute carrying a double axe
+function bruteSprite(f, frame, pose = 'walk') {
+  return cached(`brute_${f.id}_${frame}_${pose}`, () => {
+    const leg = pose === 'walk' ? [0, 1, 0, -1][frame % 4] : 0;
+    return sprite(24, 26, g => {
+      g.translate(1, 1);
+      R(g, 7, 19 - (leg > 0 ? 1 : 0), 3, 5, f.brute2); R(g, 12, 19 - (leg < 0 ? 1 : 0), 3, 5, f.brute2);
+      R(g, 6, 22 - (leg > 0 ? 1 : 0), 4, 2, '#1a0e0a'); R(g, 12, 22 - (leg < 0 ? 1 : 0), 4, 2, '#1a0e0a');
+      ell(g, 2, 8, 18, 14, f.brute2); ell(g, 3, 8, 16, 12, f.brute); ell(g, 7, 12, 8, 7, shade(f.brute, 0.12));
+      R(g, 4, 17, 14, 2, '#2a1a10'); P(g, 10, 17, '#c8a040');
+      // hood + face + horns
+      ell(g, 6, 1, 10, 10, f.brute2); ell(g, 7, 1, 8, 9, f.brute);
+      R(g, 8, 5, 6, 4, f.skin); R(g, 8, 5, 6, 1, shade(f.skin, -0.3)); P(g, 9, 6, '#1a0a0a'); P(g, 12, 6, '#1a0a0a'); R(g, 9, 8, 4, 1, shade(f.skin, -0.35));
+      R(g, 5, 0, 2, 3, '#e8e0d0'); P(g, 4, -1, '#e8e0d0'); R(g, 15, 0, 2, 3, '#e8e0d0'); P(g, 17, -1, '#e8e0d0');
+      const axe = (hx, hy, vert, flip) => {
+        if (vert) { R(g, hx, hy, 1, 14, '#6a4a2a'); ell(g, hx - 5, hy, 5, 7, f.axe); ell(g, hx + 1, hy, 5, 7, f.axe); R(g, hx - 4, hy + 3, 10, 1, shade(f.axe, -0.3)); }
+        else { R(g, hx, hy, 14, 1, '#6a4a2a'); ell(g, hx + (flip ? 0 : 9), hy - 5, 7, 5, f.axe); ell(g, hx + (flip ? 0 : 9), hy + 1, 7, 5, f.axe); }
+      };
+      if (pose === 'wind') { R(g, 0, 5, 3, 8, f.brute); R(g, 19, 3, 3, 8, f.brute); axe(3, -1, false, false); }
+      else if (pose === 'slash') { R(g, 2, 12, 3, 7, f.brute); R(g, 17, 13, 3, 7, f.brute); axe(10, 18, true); }
+      else { R(g, 0, 11 + (leg > 0 ? 1 : 0), 3, 7, f.brute); R(g, 19, 11 + (leg < 0 ? 1 : 0), 3, 7, f.brute); axe(21, 3 + (leg < 0 ? 1 : 0), true); }
+    }, '#140a08');
+  });
+}
+// tombstone / obelisk with a glowing rune that fires bolts
+function runeStoneSprite(f, frame) {
+  return cached(`runestone_${f.id}_${frame}`, () => sprite(14, 20, g => {
+    R(g, 0, 17, 14, 3, f.stone2); ell(g, 1, 0, 12, 9, f.stone); R(g, 1, 4, 12, 14, f.stone);
+    R(g, 11, 4, 2, 14, f.stone2); R(g, 2, 2, 3, 1, shade(f.stone, 0.25)); R(g, 3, 10, 2, 1, f.stone2); R(g, 8, 14, 3, 1, f.stone2);
+    const c = frame === 1 ? '#ffffff' : f.rune;
+    R(g, 6, 4, 2, 9, c); R(g, 4, 6, 6, 1, c); R(g, 4, 10, 2, 1, c); R(g, 8, 10, 2, 1, c);
+    if (frame === 1) { R(g, 5, 3, 4, 1, f.rune); R(g, 3, 7, 1, 3, f.rune); R(g, 10, 7, 1, 3, f.rune); }
+  }, '#120e14'));
+}
+// the haunted tree guardian: gnarled branches, glowing slit eyes
+function hauntedTreeSprite(f, frame) {
+  return cached(`htree_${f.id}_${frame}`, () => sprite(80, 70, g => {
+    const T = f.tree, T2 = f.tree2;
+    [[40, 30, 6, 6], [40, 28, 18, 2], [40, 30, 74, 10], [40, 32, 2, 18], [40, 26, 56, 0], [40, 26, 24, 0], [40, 34, 78, 26]].forEach(([a, b, c, d]) => thickLine(g, a, b, c, d, 5, T));
+    [[18, 5, 12, 0], [60, 3, 66, 0], [10, 12, 4, 8], [70, 12, 78, 4], [26, 2, 30, -2], [8, 18, 0, 20]].forEach(([a, b, c, d]) => thickLine(g, a, b, c, d, 2, T));
+    thickLine(g, 32, 60, 10, 68, 5, T); thickLine(g, 48, 60, 70, 68, 5, T); thickLine(g, 40, 62, 40, 70, 4, T); thickLine(g, 36, 60, 22, 70, 3, T);
+    ell(g, 26, 18, 28, 36, T); R(g, 28, 34, 24, 28, T);
+    for (let i = 0; i < 6; i++) R(g, 29 + i * 4, 22 + (i % 2) * 6, 1, 30, T2);
+    ell(g, 30, 20, 8, 6, T2);
+    const e = f.rune;
+    if (frame === 1) { R(g, 30, 34, 7, 2, e); P(g, 31, 33, e); P(g, 36, 36, e); R(g, 43, 34, 7, 2, e); P(g, 49, 33, e); P(g, 43, 36, e); }
+    else { R(g, 31, 35, 5, 1, shade(e, -0.4)); R(g, 44, 35, 5, 1, shade(e, -0.4)); }
+    ell(g, 34, 42, 12, 10, '#07050a'); for (let i = 0; i < 3; i++) P(g, 36 + i * 3, 42, '#c8c0b0');
+  }, '#07050a'));
+}
+function rootClawSprite(f) {
+  return cached(`rootclaw_${f.id}`, () => sprite(24, 22, g => {
+    thickLine(g, 12, 0, 12, 12, 6, f.tree);
+    [[12, 10, 3, 20], [12, 10, 12, 21], [12, 10, 21, 20]].forEach(([a, b, c, d]) => thickLine(g, a, b, c, d, 4, f.tree));
+    R(g, 2, 19, 3, 2, f.rune); R(g, 11, 20, 3, 2, f.rune); R(g, 20, 19, 3, 2, f.rune);
+    R(g, 10, 2, 1, 8, f.tree2);
+  }, '#07050a'));
+}
+function candleGrave(g, x, y, f, v) {
+  // small tombstone with a candle (static part); flame drawn live
+  if (v === 0) { ell(g, x - 6, y - 16, 12, 8, f.stone); R(g, x - 6, y - 12, 12, 12, f.stone); R(g, x + 4, y - 12, 2, 12, f.stone2); R(g, x - 3, y - 10, 6, 1, f.stone2); R(g, x - 3, y - 7, 5, 1, f.stone2); R(g, x - 7, y, 14, 2, f.stone2); }
+  else { R(g, x - 1, y - 16, 2, 16, f.stone); R(g, x - 5, y - 12, 10, 2, f.stone); R(g, x - 4, y, 8, 2, f.stone2); }
+  R(g, x - 1, y - 3, 3, 4, '#e8e0c8');
+}

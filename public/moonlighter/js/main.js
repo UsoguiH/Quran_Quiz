@@ -190,6 +190,7 @@ async function boot() {
     ]);
   } catch (e) { /* offline: fall back to monospace */ }
   _mcache.clear();
+  skinTouchButtons();
   Game.setScene(new TitleScene());
   window.__game = { Game, get S() { return S; }, UI, Input };
   requestAnimationFrame(frame);

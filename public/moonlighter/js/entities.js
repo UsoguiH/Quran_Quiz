@@ -456,7 +456,9 @@ class Enemy {
     this.dmg = Math.round(b.dmg * d.dmgMul * fmul * nmul);
     this.r = b.r; this.spd = b.spd; this.hw = 4; this.hh = 3;
     this.t = rand(0, 1); this.st = 0; this.state = 'idle'; this.flash = 0; this.dead = false; this.anim = rand(4);
-    this.pal = type === 'slime' || type === 'bigslime' ? d.slime : d.stone;
+    this.f = d.foe;
+    const fxc = { slime: [d.foe.fur, d.foe.fur2, d.foe.eye], bigslime: [d.foe.fur, d.foe.fur2, d.foe.eye], wisp: [d.foe.blob, d.foe.blob2, '#f4ecdc'], golem: [d.foe.brute, d.foe.brute2, d.foe.axe], turret: [d.foe.stone, d.foe.stone2, d.foe.rune] }[type];
+    this.pal = { body: fxc[0], dark: fxc[1], moss: fxc[2], light: fxc[2], eye: d.foe.rune };
     this.name = d.enemyNames[type];
     this.cd = rand(0.5, 1.5); this.spawnT = 0.5; this.z = 0; this.facing = 1;
     if (type === 'bigslime') { this.hw = 7; this.hh = 5; }
@@ -525,7 +527,7 @@ class Enemy {
         if (this.cd <= 0 && alive) {
           this.cd = rand(1.8, 2.6); this.state = 'idle';
           const sp = 95; const a = Math.atan2(p.y - 7 - (this.y - 10), dx);
-          sc.projs.push(new Projectile(this.x, this.y - 10, Math.cos(a) * sp, Math.sin(a) * sp, { dmg: this.dmg, col: this.pal.eye, r: 3 }));
+          sc.projs.push(new Projectile(this.x, this.y - 10, Math.cos(a) * sp, Math.sin(a) * sp, { dmg: this.dmg, col: this.f.rune, r: 3 }));
           sfx('shoot');
         }
         break;
@@ -551,11 +553,11 @@ class Enemy {
   }
   sprite() {
     switch (this.type) {
-      case 'slime': return slimeSprite(this.pal, this.state === 'hop' ? 2 : Math.floor(this.t * 3) % 2, 1);
-      case 'bigslime': return slimeSprite(this.pal, this.state === 'hop' ? 2 : Math.floor(this.t * 2) % 2, 2);
-      case 'golem': return golemSprite(this.pal, Math.floor(this.anim) % 4, this.state === 'wind' ? 'wind' : this.state === 'slash' ? 'slash' : 'walk');
-      case 'turret': return turretSprite(this.pal, this.state === 'charge' ? 1 : 0);
-      case 'wisp': return wispSprite(this.pal, Math.floor(this.t * 8) % 2);
+      case 'slime': return critterSprite(this.f, this.state === 'hop' ? 2 : Math.floor(this.t * 3) % 2, 1);
+      case 'bigslime': return critterSprite(this.f, this.state === 'hop' ? 2 : Math.floor(this.t * 2) % 2, 2);
+      case 'golem': return bruteSprite(this.f, Math.floor(this.anim) % 4, this.state === 'wind' ? 'wind' : this.state === 'slash' ? 'slash' : 'walk');
+      case 'turret': return runeStoneSprite(this.f, this.state === 'charge' ? 1 : 0);
+      case 'wisp': return eyeBlobSprite(this.f, Math.floor(this.t * 6) % 4);
     }
   }
   draw(ox, oy) {
@@ -580,7 +582,8 @@ class Enemy {
 class Boss {
   constructor(sc) {
     const d = DUNGEONS[sc.dIdx];
-    this.d = d; this.pal = d.bossPal; this.type = 'boss'; this.name = d.boss;
+    this.d = d; this.f = d.foe; this.type = 'boss'; this.name = d.boss;
+    this.pal = { id: 'b' + d.id, body: d.foe.tree2, dark: d.foe.tree, moss: d.foe.rune, eye: d.foe.rune };
     this.x = W / 2; this.y = 84; this.r = 30;
     this.maxHp = this.hp = Math.round(900 * d.hpMul);
     this.dmg = Math.round(18 * d.dmgMul * (S.phase === 'night' ? 1.15 : 1));
@@ -694,7 +697,7 @@ class Boss {
   }
   draw(ox, oy) {
     const x = Math.round(this.x - ox), y = Math.round(this.y - oy);
-    let img = bossSprite(this.pal, this.eyeOpen || this.intro > 0.3 && this.intro < 1.4 ? 1 : 0);
+    let img = hauntedTreeSprite(this.f, this.eyeOpen || this.intro > 0.3 && this.intro < 1.4 || Math.sin(this.t * 1.7) > 0.6 ? 1 : 0);
     const rise = this.intro > 0 ? clamp(this.intro - 1.2, 0, 1) * 40 : 0;
     if (this.dead) {
       const k = clamp(this.deathT / 1.6, 0, 1);
@@ -707,7 +710,7 @@ class Boss {
     if (this.flash > 0) drawSpr(whiteOf(img), x, y + rise, { alpha: 0.8 });
     ctx.restore();
     if (this.intro <= 0) for (const f of this.fists) {
-      const fi = fistSprite(this.pal);
+      const fi = rootClawSprite(this.f);
       shadow(f.x - ox, f.y - oy, 20, 0.3);
       drawSpr(fi, f.x - ox, f.y - oy - f.z);
     }

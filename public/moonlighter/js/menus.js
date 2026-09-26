@@ -125,27 +125,27 @@ class SlotScene {
   }
 }
 
-// ---------------------------------------------------------------- options
+// ---------------------------------------------------------------- settings (pocket-style)
 class OptionsUI extends Overlay {
   constructor() {
     super(); this.tab = 0; this.sel = 0;
-    this.tabs = ['GAME OPTIONS', 'GRAPHICS', 'SOUND', 'CONTROLS'];
+    this.tabs = [['GAME', 'gear'], ['VIDEO', 'eye'], ['SOUND', 'sound'], ['CONTROLS', 'pad']];
   }
   items() {
-    const pct = v => Math.round(v * 100) + '%';
+    const step = (k, d, f) => () => { OPTS[k] = clamp(Math.round((OPTS[k] + d) * 10) / 10, 0, 1); if (f) f(); };
     if (this.tab === 0) return [
       { name: 'Language', val: () => 'English', left() { }, right() { } },
-      { name: 'Screenshake', slider: () => OPTS.shake, val: () => pct(OPTS.shake), left() { OPTS.shake = clamp(Math.round((OPTS.shake - 0.1) * 10) / 10, 0, 1); }, right() { OPTS.shake = clamp(Math.round((OPTS.shake + 0.1) * 10) / 10, 0, 1); } },
+      { name: 'Screenshake', slider: () => OPTS.shake, left: step('shake', -0.1), right: step('shake', 0.1) },
       { name: 'Vibration', val: () => OPTS.vibration ? 'On' : 'Off', left() { OPTS.vibration = !OPTS.vibration; }, right() { OPTS.vibration = !OPTS.vibration; } },
-      { name: 'Text Speed', val: () => ['Slow', 'Normal', 'Fast'][OPTS.textSpeed], left() { OPTS.textSpeed = (OPTS.textSpeed + 2) % 3; }, right() { OPTS.textSpeed = (OPTS.textSpeed + 1) % 3; } },
+      { name: 'Text speed', val: () => ['Slow', 'Normal', 'Fast'][OPTS.textSpeed], left() { OPTS.textSpeed = (OPTS.textSpeed + 2) % 3; }, right() { OPTS.textSpeed = (OPTS.textSpeed + 1) % 3; } },
     ];
     if (this.tab === 1) return [
       { name: 'Fullscreen', val: () => document.fullscreenElement ? 'On' : 'Off', left: toggleFS, right: toggleFS },
-      { name: 'Touch Controls', val: () => document.body.classList.contains('touch') ? 'On' : 'Off', left: toggleTouch, right: toggleTouch },
+      { name: 'Touch controls', val: () => document.body.classList.contains('touch') ? 'On' : 'Off', left: toggleTouch, right: toggleTouch },
     ];
     if (this.tab === 2) return [
-      { name: 'Music', slider: () => OPTS.music, val: () => pct(OPTS.music), left() { OPTS.music = clamp(Math.round((OPTS.music - 0.1) * 10) / 10, 0, 1); AudioSys.applyVol(); }, right() { OPTS.music = clamp(Math.round((OPTS.music + 0.1) * 10) / 10, 0, 1); AudioSys.applyVol(); } },
-      { name: 'Sound Effects', slider: () => OPTS.sfx, val: () => pct(OPTS.sfx), left() { OPTS.sfx = clamp(Math.round((OPTS.sfx - 0.1) * 10) / 10, 0, 1); AudioSys.applyVol(); sfx('coin'); }, right() { OPTS.sfx = clamp(Math.round((OPTS.sfx + 0.1) * 10) / 10, 0, 1); AudioSys.applyVol(); sfx('coin'); } },
+      { name: 'Music', slider: () => OPTS.music, left: step('music', -0.1, () => AudioSys.applyVol()), right: step('music', 0.1, () => AudioSys.applyVol()) },
+      { name: 'Sound effects', slider: () => OPTS.sfx, left: step('sfx', -0.1, () => { AudioSys.applyVol(); sfx('coin'); }), right: step('sfx', 0.1, () => { AudioSys.applyVol(); sfx('coin'); }) },
     ];
     return [];
   }
@@ -159,43 +159,56 @@ class OptionsUI extends Overlay {
       if (d === 'D') { this.sel = (this.sel + 1) % it.length; sfx('move'); }
       if (d === 'L') { it[this.sel].left(); sfx('select'); saveOpts(); }
       if (d === 'R' || Input.pressed('A')) { it[this.sel].right(); sfx('select'); saveOpts(); }
-    }
+    } else if (d === 'L' || d === 'R') { this.tab = (this.tab + (d === 'L' ? 3 : 1)) % 4; this.sel = 0; sfx('move'); }
     if (Input.pressed('B')) { sfx('cancel'); saveOpts(); this.close(); }
   }
   draw() {
-    oliveBG(this.t);
+    dimScreen(0.7);
+    const fx = 36, fy = 8, fw = W - 72, fh = 186;
+    pocketFrame(fx, fy, fw, fh, 'SETTINGS');
     // tabs
-    const tw = W / 4;
-    this.tabs.forEach((t, i) => {
-      txt(t, tw * i + tw / 2, 12, { size: 6, align: 'center', color: i === this.tab ? '#f4ecd6' : '#a8a088', fam: FONT_TITLE });
-      if (i === this.tab) R(ctx, tw * i + 12, 16, tw - 24, 2, C.teal);
+    const tw = 64, gap = 6, tx0 = W / 2 - (this.tabs.length * tw + (this.tabs.length - 1) * gap) / 2;
+    this.tabs.forEach(([name, icon], i) => {
+      const x = tx0 + i * (tw + gap), y = fy + 24, on = i === this.tab;
+      slateBar(x, y, tw, 17, on, on ? PK.faceHi : PK.face);
+      ctx.drawImage(pIcon(icon), x + 4, y + 4);
+      pText(ctx, name, x + 14, y + 6, on ? PK.cream : PK.creamDim);
     });
-    btnGlyph(4, 13, 'LB'); btnGlyph(W - 22, 13, 'RB');
-    zigRow(22, 0, W);
-    R(ctx, W - 50, 40, 2, 150, C.teal);
+    btnGlyph(tx0 - 22, fy + 36, 'LB'); btnGlyph(tx0 + this.tabs.length * (tw + gap) + 2, fy + 36, 'RB');
     const it = this.items();
-    if (this.tab === 3) {
-      const rows = [
-        ['Move', 'WASD / Arrows', 'Stick / D-pad'], ['Interact / Confirm', 'E / Enter', 'A'], ['Attack', 'J', 'X'], ['Secondary / Block', 'K', 'Y'],
-        ['Roll', 'Space', 'B'], ['Back', 'Esc', 'B'], ['Inventory', 'I / Tab', 'Select'], ['Swap weapon', 'Q', 'LB'], ['Potion', 'R', 'RB'],
-        ['Pendant (hold)', 'F', 'L3'], ['Pause', 'P / Esc', 'Start'],
-      ];
-      txt('Action', 70, 42, { size: 7, color: C.mint }); txt('Keyboard', 170, 42, { size: 7, color: C.mint }); txt('Gamepad / Touch', 250, 42, { size: 7, color: C.mint });
-      rows.forEach((r, i) => { txt(r[0], 70, 56 + i * 12, { size: 7, color: '#e8e0c8' }); txt(r[1], 170, 56 + i * 12, { size: 7, color: '#c8c0a8' }); txt(r[2], 250, 56 + i * 12, { size: 7, color: '#c8c0a8' }); });
-    }
+    if (this.tab === 3) this.drawControls(fx, fy + 48, fw);
     it.forEach((o, i) => {
-      const y = 50 + i * 36, sel = i === this.sel, cx = W / 2 - 20;
-      txt(o.name, cx, y, { size: 7, align: 'center', color: sel ? '#f4ecd6' : '#b8b098' });
-      if (sel) { const w = textW(o.name, 7) / 2 + 12; ctx.drawImage(swirlIcon(false), cx - w - 4, y - 7); ctx.drawImage(swirlIcon(true), cx + w - 3, y - 7); }
-      txt('◀', cx - 50, y + 14, { size: 7, align: 'center', color: C.mint }); txt('▶', cx + 50, y + 14, { size: 7, align: 'center', color: C.mint });
-      if (o.slider) {
-        const v = o.slider();
-        txt('[', cx - 38, y + 14, { size: 8, color: '#f4ecd6' }); txt(']', cx + 34, y + 14, { size: 8, color: '#f4ecd6' });
-        for (let k = 0; k < 10; k++) R(ctx, cx - 32 + k * 6.6, y + 8, 5, 5, k < Math.round(v * 10) ? C.mint : '#6e6854');
-        txt(o.val(), cx, y + 24, { size: 6, align: 'center', color: '#8a8470' });
-      } else txt(o.val(), cx, y + 15, { size: 7, align: 'center', color: sel ? C.mint : '#a8a088' });
+      const x = fx + 20, y = fy + 52 + i * 26, w = fw - 40, sel = i === this.sel;
+      slateBar(x, y, w, 20, sel);
+      pText(ctx, o.name, x + 8, y + 7, sel ? PK.cream : PK.creamDim);
+      const vx = x + w - 96;
+      if (sel) { pText(ctx, '<', vx - 8, y + 7, PK.cream); pText(ctx, '>', x + w - 10, y + 7, PK.cream); }
+      if (o.slider) { const v = Math.round(o.slider() * 10); pipBar(vx, y + 6, 10, v); }
+      else { const s = o.val(); pText(ctx, s, vx + 30 - pTextW(s) / 2, y + 7, sel ? PK.xbY : PK.creamDim); }
     });
-    promptBar([['A', 'Change'], ['B', 'Back']], H - 6);
+    promptBar(this.tab === 3 ? [['LB', 'Tab'], ['B', 'Back']] : [['A', 'Change'], ['LB', 'Tab'], ['B', 'Back']], H - 5);
+  }
+  drawControls(fx, y0, fw) {
+    // keyboard block: WASD like a key cluster + action keys
+    const kx = fx + 26;
+    ctx.drawImage(keyCap('W', true), kx + 16, y0);
+    ['A', 'S', 'D'].forEach((k, i) => ctx.drawImage(keyCap(k), kx + i * 16, y0 + 16));
+    pText(ctx, 'MOVE', kx + 12, y0 + 34, PK.cream);
+    const acts = [['J', 'ATTACK'], ['K', 'BLOCK'], ['E', 'USE'], ['SPC', 'ROLL'], ['Q', 'SWAP'], ['R', 'POTION'], ['I', 'BAG'], ['F', 'HOME'], ['ESC', 'PAUSE']];
+    acts.forEach(([k, l], i) => {
+      const x = kx + (i % 3) * 58, y = y0 + 44 + Math.floor(i / 3) * 18;
+      const img = keyCap(k); ctx.drawImage(img, x, y);
+      pText(ctx, l, x + img.width + 1, y + 6, PK.cream);
+    });
+    // gamepad diamond
+    const cx = fx + fw - 74, cy = y0 + 40;
+    const place = (l, dx, dy, label, lx) => { ctx.drawImage(roundBtn(l, PAD_LETTER_COL[l], l === 'Y'), cx + dx - 8, cy + dy - 8); pText(ctx, label, cx + dx + lx, cy + dy - 2, PK.cream); };
+    place('Y', 0, -18, 'BLOCK', 12);
+    place('X', -18, 0, '', 0); place('B', 18, 0, '', 0); place('A', 0, 18, '', 0);
+    pText(ctx, 'ATTACK', cx - 58, cy - 2, PK.cream); pText(ctx, 'ROLL', cx + 30, cy - 2, PK.cream); pText(ctx, 'USE', cx - 5, cy + 30, PK.cream);
+    pText(ctx, 'LB SWAP  RB POTION', cx - 36, cy + 44, PK.creamDim);
+    ctx.drawImage(pIcon('hand', 2), fx + fw - 30, y0 - 4);
+    ctx.drawImage(pIcon('sword', 2), fx + 8, y0 + 96);
   }
 }
 function toggleFS() {
@@ -203,17 +216,17 @@ function toggleFS() {
 }
 function toggleTouch() { document.body.classList.toggle('touch'); resize(); }
 
-// ---------------------------------------------------------------- pause
+// ---------------------------------------------------------------- pause = player status (pocket-style)
 class PauseUI extends Overlay {
   constructor() {
     super(); this.sel = 0;
     const inD = Game.scene instanceof DungeonScene;
     this.items = [
-      ['Resume', () => this.close()],
-      ['Inventory', () => { this.close(); UI.open(new InventoryUI({ inDungeon: inD, scene: Game.scene })); }],
-      ['Notebook', () => { this.close(); UI.open(new NotebookUI()); }],
-      ['Options', () => UI.open(new OptionsUI())],
-      [inD ? 'Abandon run & quit' : 'Save & quit to title', () => ask(inD ? 'Quit to the title screen? Everything found on this run will be lost.' : 'Save and return to the title screen?', () => { if (!inD) saveGame(); UI.clear(); Game.setScene(new TitleScene()); })],
+      ['RESUME', 'hand', () => this.close()],
+      ['BAG', 'bag', () => { this.close(); UI.open(new InventoryUI({ inDungeon: inD, scene: Game.scene })); }],
+      ['NOTEBOOK', 'book', () => { this.close(); UI.open(new NotebookUI()); }],
+      ['SETTINGS', 'gear', () => UI.open(new OptionsUI())],
+      [inD ? 'ABANDON' : 'SAVE+QUIT', 'door', () => ask(inD ? 'Quit to the title screen? Everything found on this run will be lost.' : 'Save and return to the title screen?', () => { if (!inD) saveGame(); UI.clear(); Game.setScene(new TitleScene()); })],
     ];
   }
   update(dt) {
@@ -221,20 +234,56 @@ class PauseUI extends Overlay {
     const d = Input.dir();
     if (d === 'U') { this.sel = (this.sel + this.items.length - 1) % this.items.length; sfx('move'); }
     if (d === 'D') { this.sel = (this.sel + 1) % this.items.length; sfx('move'); }
-    if (Input.pressed('A') || Input.pressed('X')) { sfx('confirm'); this.items[this.sel][1](); }
+    if (Input.pressed('A') || Input.pressed('X')) { sfx('confirm'); this.items[this.sel][2](); }
     if (Input.pressed('B') || Input.pressed('START')) { sfx('cancel'); this.close(); }
   }
   draw() {
-    dimScreen(0.6);
-    const w = 150, h = 22 + this.items.length * 16, x = (W - w) / 2, y = (H - h) / 2;
-    paperPanel(x, y, w, h);
-    banner(W / 2, y - 12, 90, 'PAUSED');
-    this.items.forEach(([n], i) => {
-      const yy = y + 22 + i * 16, sel = i === this.sel;
-      if (sel) { R(ctx, x + 10, yy - 9, w - 20, 13, C.teal); }
-      txt(n, W / 2, yy, { size: 8, align: 'center', color: sel ? '#fff' : C.paperDark });
+    dimScreen(0.65);
+    const fx = 24, fy = 8, fw = W - 48, fh = 190;
+    pocketFrame(fx, fy, fw, fh, 'PLAYER STATUS');
+    const st = playerStats();
+    // portrait
+    slateBar(fx + 12, fy + 24, 70, 78, false, PK.band);
+    const pimg = heroPortrait(); ctx.drawImage(pimg, fx + 47 - pimg.width / 2, fy + 28);
+    pText(ctx, 'SHOPKEEPER', fx + 47 - pTextW('SHOPKEEPER') / 2, fy + 106, PK.cream);
+    pText(ctx, `DAY ${S.day} ${S.phase === 'night' ? 'NIGHT' : 'DAY'}`, fx + 47 - pTextW(`DAY ${S.day} ${S.phase === 'night' ? 'NIGHT' : 'DAY'}`) / 2, fy + 114, PK.creamDim);
+    // equipped weapons
+    const wl = S.equip.w;
+    [0, 1].forEach(i => {
+      const x = fx + 16 + i * 34, y = fy + 126;
+      slateBar(x, y, 28, 24, i === S.equip.active, PK.band);
+      if (wl[i]) ctx.drawImage(gearIcon(WEAPON_LINES[wl[i]].icon, S.gear[wl[i]]), x + 7, y + 4);
     });
-    txt(`Day ${S.day} · ${fmt(S.stats.earned)} gold earned · ${S.stats.kills} enemies defeated`, W / 2, y + h + 12, { size: 6, align: 'center', color: '#efe3c5' });
+    pText(ctx, 'WEAPONS', fx + 47 - pTextW('WEAPONS') / 2, fy + 156, PK.creamDim);
+    // stats
+    const sx = fx + 92, sw = 136;
+    const stat = (i, icon, label, value, bar) => {
+      const y = fy + 24 + i * 23;
+      slateBar(sx, y, sw, 19, false);
+      ctx.drawImage(pIcon(icon), sx + 4, y + 5);
+      pText(ctx, label, sx + 14, y + 7, PK.creamDim);
+      if (bar !== undefined) {
+        const bw = 64, bx = sx + sw - bw - 6;
+        R(ctx, bx, y + 5, bw, 7, PK.outline); R(ctx, bx + 1, y + 6, bw - 2, 5, '#5a1a1e'); R(ctx, bx + 1, y + 6, (bw - 2) * bar, 5, '#e24a42'); R(ctx, bx + 1, y + 6, (bw - 2) * bar, 1, '#ff9a8a');
+        pText(ctx, value, bx + bw / 2 - pTextW(value) / 2, y + 13 - 7, PK.cream);
+      } else pText(ctx, value, sx + sw - 6 - pTextW(value), y + 7, PK.cream);
+    };
+    stat(0, 'heart', 'HP', `${Math.ceil(S.hp)}/${st.maxHp}`, S.hp / st.maxHp);
+    stat(1, 'sword', 'ATTACK', String(st.dmg(wl[S.equip.active] || 'sword') | 0));
+    stat(2, 'shield', 'DEFENSE', st.def + '%');
+    stat(3, 'boot', 'SPEED', String(100 + st.spd));
+    stat(4, 'coin', 'GOLD', fmt(S.gold));
+    stat(5, 'sword', 'DEFEATED', String(S.stats.kills + (Game.scene.kills || 0)));
+    pText(ctx, `GUARDIANS ${S.bosses.filter(Boolean).length}/4`, sx + 4, fy + 166, PK.creamDim);
+    // menu
+    const mx = fx + fw - 100;
+    this.items.forEach(([n, icon], i) => {
+      const y = fy + 26 + i * 28, sel = i === this.sel;
+      slateBar(mx, y, 88, 20, sel, sel ? PK.faceHi : PK.face);
+      ctx.drawImage(pIcon(icon), mx + 6, y + 6);
+      pText(ctx, n, mx + 20, y + 7, sel ? PK.cream : PK.creamDim);
+    });
+    promptBar([['A', 'Select'], ['B', 'Resume']], H - 5);
   }
 }
 

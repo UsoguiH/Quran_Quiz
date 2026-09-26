@@ -42,26 +42,20 @@ const toast = (m, c) => Toasts.add(m, c);
 const KEY_LABEL = { A: 'E', B: 'Esc', X: 'J', Y: 'K', ROLL: 'Spc', LB: 'Q', RB: 'R', SELECT: 'I', START: 'P', PENDANT: 'F', LT: 'Z', RT: 'C' };
 const PAD_COL = { A: C.btnA, B: C.btnB, X: C.btnX, Y: C.btnY };
 function btnGlyph(x, y, b) {
-  // returns width drawn
+  // pixel keycap / round gamepad button; returns the drawn width
   const dev = Input.device();
+  const fix = l => l.replace('◀▶', '<>').replace('▲▼', '^v');
+  x = Math.round(x); y = Math.round(y);
   if (dev === 'key') {
-    const lab = KEY_LABEL[b] || b;
-    const w = Math.max(9, textW(lab, 7) + 5);
-    R(ctx, x, y - 7, w, 9, '#1b1420'); R(ctx, x + 1, y - 6, w - 2, 7, '#efe3c5'); R(ctx, x + 1, y, w - 2, 1, '#bba880');
-    txt(lab, x + w / 2, y - 0.5, { size: 7, align: 'center', color: '#3a2e20' });
-    return w;
+    const img = keyCap(fix(KEY_LABEL[b] || b));
+    ctx.drawImage(img, x - 2, y - 10);
+    return img.width - 4;
   }
   if (b === 'ROLL') b = 'B';
-  if (b === 'PENDANT') b = 'HOME';
-  if (PAD_COL[b]) {
-    ell(ctx, x, y - 7, 9, 9, '#1b1420'); ell(ctx, x + 1, y - 6, 7, 7, PAD_COL[b]);
-    txt(b, x + 4.5, y, { size: 7, align: 'center', color: '#fff', bold: true });
-    return 9;
-  }
-  const w = textW(b, 6) + 6;
-  R(ctx, x, y - 7, w, 9, '#1b1420'); R(ctx, x + 1, y - 6, w - 2, 7, '#5a5a66');
-  txt(b, x + w / 2, y - 0.5, { size: 6, align: 'center', color: '#fff' });
-  return w;
+  if (PAD_LETTER_COL[b]) { const img = roundBtn(b, PAD_LETTER_COL[b]); ctx.drawImage(img, x - 2, y - 10); return 13; }
+  const img = keyCap(fix(b === 'PENDANT' ? 'HOME' : b === 'SELECT' ? 'BAG' : b === 'START' ? 'II' : b));
+  ctx.drawImage(img, x - 2, y - 10);
+  return img.width - 4;
 }
 // prompts: [['A','Grab'],['B','Back']]; drawn centered at y
 function promptBar(list, y = H - 6, col = '#efe3c5', center = W / 2) {
