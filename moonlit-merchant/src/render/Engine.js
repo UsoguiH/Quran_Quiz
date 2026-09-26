@@ -229,7 +229,7 @@ export class Engine {
   resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const pr = Math.min(window.devicePixelRatio || 1, 2) * (this.q?.pixelRatio ?? 1);
+    const pr = Math.min(window.devicePixelRatio || 1, this.maxDpr ?? 2) * (this.q?.pixelRatio ?? 1);
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h);
     this.composer.setPixelRatio(pr);

@@ -1347,3 +1347,316 @@ input[type='range'] {
     transform: translateY(-2px);
   }
 }
+
+/* ---------------------------------------------------------------- */
+/* Touch / mobile controls                                           */
+/* ---------------------------------------------------------------- */
+
+html,
+body {
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.free-look #app canvas {
+  cursor: none;
+}
+
+.touch-controls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.joy-base {
+  position: fixed;
+  width: 124px;
+  height: 124px;
+  margin: -62px 0 0 -62px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 70%);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.joy-base.active {
+  opacity: 1;
+}
+
+.joy-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #c9cedb 55%, #8a90a0);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+}
+
+.touch-cluster {
+  position: fixed;
+  right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 230px;
+  height: 230px;
+  pointer-events: none;
+}
+
+.tbtn {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, rgba(120, 126, 145, 0.75), rgba(40, 44, 56, 0.72));
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.35),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  transition:
+    transform 0.08s ease,
+    filter 0.08s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tbtn.down {
+  transform: scale(0.9);
+  filter: brightness(1.35);
+}
+
+.tbtn.big {
+  width: 92px;
+  height: 92px;
+  font-size: 38px;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 214, 120, 0.85), rgba(190, 110, 30, 0.8));
+}
+
+.tbtn.block {
+  right: 102px;
+  bottom: 4px;
+}
+.tbtn.roll {
+  right: 4px;
+  bottom: 102px;
+}
+.tbtn.interact {
+  right: 84px;
+  bottom: 80px;
+}
+.tbtn.interact.ready {
+  background: radial-gradient(circle at 35% 30%, rgba(140, 230, 140, 0.9), rgba(40, 140, 60, 0.85));
+  animation: pulse 1s ease-in-out infinite;
+}
+.tbtn.swap,
+.tbtn.heal,
+.tbtn.pendant {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+.tbtn.swap {
+  right: 172px;
+  bottom: 10px;
+}
+.tbtn.pendant {
+  right: 156px;
+  bottom: 72px;
+}
+.tbtn.heal {
+  right: 144px;
+  bottom: 132px;
+}
+
+/* in town the cluster only shows the interact button: make it the big one */
+.touch-cluster .attack.hidden ~ .interact {
+  right: 0;
+  bottom: 0;
+  width: 84px;
+  height: 84px;
+  font-size: 34px;
+}
+
+.touch-top {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+}
+
+.touch-top .tbtn {
+  position: static;
+  width: 44px;
+  height: 44px;
+  font-size: 19px;
+  border-radius: 12px;
+}
+
+.rotate-hint {
+  display: none;
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(120, 230, 120, 0.25),
+      0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Layout adjustments on touch devices */
+body.touch {
+  --slot: 44px;
+}
+
+body.touch .hotbar,
+body.touch .weapon-slots,
+body.touch .prompt {
+  pointer-events: auto;
+}
+
+body.touch .bottom-bar {
+  bottom: calc(6px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) scale(0.74);
+  transform-origin: bottom center;
+}
+
+body.touch .minimap {
+  top: calc(64px + env(safe-area-inset-top));
+}
+
+body.touch .minimap {
+  padding: 5px;
+}
+
+body.touch .minimap canvas {
+  width: 92px;
+  height: 92px;
+}
+
+body.touch .minimap .floor {
+  display: none;
+}
+
+body.touch .messages {
+  left: calc(12px + env(safe-area-inset-left));
+  bottom: auto;
+  top: 58px;
+  width: 300px;
+}
+
+body.touch .msg {
+  font-size: 12px;
+}
+
+body.touch .info-tl {
+  left: calc(12px + env(safe-area-inset-left));
+  top: calc(10px + env(safe-area-inset-top));
+}
+
+body.touch .chip {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+body.touch .prompt {
+  font-size: 14px;
+  padding: 9px 16px;
+}
+
+body.touch .prompt kbd {
+  display: none;
+}
+
+body.touch .prompt::before {
+  content: '👆 ';
+}
+
+body.touch .window {
+  padding: 12px 14px 14px;
+  max-height: 96vh;
+  max-width: 98vw;
+}
+
+body.touch .inv-layout {
+  gap: 12px;
+}
+
+body.touch .recipes,
+body.touch .ledger {
+  min-width: 0;
+}
+
+body.touch .toast .big {
+  font-size: 32px;
+}
+
+body.touch .screen h1 {
+  font-size: clamp(34px, 8vw, 64px);
+}
+
+body.touch .screen .btn {
+  min-width: 200px;
+  padding: 10px 18px;
+}
+
+body.touch .controls-grid {
+  font-size: 12px;
+}
+
+@media (orientation: portrait) {
+  body.touch .rotate-hint {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(7, 8, 12, 0.94);
+    font: 800 18px var(--font);
+    text-align: center;
+    padding: 24px;
+    pointer-events: auto;
+  }
+
+  body.touch .rotate-hint .phone {
+    font-size: 64px;
+    animation: rotatePhone 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes rotatePhone {
+  0%,
+  30% {
+    transform: rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: rotate(-90deg);
+  }
+}
+
+body.touch .window,
+body.touch .screen {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}

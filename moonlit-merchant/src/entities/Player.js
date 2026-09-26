@@ -70,6 +70,16 @@ export class Player {
       if (input.down('KeyA')) wish.sub(r);
     }
     if (wish.lengthSq() > 0) wish.normalize();
+    else if (canControl && !this.dead) {
+      // analog stick (touch): proportional speed
+      const ax = input.axis.x;
+      const ay = input.axis.y;
+      const mag = Math.min(1, Math.hypot(ax, ay));
+      if (mag > 0.12) {
+        wish.addScaledVector(f, ay).addScaledVector(r, ax);
+        wish.setLength(mag);
+      }
+    }
 
     this.rollCd -= dt;
     this.invuln -= dt;

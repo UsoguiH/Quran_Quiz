@@ -90,6 +90,11 @@ export class UI {
       `<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"/><circle class="arc" cx="23" cy="23" r="19" fill="none" stroke="#ffd35a" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="119.4" transform="rotate(-90 23 23)"/></svg>`,
     );
     this.prompt = h('div', 'prompt hidden');
+    this.prompt.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;
+      e.preventDefault();
+      this.game.input.pressed.add('KeyE');
+    });
     const tl = h('div', 'info-tl');
     this.clockChip = h('div', 'chip');
     this.shopChip = h('div', 'chip closed hidden', '<span class="dot"></span><span class="t">Shop closed</span>');
@@ -149,6 +154,16 @@ export class UI {
       const s = this.slotEl(bag.slots[i]);
       if (i === this.hotbarSel) s.classList.add('selected');
       s.append(h('span', 'key', String(i + 1)));
+      // tap a pocket slot to select it; tap the selected one again to use it (touch)
+      s.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse') return;
+        e.preventDefault();
+        if (this.hotbarSel === i) this.game.input.pressed.add('KeyF');
+        else {
+          this.hotbarSel = i;
+          this.updateHotbar();
+        }
+      });
       this.hotbar.append(s);
     }
   }
@@ -170,6 +185,11 @@ export class UI {
       }
       if (i === st.activeWeapon && id) s.classList.add('active');
       s.append(h('span', 'tag', i === 0 ? 'MAIN' : 'ALT · Q'));
+      s.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse') return;
+        e.preventDefault();
+        this.game.input.pressed.add('KeyQ');
+      });
       this.weaponSlots.append(s);
     });
   }
@@ -457,6 +477,11 @@ export class UI {
       e.preventDefault();
       this.onSlotClick(desc, e);
     });
+    // long-press on touch screens acts as right-click (split a stack)
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (document.body.classList.contains('touch')) this.onSlotClick(desc, { button: 2, shiftKey: false });
+    });
     el.addEventListener('mouseenter', () => this.showTooltip(desc.get(), desc));
     el.addEventListener('mouseleave', () => this.hideTooltip());
     return el;
@@ -692,7 +717,9 @@ export class UI {
       );
       stats.style.marginTop = '12px';
       right.append(stats);
-      right.append(h('div', 'hint', '<p style="font-size:12px;color:#b9b6ad;margin:10px 0 0">Click to pick up · Right-click to split · Shift-click to quick-move · 1–5 select pocket slot · F uses it</p>'));
+      right.append(h('div', 'hint', document.body.classList.contains('touch')
+            ? '<p style="font-size:12px;color:#b9b6ad;margin:10px 0 0">Tap to pick up / place · Long-press to split a stack · Tap a hotbar slot twice to use it</p>'
+            : '<p style="font-size:12px;color:#b9b6ad;margin:10px 0 0">Click to pick up · Right-click to split · Shift-click to quick-move · 1–5 select pocket slot · F uses it</p>'));
       lay.append(right);
       body.append(lay);
     });

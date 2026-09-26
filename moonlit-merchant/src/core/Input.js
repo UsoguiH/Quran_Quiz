@@ -7,6 +7,11 @@ export class Input {
     this.released = new Set();
     this.mouse = { dx: 0, dy: 0, x: 0, y: 0, buttons: new Set(), pressed: new Set(), released: new Set(), wheel: 0 };
     this.locked = false;
+    this.axis = { x: 0, y: 0 }; // analog movement (touch joystick)
+    this.lockDisabled = false; // touch devices never use pointer lock
+    this.freeLook = false; // fallback when pointer lock is unavailable (e.g. sandboxed iframes)
+    this.onLockFail = null;
+    this.everLocked = false;
     this.onLockChange = null;
     this.onKey = null; // raw keydown hook for UI
 
@@ -33,14 +38,14 @@ export class Input {
     document.addEventListener('mousemove', (e) => {
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
-      if (this.locked) {
+      if (this.locked || this.freeLook) {
         // clamp giant spikes some browsers emit when re-locking
         this.mouse.dx += Math.max(-250, Math.min(250, e.movementX));
         this.mouse.dy += Math.max(-250, Math.min(250, e.movementY));
       }
     });
     document.addEventListener('mousedown', (e) => {
-      if (!this.locked) return;
+      if (!this.locked && !(this.freeLook && e.target === this.canvas)) return;
       this.mouse.buttons.add(e.button);
       this.mouse.pressed.add(e.button);
     });
@@ -52,12 +57,14 @@ export class Input {
     document.addEventListener(
       'wheel',
       (e) => {
-        if (this.locked) this.mouse.wheel += Math.sign(e.deltaY);
+        if (this.locked || this.freeLook) this.mouse.wheel += Math.sign(e.deltaY);
       },
       { passive: true },
     );
+    document.addEventListener('pointerlockerror', () => this.lockFailed());
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
+      if (this.locked) this.everLocked = true;
       if (!this.locked) {
         this.mouse.buttons.clear();
         this.keys.clear();
@@ -67,13 +74,23 @@ export class Input {
   }
 
   lock() {
-    if (this.locked) return;
+    if (this.locked || this.lockDisabled || this.freeLook) return;
+    if (!this.canvas.requestPointerLock) return this.lockFailed();
     try {
-      const p = this.canvas.requestPointerLock?.({ unadjustedMovement: false });
-      if (p && p.catch) p.catch(() => {});
+      const p = this.canvas.requestPointerLock({ unadjustedMovement: false });
+      if (p && p.catch) p.catch((err) => {
+        // a user-gesture error is recoverable; anything else means lock is unsupported here
+        if (!/gesture|activation/i.test(String(err))) this.lockFailed();
+      });
     } catch {
       /* ignore: needs a user gesture */
     }
+  }
+
+  // Only fall back to free-look if pointer lock has never worked on this page
+  // (a re-lock that is merely too soon after Esc is not a real failure).
+  lockFailed() {
+    if (!this.everLocked) this.onLockFail?.();
   }
 
   unlock() {

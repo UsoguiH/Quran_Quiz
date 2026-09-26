@@ -15,6 +15,7 @@ import { Village } from './world/Village.js';
 import { ShopInterior } from './world/ShopInterior.js';
 import { Dungeon } from './world/Dungeon.js';
 import { UI } from './ui/UI.js';
+import { TouchControls, isTouchDevice } from './ui/TouchControls.js';
 
 const TIME_RATE = 2; // game minutes per real second
 const SETTINGS_KEY = 'moonlit-merchant-settings';
@@ -45,7 +46,23 @@ class Game {
     this.pendantT = 0;
     this.godMode = false;
     this.clock = new THREE.Clock();
+    this.touch = isTouchDevice();
+    if (this.touch) {
+      document.body.classList.add('touch');
+      this.noLock = true;
+      this.input.lockDisabled = true;
+      this.engine.maxDpr = 1.5;
+    }
+    this.input.onLockFail = () => {
+      // pointer lock blocked (embedded preview etc.): look by moving the mouse instead
+      if (this.input.freeLook) return;
+      this.input.freeLook = true;
+      this.noLock = true;
+      document.body.classList.add('free-look');
+      this.ui?.message?.('Mouse capture is unavailable here — just move the mouse to look around.');
+    };
     this.ui = new UI(this);
+    if (this.touch) this.touchControls = new TouchControls(this);
     window.game = this;
   }
 
@@ -116,7 +133,7 @@ class Game {
     if (s.fov) this.player.fov = s.fov;
     if (s.volume !== undefined) this.audio.volume = s.volume;
     if (s.music !== undefined) this.audio.musicVolume = s.music;
-    this.setQuality(s.quality ?? this.engine.quality, false);
+    this.setQuality(s.quality ?? (this.touch ? 'medium' : this.engine.quality), false);
   }
 
   saveSettings() {
@@ -185,6 +202,8 @@ class Game {
       }
       if (this.paused && e.code === 'Escape') {
         this.resume();
+      } else if (!this.paused && e.code === 'Escape' && !input.locked) {
+        this.pause();
       }
     };
   }
@@ -211,6 +230,7 @@ class Game {
   }
 
   resume() {
+    if (this.player.dead) return;
     this.paused = false;
     this.ui.clearScreen();
     this.input.lock();
@@ -221,6 +241,7 @@ class Game {
   async startPlaying() {
     this.ui.clearScreen();
     this.audio.init();
+    if (this.touch) this.goFullscreen();
     await this.ui.fadeOut();
     this.mode = 'play';
     this.paused = false;
@@ -237,6 +258,19 @@ class Game {
     this.ui.refreshHUD();
     this.input.lock();
     await this.ui.fadeIn();
+  }
+
+  goFullscreen() {
+    try {
+      const el = document.documentElement;
+      if (!document.fullscreenElement && el.requestFullscreen) {
+        el.requestFullscreen({ navigationUI: 'hide' })
+          .then(() => screen.orientation?.lock?.('landscape').catch(() => {}))
+          .catch(() => {});
+      }
+    } catch {
+      /* not supported (iOS Safari): play in the browser window */
+    }
   }
 
   async newGame() {
@@ -652,6 +686,7 @@ class Game {
       }
       this.ui.update(dt);
     }
+    this.touchControls?.update();
     this.audio.update(dt);
     this.input.endFrame();
     this.engine.render(this.time);
