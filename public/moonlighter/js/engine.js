@@ -176,7 +176,7 @@ const Input = (() => {
     KeyZ: ['LT'], KeyC: ['RT'],
   };
   const down = {}, prev = {}, src = { key: {}, pad: {}, touch: {} }, latch = new Set(); // latch: presses shorter than a frame still count
-  let stick = { x: 0, y: 0 }, padStick = { x: 0, y: 0 }, analogMag = 0;
+  let stick = { x: 0, y: 0 }, stickRaw = 0, padStick = { x: 0, y: 0 }, analogMag = 0;
   let lastDevice = 'key';
   const rep = { dir: null, t: 0 };
   let anyPressedFlag = false;
@@ -218,24 +218,34 @@ const Input = (() => {
   stickEl.addEventListener('pointermove', onMove); zone.addEventListener('pointermove', onMove);
   const endStick = e => {
     if (e.pointerId !== stickId) return;
-    stickId = null; stick = { x: 0, y: 0 }; knob.style.transform = '';
+    stickId = null; stick = { x: 0, y: 0 }; stickRaw = 0; knob.style.transform = '';
     stickEl.classList.remove('active');
     stickEl.style.left = (stickHome.x - stickR) + 'px'; stickEl.style.top = (stickHome.y - stickR) + 'px';
   };
   for (const el of [stickEl, zone]) { el.addEventListener('pointerup', endStick); el.addEventListener('pointercancel', endStick); }
   function moveStick(e) {
-    let dx = (e.clientX - stickC.x) / stickR, dy = (e.clientY - stickC.y) / stickR;
+    // short thumb travel: full tilt at 55% of the ring, so small drags are enough
+    const travel = stickR * 0.55;
+    let dx = (e.clientX - stickC.x) / travel, dy = (e.clientY - stickC.y) / travel;
     const l = Math.hypot(dx, dy);
     if (l > 1) {
       // drag the base along when the thumb slides past the rim (dynamic joystick)
       if (floating) {
-        stickC.x += (dx / l) * (l - 1) * stickR; stickC.y += (dy / l) * (l - 1) * stickR;
+        stickC.x += (dx / l) * (l - 1) * travel; stickC.y += (dy / l) * (l - 1) * travel;
         stickEl.style.left = (stickC.x - stickR) + 'px'; stickEl.style.top = (stickC.y - stickR) + 'px';
       }
       dx /= l; dy /= l;
     }
-    stick = { x: dx, y: dy };
-    knob.style.transform = `translate(${dx * stickR * 0.6}px, ${dy * stickR * 0.6}px)`;
+    knob.style.transform = `translate(${dx * travel}px, ${dy * travel}px)`;
+    // response curve: small dead zone, then quickly up to full walking speed
+    const m = Math.min(1, Math.hypot(dx, dy)); stickRaw = m;
+    if (m < 0.12) { stick = { x: 0, y: 0 }; return; }
+    let a = Math.atan2(dy, dx);
+    // gently snap to the 8 directions so straight lines and diagonals are easy to hold
+    const oct = Math.round(a / (Math.PI / 4)) * (Math.PI / 4);
+    if (Math.abs(a - oct) < 0.2) a = oct;
+    const k = Math.min(1, (m - 0.12) / 0.6 + 0.3);
+    stick = { x: Math.cos(a) * k, y: Math.sin(a) * k };
   }
   for (const b of touchEl.querySelectorAll('.tbtn')) {
     const name = b.dataset.b;
@@ -303,7 +313,7 @@ const Input = (() => {
     place(stickEl, sx, sy, sr); stickHome = { x: sx, y: sy };
     // the floating-stick zone covers the lower-left of the screen
     if (portrait) { const zt = (VIEW.bottom || innerHeight * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight - zt) + 'px' }); }
-    else Object.assign(zone.style, { left: '0px', top: (innerHeight * 0.3) + 'px', width: (innerWidth * 0.45) + 'px', height: (innerHeight * 0.7) + 'px' });
+    else Object.assign(zone.style, { left: '0px', top: (innerHeight * 0.22) + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight * 0.78) + 'px' });
     // action buttons: one big thumb button in the corner, the others fanned around it
     const Rr = (big + sat) / 2 + 6;
     const at = deg => [bx + Math.cos(deg * Math.PI / 180) * Rr, by + Math.sin(deg * Math.PI / 180) * Rr];
@@ -367,7 +377,7 @@ const Input = (() => {
     if (src.key.LEFT || src.pad.LEFT) x -= 1; if (src.key.RIGHT || src.pad.RIGHT) x += 1;
     if (src.key.UP || src.pad.UP) y -= 1; if (src.key.DOWN || src.pad.DOWN) y += 1;
     x += padStick.x + stick.x; y += padStick.y + stick.y;
-    analogMag = Math.hypot(padStick.x + stick.x, padStick.y + stick.y);
+    analogMag = Math.max(Math.hypot(padStick.x, padStick.y), stickRaw);
     const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
     if (l < 0.18) { x = 0; y = 0; }
     return { x, y };
@@ -388,7 +398,7 @@ const Input = (() => {
     tapIn: (x, y, w, h) => !!tapNow && tapNow.x >= x && tapNow.x < x + w && tapNow.y >= y && tapNow.y < y + h,
     eatTap() { tapNow = null; },
     // run: hold Shift / RT, or push the analog stick (pad or touch) all the way
-    runHeld: () => !!down.RUN || !!down.RT || analogMag > 0.85,
+    runHeld: () => !!down.RUN || !!down.RT || analogMag > 0.97,
   };
   return api;
 })();

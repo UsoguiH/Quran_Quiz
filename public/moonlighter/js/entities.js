@@ -5,6 +5,14 @@
 
 const DIRV = [[0, 1], [0, -1], [-1, 0], [1, 0]]; // down, up, left, right
 const DIRA = [Math.PI / 2, -Math.PI / 2, Math.PI, 0];
+// facing that doesn't flicker on near-diagonals: only turn when the new axis clearly wins
+function stickyDir(cur, x, y) {
+  const want = dirFromVec(x, y);
+  if (want === cur) return cur;
+  const along = cur === 0 ? y : cur === 1 ? -y : cur === 2 ? -x : x;
+  const other = want === 0 ? y : want === 1 ? -y : want === 2 ? -x : x;
+  return along > 0.25 && other < along * 1.35 ? cur : want;
+}
 function dirFromVec(x, y) { return Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : (y < 0 ? 1 : 0); }
 function drawSpr(img, x, y, o = {}) {
   // bottom-centre anchor
@@ -54,7 +62,7 @@ function drawFX(sc, ox, oy) {
 }
 
 // ---------------------------------------------------------------- collision helper
-function moveBody(e, dx, dy, world, canPit = true) {
+function moveBody(e, dx, dy, world, canPit = true, slide = false) {
   const hw = e.hw, hh = e.hh;
   const blocked = (x, y) => {
     const pts = [[x - hw, y - hh], [x + hw, y - hh], [x - hw, y + hh], [x + hw, y + hh], [x, y - hh], [x, y + hh]];
@@ -65,6 +73,20 @@ function moveBody(e, dx, dy, world, canPit = true) {
   const stepX = Math.ceil(Math.abs(dx) / 3) || 1, stepY = Math.ceil(Math.abs(dy) / 3) || 1;
   for (let i = 0; i < stepX; i++) { const nx = e.x + dx / stepX; if (!blocked(nx, e.y)) e.x = nx; else { hitX = true; break; } }
   for (let i = 0; i < stepY; i++) { const ny = e.y + dy / stepY; if (!blocked(e.x, ny)) e.y = ny; else { hitY = true; break; } }
+  // corner correction: when mostly walking into a wall edge, ease around it instead of sticking
+  if (slide) {
+    const nudge = (ax, ay, amt) => {
+      for (let off = 1; off <= 10; off++) for (const sgn of [-1, 1]) {
+        const ox = ax * off * sgn, oy = ay * off * sgn;
+        if (!blocked(e.x + ox, e.y + oy) && !blocked(e.x + ox + (ay ? Math.sign(dx) * 2 : 0), e.y + oy + (ax ? Math.sign(dy) * 2 : 0))) {
+          const m = Math.min(off, amt); e.x += ax * m * sgn; e.y += ay * m * sgn; return true;
+        }
+      }
+      return false;
+    };
+    if (hitX && Math.abs(dy) < Math.abs(dx) * 0.6) nudge(0, 1, Math.abs(dx) * 0.9);
+    if (hitY && Math.abs(dx) < Math.abs(dy) * 0.6) nudge(1, 0, Math.abs(dy) * 0.9);
+  }
   return { hitX, hitY };
 }
 
@@ -102,6 +124,7 @@ class Player {
     // knockback decay
     if (this.kx || this.ky) { moveBody(this, this.kx * dt, this.ky * dt, world); this.kx *= 0.82; this.ky *= 0.82; if (Math.abs(this.kx) + Math.abs(this.ky) < 4) { this.kx = this.ky = 0; } }
 
+    if (!['walk', 'run', 'idle'].includes(this.state)) { this.vx = 0; this.vy = 0; }
     switch (this.state) {
       case 'dead': return;
       case 'fall':
@@ -118,7 +141,7 @@ class Player {
         this.anim += dt * 22;
         this.trailT -= dt;
         if (this.trailT <= 0) { this.trailT = 0.035; this.trail.push({ x: this.x, y: this.y, f: Math.floor(this.anim) % 6, life: 0.22 }); }
-        if (this.st > 0.32) { this.state = 'idle'; this.rollCd = 0.12; FX.dust(sc, this.x, this.y, 3); }
+        if (this.st > 0.32) { this.state = 'idle'; this.rollCd = 0.12; FX.dust(sc, this.x, this.y, 3); this.vx = this.rvx * st.speed * 0.8; this.vy = this.rvy * st.speed * 0.8; }
         if (Math.random() < 0.5) FX.dust(sc, this.x, this.y, 1);
         if (Math.random() < 0.3) sc.parts.push({ x: this.x - this.rvx * 6 + rand(-3, 3), y: this.y - 8 + rand(-3, 3), vx: -this.rvx * 30, vy: -this.rvy * 30, life: 0.3, max: 0.3, col: PD.r, s: 1, grav: 0 });
         return;
@@ -162,16 +185,25 @@ class Player {
     }
     // --- free movement
     if (moving) {
-      this.dir = dirFromVec(ax.x, ax.y);
+      this.dir = stickyDir(this.dir, ax.x, ax.y);
       const running = Input.runHeld() && !this.exhausted;
       if (running) { this.stam -= 16 * dt; this.stamCd = 0.45; if (this.stam <= 0) { this.stam = 0; this.exhausted = true; } }
       const sp = st.speed * (running ? 1.55 : 1);
-      moveBody(this, ax.x * sp * dt, ax.y * sp * dt, world);
+      // quick acceleration: snappy but without the jerk of instant starts and turns
+      const k = 1 - Math.exp(-dt * 24);
+      this.vx += (ax.x * sp - this.vx) * k; this.vy += (ax.y * sp - this.vy) * k;
+      const hit = moveBody(this, this.vx * dt, this.vy * dt, world, true, true);
+      if (hit.hitX && Math.abs(ax.x) < 0.3) this.vx = 0; if (hit.hitY && Math.abs(ax.y) < 0.3) this.vy = 0;
       if (this.state !== (running ? 'run' : 'walk')) this.anim = 0;
       this.anim += dt * (running ? 14 : 8); this.state = running ? 'run' : 'walk';
       this.stepT -= dt;
       if (this.stepT <= 0) { this.stepT = running ? 0.18 : 0.3; if (mode !== 'dungeon') sfx('step'); if (running) FX.dust(sc, this.x - ax.x * 4, this.y, 2); }
-    } else { if (this.state !== 'idle') this.anim = 0; this.state = 'idle'; this.anim += dt * 2.2; }
+    } else {
+      // tiny glide to a stop
+      const k = 1 - Math.exp(-dt * 28); this.vx -= this.vx * k; this.vy -= this.vy * k;
+      if (Math.abs(this.vx) + Math.abs(this.vy) > 3) moveBody(this, this.vx * dt, this.vy * dt, world, true, true); else this.vx = this.vy = 0;
+      if (this.state !== 'idle') this.anim = 0; this.state = 'idle'; this.anim += dt * 2.2;
+    }
     // pits & safe spots
     if (world.pit) {
       if (world.pit(this.x, this.y)) { this.state = 'fall'; this.st = 0; sfx('fall'); return; }
