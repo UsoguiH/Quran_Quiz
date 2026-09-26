@@ -98,7 +98,7 @@ class InventoryUI extends GridUI {
     txt('⇄', 244, 49, { size: 8, align: 'center', color: C.teal2 }); if (S.equip.active === 0) R(ctx, 214, 56, 18, 2, C.teal); else R(ctx, 256, 56, 18, 2, C.teal);
     ['helm', 'chest', 'boots'].forEach((k, i) => slot(206, 64 + i * 22, S.gear[k] >= 0 && { gear: k, tier: S.gear[k] }, k.toUpperCase()));
     R(ctx, 232, 64, 58, 64, '#e6d7b2'); R(ctx, 233, 65, 56, 62, '#efe6cc');
-    ctx.drawImage(heroPortrait(), 240, 74);
+    { const hp = heroPortrait(); ctx.drawImage(hp, 261 - hp.width / 2, 68); }
     for (let t = 0; t < 4; t++) {
       slotBox(214 + t * 22, 138, 18);
       if (S.potions[t]) drawStack({ potion: t, n: S.potions[t] }, 215 + t * 22, 139, 16);

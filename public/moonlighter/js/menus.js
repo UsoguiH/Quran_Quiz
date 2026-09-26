@@ -194,7 +194,7 @@ class OptionsUI extends Overlay {
     ctx.drawImage(keyCap('W', true), kx + 16, y0);
     ['A', 'S', 'D'].forEach((k, i) => ctx.drawImage(keyCap(k), kx + i * 16, y0 + 16));
     pText(ctx, 'MOVE', kx + 12, y0 + 34, PK.cream);
-    const acts = [['J', 'ATTACK'], ['K', 'BLOCK'], ['E', 'USE'], ['SPC', 'ROLL'], ['Q', 'SWAP'], ['R', 'POTION'], ['I', 'BAG'], ['F', 'HOME'], ['ESC', 'PAUSE']];
+    const acts = [['J', 'ATTACK'], ['K', 'BLOCK'], ['E', 'USE'], ['SPC', 'DASH'], ['SHF', 'RUN'], ['Q', 'SWAP'], ['R', 'POTION'], ['I', 'BAG'], ['F', 'HOME'], ['ESC', 'PAUSE']];
     acts.forEach(([k, l], i) => {
       const x = kx + (i % 3) * 58, y = y0 + 44 + Math.floor(i / 3) * 18;
       const img = keyCap(k); ctx.drawImage(img, x, y);
@@ -205,8 +205,8 @@ class OptionsUI extends Overlay {
     const place = (l, dx, dy, label, lx) => { ctx.drawImage(roundBtn(l, PAD_LETTER_COL[l], l === 'Y'), cx + dx - 8, cy + dy - 8); pText(ctx, label, cx + dx + lx, cy + dy - 2, PK.cream); };
     place('Y', 0, -18, 'BLOCK', 12);
     place('X', -18, 0, '', 0); place('B', 18, 0, '', 0); place('A', 0, 18, '', 0);
-    pText(ctx, 'ATTACK', cx - 58, cy - 2, PK.cream); pText(ctx, 'ROLL', cx + 30, cy - 2, PK.cream); pText(ctx, 'USE', cx - 5, cy + 30, PK.cream);
-    pText(ctx, 'LB SWAP  RB POTION', cx - 36, cy + 44, PK.creamDim);
+    pText(ctx, 'ATTACK', cx - 58, cy - 2, PK.cream); pText(ctx, 'DASH', cx + 30, cy - 2, PK.cream); pText(ctx, 'USE', cx - 5, cy + 30, PK.cream);
+    pText(ctx, 'LB SWAP  RB POTION', cx - 36, cy + 44, PK.creamDim); pText(ctx, 'FULL STICK = RUN', cx - 32, cy + 54, PK.creamDim);
     ctx.drawImage(pIcon('hand', 2), fx + fw - 30, y0 - 4);
     ctx.drawImage(pIcon('sword', 2), fx + 8, y0 + 96);
   }

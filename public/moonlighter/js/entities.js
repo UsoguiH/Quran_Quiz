@@ -76,13 +76,14 @@ class Player {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.dir = 0; this.hw = 4; this.hh = 3;
     this.state = 'idle'; this.st = 0; this.anim = 0; this.inv = 0; this.combo = 0; this.queued = false;
     this.rollCd = 0; this.lastSafe = { x, y }; this.hitList = new Set(); this.charge = 0; this.flash = 0; this.stepT = 0;
-    this.kx = 0; this.ky = 0;
+    this.kx = 0; this.ky = 0; this.trail = []; this.trailT = 0;
   }
   get weapon() { const line = S.equip.w[S.equip.active] || S.equip.w[0]; return line; }
   update(dt, sc, mode) {
     const st = playerStats();
     this.inv = Math.max(0, this.inv - dt); this.rollCd = Math.max(0, this.rollCd - dt); this.flash = Math.max(0, this.flash - dt);
     this.st += dt;
+    for (const t of this.trail) t.life -= dt; this.trail = this.trail.filter(t => t.life > 0);
     const ax = Input.axis();
     const moving = Math.hypot(ax.x, ax.y) > 0.2;
     const world = sc.world;
@@ -99,11 +100,16 @@ class Player {
         }
         return;
       case 'roll': {
-        const sp = 175 * (1 + st.spd / 100);
+        // dash-roll: explosive start that eases out
+        const k = clamp(this.st / 0.32, 0, 1);
+        const sp = lerp(250, 120, k * k) * (1 + st.spd / 100);
         moveBody(this, this.rvx * sp * dt, this.rvy * sp * dt, world);
-        this.anim += dt * 16;
-        if (this.st > 0.3) { this.state = 'idle'; this.rollCd = 0.12; }
-        if (Math.random() < 0.4) FX.dust(sc, this.x, this.y, 1);
+        this.anim += dt * 22;
+        this.trailT -= dt;
+        if (this.trailT <= 0) { this.trailT = 0.035; this.trail.push({ x: this.x, y: this.y, f: Math.floor(this.anim) % 6, life: 0.22 }); }
+        if (this.st > 0.32) { this.state = 'idle'; this.rollCd = 0.12; FX.dust(sc, this.x, this.y, 3); }
+        if (Math.random() < 0.5) FX.dust(sc, this.x, this.y, 1);
+        if (Math.random() < 0.3) sc.parts.push({ x: this.x - this.rvx * 6 + rand(-3, 3), y: this.y - 8 + rand(-3, 3), vx: -this.rvx * 30, vy: -this.rvy * 30, life: 0.3, max: 0.3, col: PD.r, s: 1, grav: 0 });
         return;
       }
       case 'attack': {
@@ -146,11 +152,14 @@ class Player {
     // --- free movement
     if (moving) {
       this.dir = dirFromVec(ax.x, ax.y);
-      const sp = st.speed;
+      const running = Input.runHeld();
+      const sp = st.speed * (running ? 1.55 : 1);
       moveBody(this, ax.x * sp * dt, ax.y * sp * dt, world);
-      this.anim += dt * 9; this.state = 'walk';
-      this.stepT -= dt; if (this.stepT <= 0) { this.stepT = 0.28; if (mode !== 'dungeon') sfx('step'); }
-    } else { this.state = 'idle'; this.anim = 0; }
+      if (this.state !== (running ? 'run' : 'walk')) this.anim = 0;
+      this.anim += dt * (running ? 14 : 8); this.state = running ? 'run' : 'walk';
+      this.stepT -= dt;
+      if (this.stepT <= 0) { this.stepT = running ? 0.18 : 0.3; if (mode !== 'dungeon') sfx('step'); if (running) FX.dust(sc, this.x - ax.x * 4, this.y, 2); }
+    } else { if (this.state !== 'idle') this.anim = 0; this.state = 'idle'; this.anim += dt * 2.2; }
     // pits & safe spots
     if (world.pit) {
       if (world.pit(this.x, this.y)) { this.state = 'fall'; this.st = 0; sfx('fall'); return; }
@@ -292,10 +301,21 @@ class Player {
       ctx.save(); ctx.translate(x, y - 4); ctx.rotate(Math.PI / 2); ctx.drawImage(img, -img.width / 2, -img.height / 2); ctx.restore();
       return;
     }
-    if (this.state === 'roll') { drawSpr(heroRoll(Math.floor(this.anim) % 4), x, y + 1); return; }
+    if (this.state === 'roll') {
+      const rev = this.rvx < -0.1;
+      for (const t of this.trail) { ctx.globalAlpha = clamp(t.life / 0.22, 0, 1) * 0.35; drawSpr(heroRoll(rev ? 5 - t.f : t.f), t.x - ox, t.y - oy + 1); }
+      ctx.globalAlpha = 1;
+      const f = Math.floor(this.anim) % 6;
+      drawSpr(heroRoll(rev ? 5 - f : f), x, y + 1); return;
+    }
     const atk = this.state === 'attack' || this.state === 'special';
-    const pose = atk ? 'attack' : this.state === 'walk' || this.state === 'block' ? 'walk' : 'idle';
-    const frame = Math.floor(this.anim) % 4;
+    let pose = atk ? 'attack' : this.state === 'run' ? 'run' : this.state === 'walk' || this.state === 'block' ? 'walk' : 'idle';
+    let frame = Math.floor(this.anim);
+    if (atk) {
+      const k = WK[this.wkind] || WK.sword, dur = this.state === 'special' ? this.specDur : k.dur[this.combo];
+      const p = clamp(this.st / dur, 0, 1); frame = p < 0.25 ? 0 : p < 0.65 ? 1 : 2;
+    }
+    if (this.state === 'charge') { pose = 'attack'; frame = 0; }
     const drawWeaponFirst = this.dir === 1 || this.dir === 2 && false;
     if ((atk || this.state === 'block' || this.state === 'charge') && drawWeaponFirst) this.drawWeapon(x, y);
     const img = heroSprite(this.dir, frame, pose);
@@ -308,7 +328,7 @@ class Player {
     const kind = WEAPON_LINES[line].kind;
     const ic = gearIcon(WEAPON_LINES[line].icon, tier);
     const a0 = DIRA[this.dir];
-    const hx = x + DIRV[this.dir][0] * 4, hy = y - 9 + DIRV[this.dir][1] * 3;
+    const hx = x + DIRV[this.dir][0] * 6, hy = y - 13 + DIRV[this.dir][1] * 4;
     if (this.state === 'block') {
       ctx.save(); ctx.translate(hx + DIRV[this.dir][0] * 4, hy + DIRV[this.dir][1] * 4);
       R(ctx, -5, -6, 10, 12, '#1b1420'); R(ctx, -4, -5, 8, 10, '#8a8a9a'); R(ctx, -3, -4, 6, 8, '#c3c3d2'); R(ctx, -1, -3, 2, 6, C.teal);

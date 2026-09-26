@@ -39,7 +39,7 @@ const Toasts = {
 const toast = (m, c) => Toasts.add(m, c);
 
 // ---------------------------------------------------------------- button glyphs
-const KEY_LABEL = { A: 'E', B: 'Esc', X: 'J', Y: 'K', ROLL: 'Spc', LB: 'Q', RB: 'R', SELECT: 'I', START: 'P', PENDANT: 'F', LT: 'Z', RT: 'C' };
+const KEY_LABEL = { RUN: 'SHF', A: 'E', B: 'Esc', X: 'J', Y: 'K', ROLL: 'Spc', LB: 'Q', RB: 'R', SELECT: 'I', START: 'P', PENDANT: 'F', LT: 'Z', RT: 'C' };
 const PAD_COL = { A: C.btnA, B: C.btnB, X: C.btnX, Y: C.btnY };
 function btnGlyph(x, y, b) {
   // pixel keycap / round gamepad button; returns the drawn width

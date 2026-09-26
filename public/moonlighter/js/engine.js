@@ -129,12 +129,12 @@ const Input = (() => {
     KeyE: ['A'], Enter: ['A'], NumpadEnter: ['A'],
     Escape: ['B', 'START'], Backspace: ['B'],
     KeyJ: ['X'], KeyK: ['Y'], KeyL: ['A'],
-    Space: ['ROLL'], ShiftLeft: ['ROLL'],
+    Space: ['ROLL'], ShiftLeft: ['RUN'], ShiftRight: ['RUN'],
     KeyQ: ['LB'], KeyR: ['RB'], KeyI: ['SELECT'], Tab: ['SELECT'], KeyP: ['START'], KeyF: ['PENDANT'],
     KeyZ: ['LT'], KeyC: ['RT'],
   };
   const down = {}, prev = {}, src = { key: {}, pad: {}, touch: {} };
-  let stick = { x: 0, y: 0 }, padStick = { x: 0, y: 0 };
+  let stick = { x: 0, y: 0 }, padStick = { x: 0, y: 0 }, analogMag = 0;
   let lastDevice = 'key';
   const rep = { dir: null, t: 0 };
   let anyPressedFlag = false;
@@ -247,6 +247,7 @@ const Input = (() => {
     if (src.key.LEFT || src.pad.LEFT) x -= 1; if (src.key.RIGHT || src.pad.RIGHT) x += 1;
     if (src.key.UP || src.pad.UP) y -= 1; if (src.key.DOWN || src.pad.DOWN) y += 1;
     x += padStick.x + stick.x; y += padStick.y + stick.y;
+    analogMag = Math.hypot(padStick.x + stick.x, padStick.y + stick.y);
     const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
     if (l < 0.18) { x = 0; y = 0; }
     return { x, y };
@@ -261,6 +262,8 @@ const Input = (() => {
     consume(b) { prev[b] = true; down[b] = true; },
     clearAll() { for (const k in down) { prev[k] = true; } },
     device: () => lastDevice,
+    // run: hold Shift / RT, or push the analog stick (pad or touch) all the way
+    runHeld: () => !!down.RUN || !!down.RT || analogMag > 0.85,
   };
   return api;
 })();

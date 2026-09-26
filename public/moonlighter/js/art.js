@@ -171,113 +171,134 @@ function potionIcon(tier) {
   });
 }
 
-// ---------------------------------------------------------------- hero
-const HERO_COL = {
-  hair: '#f1ece2', hair2: '#c7bdb2', skin: '#f1c49a', skin2: '#d49a70', eye: '#2a1c1c',
-  shirt: '#4a7fc2', shirt2: '#34609a', scarf: '#d9543f', pants: '#5a4634', boot: '#3a2a22',
-  pack: '#9a653b', pack2: '#6e4427', packL: '#c08650', roll: '#e8d8b2', roll2: '#c4b088', belt: '#6b4a2a', buckle: '#e8c060',
+// ---------------------------------------------------------------- hero: the plague-doctor merchant
+// Black top hat, glowing red eyes, grey beak mask, long tattered cloak and a red scarf.
+const PD = {
+  k: '#141217', k2: '#26232c', k3: '#38343f', kd: '#060508',
+  r: '#ff4d4a', r2: '#b82a2e', ed: '#6e1a1e', e: '#ff6a5e',
+  b1: '#76767c', b2: '#4e4e56', b3: '#a2a2aa', glove: '#3e3946',
 };
-// dir: 0 down, 1 up, 2 left, 3 right. frame 0..3 walk. pose: 'idle'|'walk'|'attack'
+const HERO_ANIM = {
+  idle: { n: 2, bob: [0, 1], feetS: [[9, 13], [9, 13]] },
+  walk: { n: 4, bob: [0, 1, 0, 1], feetS: [[8, 14], [10, 12], [14, 8], [12, 10]] },
+  run: { n: 6, bob: [0, 1, 2, 1, 0, 1], feetS: [[5, 17], [8, 15], [13, 10], [17, 5], [15, 8], [10, 13]] },
+  attack: { n: 3, bob: [0, 0, 1], feetS: [[8, 14], [7, 16], [8, 14]] },
+};
+function pdCloak(g, cx, b, lean, flare, flareF, hemShift, hemRow = 29) {
+  for (let y = 12; y <= hemRow; y++) {
+    const t = (y - 12) / (hemRow - 12);
+    const half = 3.5 + t * 6.5;
+    const c = cx + lean * (1 - t);
+    const yy = y + (t < 0.45 ? b : 0);
+    const x0 = Math.round(c - half - flare * t * t), x1 = Math.round(c + half + flareF * t * t);
+    if (y === hemRow) { for (let x = x0; x <= x1; x++) if ((x + hemShift) % 3 !== 0) P(g, x, yy, PD.k); }
+    else R(g, x0, yy, x1 - x0 + 1, 1, PD.k);
+    if (y === hemRow - 1) for (let x = x0; x <= x1; x++) if ((x + hemShift) % 5 === 0) P(g, x, hemRow + 1, PD.k);
+  }
+}
+function pdHat(g, x, y) {
+  R(g, x + 3, y, 8, 7, PD.k); R(g, x + 4, y + 1, 1, 5, PD.k3); R(g, x + 3, y + 5, 8, 1, PD.k2);
+  R(g, x, y + 7, 14, 2, PD.k); R(g, x, y + 7, 3, 1, PD.k3);
+}
 function heroSprite(dir, frame, pose = 'walk') {
-  const key = `hero_${dir}_${frame}_${pose}`;
+  const key = `pd_${dir}_${frame}_${pose}`;
   return cached(key, () => {
-    if (dir === 3) return flipH(heroSprite(2, frame, pose));
-    const K = HERO_COL;
-    const leg = pose === 'walk' ? [0, 1, 0, -1][frame % 4] : 0;
-    const bob = pose === 'walk' && (frame % 2 === 1) ? 1 : 0;
-    return sprite(20, 24, g => {
-      if (dir === 0) {
-        // pack behind (sides visible)
-        R(g, 3, 6 + bob, 14, 12, K.pack2); R(g, 4, 7 + bob, 12, 10, K.pack);
-        R(g, 4, 1 + bob, 12, 4, K.roll); R(g, 4, 4 + bob, 12, 1, K.roll2); R(g, 6, 1 + bob, 1, 4, K.pack2); R(g, 13, 1 + bob, 1, 4, K.pack2);
-        // legs
-        R(g, 7, 18 - (leg > 0 ? 1 : 0), 2, 4, K.pants); R(g, 7, 21 - (leg > 0 ? 1 : 0), 2, 2, K.boot);
-        R(g, 11, 18 - (leg < 0 ? 1 : 0), 2, 4, K.pants); R(g, 11, 21 - (leg < 0 ? 1 : 0), 2, 2, K.boot);
-        // torso
-        R(g, 6, 12 + bob, 8, 6, K.shirt); R(g, 6, 16 + bob, 8, 1, K.shirt2); R(g, 6, 17 + bob, 8, 1, K.belt); P(g, 10, 17 + bob, K.buckle);
-        R(g, 6, 12 + bob, 8, 2, K.scarf); R(g, 12, 14 + bob, 1, 2, K.scarf);
+    if (dir === 2) return flipH(heroSprite(3, frame, pose));
+    const A = HERO_ANIM[pose] || HERO_ANIM.walk, f = frame % A.n;
+    const b = A.bob[f], hs = f;
+    const run = pose === 'run', atk = pose === 'attack';
+    const outline = '#050409';
+    return sprite(28, 33, g => {
+      if (dir === 3) {
+        // ---- side view, facing right
+        const lean = run ? 2 : atk ? [-1, 2, 1][f] : 0;
+        const [bf, ff] = A.feetS[f];
+        R(g, bf, 30, 3, 2, PD.kd); R(g, ff, 30, 3, 2, PD.kd); R(g, ff + 2, 31, 1, 1, PD.kd);
+        // flowing scarf behind when running
+        if (run) {
+          const fl = f % 2;
+          R(g, 1 + lean, 14 + b + fl, 7, 2, PD.r); R(g, 0 + lean, 15 + b + fl, 3, 2, PD.r2); R(g, 2 + lean, 18 + b - fl, 5, 1, PD.r);
+        }
+        pdCloak(g, 11, b, lean, run ? 3 : atk && f === 1 ? 1 : 0, atk && f === 1 ? 3 : 0, hs);
+        // wide front fold band like the reference, plus a darker back crease
+        const edge = (y, side) => { const t = (y - 12) / 17, half = 3.5 + t * 6.5, c = 11 + lean * (1 - t); return Math.round(side < 0 ? c - half - (run ? 3 : 0) * t * t : c + half); };
+        for (let y = 16; y < 29; y++) { const ex = edge(y, 1); R(g, ex - 5, y, 2, 1, PD.k2); if (y > 18) P(g, ex - 4, y, PD.k3); }
+        for (let y = 20; y < 28; y += 2) P(g, edge(y, -1) + 3, y, PD.kd);
+        // red scarf running down the back edge of the cloak (part of the silhouette)
+        if (!run) {
+          R(g, 8 + lean, 12 + b, 2, 3, PD.r);
+          for (let y = 14; y < 26; y++) { const ex = edge(y, -1) - (y < 18 ? 1 : 0); R(g, ex, y + (y < 20 ? b : 0), 2, 1, PD.r); P(g, ex, y + (y < 20 ? b : 0), y > 16 ? PD.r2 : PD.r); }
+          P(g, edge(26, -1) + 1, 26, PD.r);
+        } else R(g, 8 + lean, 13 + b, 2, 3, PD.r);
         // arms
-        const aL = pose === 'attack' ? -2 : leg, aR = pose === 'attack' ? 0 : -leg;
-        R(g, 4, 12 + bob + (aL > 0 ? 1 : 0), 2, 5, K.shirt); R(g, 4, 17 + bob + (aL > 0 ? 1 : 0), 2, 1, K.skin);
-        R(g, 14, 12 + bob + (aR > 0 ? 1 : 0), 2, 5, K.shirt); R(g, 14, 17 + bob + (aR > 0 ? 1 : 0), 2, 1, K.skin);
-        // head
-        R(g, 5, 7 + bob, 10, 5, K.skin); R(g, 5, 11 + bob, 10, 1, K.skin2);
-        R(g, 5, 3 + bob, 10, 4, K.hair); P(g, 4, 5 + bob, K.hair); P(g, 4, 6 + bob, K.hair); P(g, 15, 5 + bob, K.hair); P(g, 15, 6 + bob, K.hair); P(g, 4, 7 + bob, K.hair); P(g, 15, 7 + bob, K.hair);
-        P(g, 6, 2 + bob, K.hair); P(g, 8, 1 + bob, K.hair); P(g, 8, 2 + bob, K.hair); P(g, 11, 2 + bob, K.hair); P(g, 13, 2 + bob, K.hair);
-        R(g, 5, 6 + bob, 10, 1, K.hair2);
-        R(g, 6, 7 + bob, 2, 1, K.hair); R(g, 10, 7 + bob, 3, 1, K.hair); P(g, 5, 8 + bob, K.hair); P(g, 14, 8 + bob, K.hair);
-        R(g, 7, 9 + bob, 1, 2, K.eye); R(g, 12, 9 + bob, 1, 2, K.eye);
-        P(g, 6, 10 + bob, '#f0a090'); P(g, 13, 10 + bob, '#f0a090');
-      } else if (dir === 1) {
-        R(g, 7, 18 - (leg > 0 ? 1 : 0), 2, 4, K.pants); R(g, 7, 21 - (leg > 0 ? 1 : 0), 2, 2, K.boot);
-        R(g, 11, 18 - (leg < 0 ? 1 : 0), 2, 4, K.pants); R(g, 11, 21 - (leg < 0 ? 1 : 0), 2, 2, K.boot);
-        R(g, 3, 12 + bob + (leg > 0 ? 1 : 0), 2, 5, K.shirt); R(g, 15, 12 + bob + (leg < 0 ? 1 : 0), 2, 5, K.shirt);
-        // head/hair behind the pack
-        R(g, 5, 3 + bob, 10, 6, K.hair); P(g, 4, 5 + bob, K.hair); P(g, 15, 5 + bob, K.hair); P(g, 7, 2 + bob, K.hair); P(g, 10, 1 + bob, K.hair); P(g, 12, 2 + bob, K.hair);
-        R(g, 5, 7 + bob, 10, 1, K.hair2);
-        // the big pack
-        R(g, 3, 7 + bob, 14, 12, K.pack); R(g, 3, 17 + bob, 14, 2, K.pack2); R(g, 15, 8 + bob, 2, 10, K.pack2);
-        R(g, 5, 9 + bob, 10, 5, K.packL); R(g, 5, 14 + bob, 10, 1, K.pack2); R(g, 9, 13 + bob, 2, 2, K.buckle);
-        R(g, 3, 4 + bob, 14, 4, K.roll); R(g, 3, 7 + bob, 14, 1, K.roll2); R(g, 6, 4 + bob, 1, 4, K.pack2); R(g, 13, 4 + bob, 1, 4, K.pack2);
+        if (atk && f === 0) { R(g, 5 + lean, 10 + b, 3, 5, PD.k2); R(g, 5 + lean, 9 + b, 2, 2, PD.glove); }
+        if (atk && f === 1) { R(g, 15 + lean, 15 + b, 6, 2, PD.k2); R(g, 21 + lean, 14 + b, 2, 3, PD.glove); }
+        if (!atk) { const sw = pose === 'walk' || run ? [0, 1, 0, -1, 0, 1][f] : 0; R(g, 12 + lean + sw, 15 + b, 2, 6, PD.k2); R(g, 12 + lean + sw, 21 + b, 2, 1, PD.glove); }
+        // head, hat, eyes, beak
+        const hx = 5 + lean, hy = 1 + b;
+        R(g, hx + 4, hy + 9, 7, 4, PD.k);
+        pdHat(g, hx, hy);
+        R(g, hx + 6, hy + 9, 5, 1, PD.ed); P(g, hx + 7, hy + 9, PD.e); P(g, hx + 9, hy + 9, PD.e);
+        R(g, hx + 9, hy + 10, 5, 2, PD.b1); R(g, hx + 14, hy + 11, 1, 1, PD.b1); R(g, hx + 10, hy + 12, 4, 1, PD.b2); P(g, hx + 15, hy + 12, PD.b2);
+        R(g, hx + 9, hy + 10, 3, 1, PD.b3);
       } else {
-        // side (facing left); pack on the right side
-        const s1 = leg, s2 = -leg;
-        R(g, 7 + s1, 18, 2, 4, K.pants); R(g, 6 + s1, 21, 3, 2, K.boot);
-        R(g, 10 + s2, 18, 2, 4, K.pants); R(g, 9 + s2, 21, 3, 2, K.boot);
-        R(g, 11, 5 + bob, 7, 13, K.pack); R(g, 16, 6 + bob, 2, 11, K.pack2); R(g, 12, 9 + bob, 4, 5, K.packL); P(g, 13, 13 + bob, K.buckle);
-        ell(g, 10, 1 + bob, 9, 6, K.roll); R(g, 11, 5 + bob, 7, 1, K.roll2);
-        R(g, 6, 12 + bob, 6, 6, K.shirt); R(g, 6, 16 + bob, 6, 1, K.shirt2); R(g, 6, 17 + bob, 6, 1, K.belt);
-        R(g, 6, 12 + bob, 6, 2, K.scarf); R(g, 11, 13 + bob, 2, 2, K.scarf);
-        // head
-        R(g, 4, 7 + bob, 8, 5, K.skin); P(g, 3, 9 + bob, K.skin); R(g, 4, 11 + bob, 8, 1, K.skin2);
-        R(g, 4, 3 + bob, 9, 4, K.hair); R(g, 9, 5 + bob, 4, 5, K.hair); P(g, 3, 5 + bob, K.hair); P(g, 3, 6 + bob, K.hair); P(g, 3, 7 + bob, K.hair);
-        P(g, 5, 2 + bob, K.hair); P(g, 8, 1 + bob, K.hair); P(g, 8, 2 + bob, K.hair); P(g, 11, 2 + bob, K.hair); R(g, 4, 6 + bob, 9, 1, K.hair2);
-        R(g, 5, 9 + bob, 1, 2, K.eye); P(g, 4, 10 + bob, '#f0a090');
-        // arm
-        if (pose === 'attack') { R(g, 2, 13 + bob, 5, 2, K.shirt); R(g, 1, 13 + bob, 1, 2, K.skin); }
-        else { const a = -leg; R(g, 7 + a, 13 + bob, 2, 4, K.shirt); R(g, 7 + a, 17 + bob, 2, 1, K.skin); }
+        // ---- front (dir 0) / back (dir 1)
+        const cx = 12;
+        const fy = [0, 1, 0, 1, 0, 1][f] ;
+        const walkish = pose === 'walk' || run;
+        const lf = walkish && f % 2 === 0 ? (f % 4 === 0 ? -1 : 0) : 0, rf = walkish && f % 2 === 0 ? (f % 4 === 2 ? -1 : 0) : 0;
+        R(g, 9, 30 + lf, 2, 2 - lf, PD.kd); R(g, 14, 30 + rf, 2, 2 - rf, PD.kd);
+        pdCloak(g, cx, b, 0, run ? 2 : 0, run ? 2 : 0, hs);
+        for (let y = 19; y < 28; y++) { P(g, 9, y, PD.k2); P(g, 15, y, PD.k2); if (y > 21) P(g, 12, y, PD.k3); }
+        const hy = 1 + b;
+        if (dir === 0) {
+          // scarf over the shoulder
+          if (run) { R(g, 5, 13 + b, 3, 4, PD.r); R(g, 2 + (f % 2), 15 + b, 4, 2, PD.r); R(g, 2, 16 + b, 1, 1, PD.r2); }
+          else { R(g, 6, 13 + b, 3, 8, PD.r); R(g, 6, 13 + b, 1, 8, PD.r2); P(g, 7, 21 + b, PD.r); }
+          if (atk && f === 1) { R(g, 12, 15 + b, 2, 7, PD.k2); R(g, 12, 22 + b, 2, 2, PD.glove); }
+          else if (atk && f === 0) { R(g, 16, 10 + b, 2, 5, PD.k2); R(g, 16, 9 + b, 2, 2, PD.glove); }
+          else { R(g, 16, 16 + b, 2, 5, PD.k2); R(g, 16, 21 + b, 2, 1, PD.glove); }
+          R(g, 9, hy + 9, 7, 4, PD.k);
+          pdHat(g, 5, hy);
+          R(g, 9, hy + 9, 6, 1, PD.ed); P(g, 10, hy + 9, PD.e); P(g, 13, hy + 9, PD.e);
+          R(g, 10, hy + 11, 4, 2, PD.b1); R(g, 11, hy + 13, 2, 2, PD.b2); P(g, 11, hy + 15, PD.b2); R(g, 10, hy + 11, 2, 1, PD.b3);
+        } else {
+          R(g, 9, hy + 9, 7, 4, PD.k);
+          pdHat(g, 5, hy);
+          R(g, 5, hy + 7, 14, 1, PD.k2);
+          if (run) { R(g, 10, 13 + b, 3, 5, PD.r); R(g, 13, 16 + b, 6, 2, PD.r); R(g, 17, 17 + b, 3, 1, PD.r2); }
+          else { R(g, 10, 13 + b, 3, 13, PD.r); R(g, 10, 13 + b, 1, 13, PD.r2); P(g, 11, 26 + b, PD.r); P(g, 12, 27 + b, PD.r); }
+          if (atk) { R(g, 16, 11 + b, 2, 5, PD.k2); R(g, 16, 10 + b, 2, 2, PD.glove); }
+        }
       }
-    });
+    }, outline);
   });
 }
+// dash-roll: the cloak tucks into a spinning ball with the red scarf whipping around
 function heroRoll(frame) {
-  return cached('heroroll_' + frame, () => {
-    const K = HERO_COL;
-    return sprite(18, 18, g => {
-      ell(g, 1, 3, 16, 14, K.pack); ell(g, 3, 5, 12, 10, K.packL);
-      const a = frame * Math.PI / 2;
-      const hx = 9 + Math.cos(a) * 5, hy = 10 + Math.sin(a) * 5;
-      ell(g, hx - 3, hy - 3, 6, 6, K.hair);
-      const bx = 9 + Math.cos(a + Math.PI) * 5, by = 10 + Math.sin(a + Math.PI) * 5;
-      R(g, bx - 2, by - 1, 4, 3, K.boot);
-      const rx = 9 + Math.cos(a + Math.PI / 2) * 5, ry = 10 + Math.sin(a + Math.PI / 2) * 5;
-      ell(g, rx - 3, ry - 2, 6, 4, K.roll);
-    });
-  });
+  return cached('pdroll_' + frame, () => sprite(24, 24, g => {
+    const a = frame / 6 * Math.PI * 2;
+    const cx = 12, cy = 13;
+    ell(g, 3, 5, 18, 17, PD.k);
+    for (let k = 0; k < 6; k++) { const t = a + 2 + k * 0.18; P(g, cx + Math.cos(t) * 6, cy + Math.sin(t) * 5.5, PD.k2); P(g, cx + Math.cos(t + 3) * 3, cy + Math.sin(t + 3) * 3, PD.k3); }
+    // scarf whipping around behind the spin
+    for (let k = 0; k < 7; k++) { const t = a + Math.PI + k * 0.22, rr = 8 + k * 0.5; P(g, cx + Math.cos(t) * rr, cy + Math.sin(t) * rr * 0.9, k > 4 ? PD.r2 : PD.r); P(g, cx + Math.cos(t) * (rr - 1), cy + Math.sin(t) * (rr - 1) * 0.9, PD.r); P(g, cx + Math.cos(t) * (rr + 1), cy + Math.sin(t) * (rr + 1) * 0.9, PD.r2); }
+    // hat brim & beak & eyes rotating with the body
+    const hx = cx + Math.cos(a) * 6, hy = cy + Math.sin(a) * 5.5;
+    ell(g, hx - 3, hy - 3, 6, 6, PD.k); P(g, hx - 1, hy - 1, PD.k3); P(g, hx, hy - 2, PD.k3);
+    const bx = cx + Math.cos(a + 0.9) * 5, by = cy + Math.sin(a + 0.9) * 4.5;
+    for (let k = 0; k < 4; k++) P(g, bx + Math.cos(a + 0.9) * k, by + Math.sin(a + 0.9) * k, k < 2 ? PD.b1 : PD.b2);
+    P(g, cx + Math.cos(a + 0.45) * 4, cy + Math.sin(a + 0.45) * 3.6, PD.e);
+  }, '#050409'));
 }
-// large hero portrait (inventory page)
+// portrait = the idle hero at 2x, framed from the knees up
 function heroPortrait() {
-  return cached('heroPortrait', () => {
-    const K = HERO_COL;
-    return sprite(40, 46, g => {
-      // pack
-      ell(g, 12, 6, 28, 30, K.pack2); ell(g, 13, 7, 25, 27, K.pack); ell(g, 17, 10, 16, 18, K.packL);
-      ell(g, 14, 0, 24, 11, K.roll); R(g, 16, 8, 20, 2, K.roll2); R(g, 20, 1, 2, 9, K.pack2); R(g, 31, 1, 2, 9, K.pack2);
-      R(g, 23, 20, 4, 3, K.buckle);
-      // legs
-      R(g, 12, 36, 5, 7, K.pants); R(g, 19, 36, 5, 7, K.pants); R(g, 11, 42, 7, 3, K.boot); R(g, 18, 42, 7, 3, K.boot);
-      // body
-      R(g, 9, 24, 17, 13, K.shirt); R(g, 9, 33, 17, 2, K.shirt2); R(g, 9, 35, 17, 2, K.belt); R(g, 16, 35, 3, 2, K.buckle);
-      R(g, 9, 24, 17, 4, K.scarf); R(g, 20, 27, 3, 5, K.scarf);
-      R(g, 5, 25, 4, 10, K.shirt); R(g, 5, 35, 4, 2, K.skin); R(g, 26, 25, 4, 10, K.shirt); R(g, 26, 35, 4, 2, K.skin);
-      // head
-      R(g, 7, 12, 20, 12, K.skin); R(g, 7, 22, 20, 2, K.skin2);
-      R(g, 6, 5, 22, 8, K.hair); R(g, 4, 8, 3, 7, K.hair); R(g, 27, 8, 3, 7, K.hair); R(g, 6, 12, 22, 1, K.hair2);
-      [[8, 3], [11, 2], [14, 1], [17, 2], [20, 1], [23, 3], [26, 4]].forEach(([x, y]) => R(g, x, y, 2, 3, K.hair));
-      R(g, 8, 13, 4, 2, K.hair); R(g, 15, 13, 6, 2, K.hair); R(g, 24, 13, 3, 3, K.hair);
-      R(g, 11, 16, 2, 4, K.eye); R(g, 22, 16, 2, 4, K.eye); P(g, 11, 16, '#ffffff'); P(g, 22, 16, '#ffffff');
-      R(g, 9, 20, 2, 1, '#f0a090'); R(g, 24, 20, 2, 1, '#f0a090'); R(g, 16, 21, 3, 1, K.skin2);
-    });
+  return cached('pdPortrait', () => {
+    const src = heroSprite(3, 0, 'idle');
+    const c = mkCanvas(src.width * 2, 26 * 2), g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, 0, 0, src.width, 26, 0, 0, src.width * 2, 52);
+    return c;
   });
 }
 
