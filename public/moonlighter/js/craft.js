@@ -268,7 +268,6 @@ class ShelfUI extends GridUI {
     super();
     this.page = 0; // 0 bag, 1 chest 1-20, 2 chest 21-40
     this.n = tableCount();
-    this.edit = null;
     this.buildCells();
     this.cur = 20 + focus;
   }
@@ -304,39 +303,21 @@ class ShelfUI extends GridUI {
     let p = S.lastPrice[id];
     if (nb && nb.r.content) p = nb.r.content;
     sh.price = p || sh.price || 10;
-    this.edit = { i, d: 6 };
+    UI.open(new PriceUI(i, { fresh: true }));
   }
   update(dt) {
     super.update(dt);
-    if (this.edit) { this.updateEdit(); return; }
     if (tapHits(this)) return;
     this.navigate();
     const tA = this.tapA();
     const c = this.cell();
-    if (tA && c.kind === 'table' && !this.held && S.shelves[c.idx].item && this.lastTap === c) { this.edit = { i: c.idx, d: 6 }; sfx('select'); this.lastTap = null; return; }
+    if (tA && c.kind === 'table' && !this.held && S.shelves[c.idx].item && this.lastTap === c) { UI.open(new PriceUI(c.idx)); sfx('select'); this.lastTap = null; return; }
     if (tA) this.lastTap = c;
     if (Input.pressed('A') || (tA && !(c.kind === 'table' && !this.held && S.shelves[c.idx].item))) this.grab(true);
     if (Input.pressed('X')) this.grab(false);
-    if (Input.pressed('Y') && c.kind === 'table' && S.shelves[c.idx].item) { this.edit = { i: c.idx, d: 6 }; sfx('select'); }
-    if ((Input.pressed('LB') || Input.pressed('RB')) && !this.edit) { this.page = (this.page + (Input.pressed('LB') ? 2 : 1)) % 3; sfx('move'); }
+    if (Input.pressed('Y') && c.kind === 'table' && S.shelves[c.idx].item) { UI.open(new PriceUI(c.idx)); sfx('select'); return; }
+    if (Input.pressed('LB') || Input.pressed('RB')) { this.page = (this.page + (Input.pressed('LB') ? 2 : 1)) % 3; sfx('move'); }
     if (Input.pressed('B')) { if (this.held) { this.returnHeld(); sfx('cancel'); } else { sfx('cancel'); this.close(); } }
-  }
-  updateEdit() {
-    const e = this.edit, sh = S.shelves[e.i];
-    let d = Input.dir();
-    const digits = String(Math.max(0, Math.min(9999999, sh.price | 0))).padStart(7, '0').split('').map(Number);
-    // touch: tap the top half of a digit to raise it, the bottom half to lower it; tap elsewhere to finish
-    const t = Input.tap();
-    if (t && this.digitRects) {
-      const k = this.digitRects.findIndex(r => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y - 6 && t.y < r.y + r.h + 6);
-      if (k >= 0) { e.d = k; d = t.y < this.digitRects[k].y + this.digitRects[k].h / 2 ? 'U' : 'D'; }
-      else { if (sh.price < 1) sh.price = 1; S.lastPrice[sh.item.id] = sh.price; this.edit = null; sfx('confirm'); return; }
-    }
-    if (d === 'L') { e.d = Math.max(0, e.d - 1); sfx('move'); }
-    if (d === 'R') { e.d = Math.min(6, e.d + 1); sfx('move'); }
-    if (d === 'U' || d === 'D') { digits[e.d] = (digits[e.d] + (d === 'U' ? 1 : 9)) % 10; sh.price = +digits.join(''); sfx('select'); }
-    if (Input.pressed('X')) { const nb = S.notes[sh.item.id]; if (nb && nb.r.content) { sh.price = nb.r.content; sfx('select'); } }
-    if (Input.pressed('A') || Input.pressed('B') || Input.pressed('Y')) { if (sh.price < 1) sh.price = 1; S.lastPrice[sh.item.id] = sh.price; this.edit = null; sfx('confirm'); }
   }
   draw() {
     this.hits = [];
@@ -344,7 +325,7 @@ class ShelfUI extends GridUI {
     // source page (bag / chest)
     paperPanel(50, 34, 120, 128);
     const names = ['Bag', 'Chest I', 'Chest II'];
-    tabsHeader(names, this.page, 110, 20, this, i => { if (!this.edit) this.page = i; });
+    tabsHeader(names, this.page, 110, 20, this, i => { this.page = i; });
     const arr = this.srcArr(), off = this.srcOff();
     for (let i = 0; i < 20; i++) { const col = i % 5, row = (i / 5) | 0, x = 64 + col * 20, y = 52 + row * 20; slotBox(x, y, 18, { safe: this.page === 0 && row === 0 }); if (arr[off + i]) drawStack(arr[off + i], x + 1, y + 1, 16); }
     txt(this.page === 0 ? 'Your bag' : 'Storage chest', 110, 146, { size: 6, align: 'center', color: C.paperInk });
@@ -359,15 +340,13 @@ class ShelfUI extends GridUI {
       const bx = small ? r.x + 26 : r.x + 6, by = small ? r.y + 4 : r.y + r.h - 32, bw = small ? 60 : 78;
       R(ctx, bx, by, bw, small ? 11 : 12, '#1b1420'); R(ctx, bx + 1, by + 1, bw - 2, small ? 9 : 10, '#f4ecd6');
       const ps = String(sh.price | 0).padStart(7, '0');
-      if (this.edit && this.edit.i === i) this.digitRects = [];
       for (let k = 0; k < 7; k++) {
-        const on = this.edit && this.edit.i === i && this.edit.d === k;
         const dx = bx + 4 + k * (small ? 6.5 : 7.5);
-        if (this.edit && this.edit.i === i) this.digitRects.push({ x: dx - 1, y: by, w: small ? 6.5 : 7.5, h: small ? 11 : 12 });
-        if (on) { R(ctx, dx - 1, by + 1, small ? 6 : 7, small ? 9 : 10, C.teal); }
         const lead = ps.slice(0, k + 1).split('').every(ch => ch === '0') && k < 6;
-        txt(ps[k], dx + 2, by + (small ? 8.5 : 9), { size: 7, align: 'center', color: on ? '#fff' : lead ? '#c8bca0' : '#3a2e20' });
+        txt(ps[k], dx + 2, by + (small ? 8.5 : 9), { size: 7, align: 'center', color: lead ? '#c8bca0' : '#3a2e20' });
       }
+      // tap the price to change it
+      if (sh.item) hit(this, bx - 2, by - 3, bw + 4, (small ? 11 : 12) + 6, () => { if (!this.held) { UI.open(new PriceUI(i)); sfx('select'); } });
       const tot = sh.item ? sh.price * sh.item.n : 0;
       if (small) {
         txt(`x${sh.item ? sh.item.n : 0}  Total: ${fmt(tot)}`, r.x + 26, r.y + r.h - 5, { size: 6, color: '#fff', outline: C.wood4 });
@@ -376,7 +355,6 @@ class ShelfUI extends GridUI {
         R(ctx, r.x + 4, r.y + r.h - 16, r.w - 8, 11, C.teal3); R(ctx, r.x + 5, r.y + r.h - 15, r.w - 10, 9, C.teal);
         txt('Total:', r.x + 8, r.y + r.h - 8, { size: 6, color: '#fff' }); txt(fmt(tot), r.x + r.w - 14, r.y + r.h - 8, { size: 6, align: 'right', color: '#fff' }); ctx.drawImage(coinIcon(), r.x + r.w - 12, r.y + r.h - 14);
       }
-      if (this.edit && this.edit.i === i && !small) { txt('▲', cell.x - 10, cell.y + 12, { size: 6, color: C.mint }); }
     }
     this.drawCursor(); this.drawHeld();
     // info strip: notebook knowledge of the item under the cursor
@@ -388,8 +366,112 @@ class ShelfUI extends GridUI {
       ['ecstatic', 'content', 'expensive', 'angry'].forEach((f, i) => { ctx.drawImage(faceIcon(f), x0 + i * 30, 182); txt(nb && nb.r[f] ? fmt(nb.r[f]) : '?', x0 + i * 30 + 14, 191, { size: 6, color: '#efe3c5' }); });
       txt(`Popularity: ${popLabel(h.id)}`, 176, 191, { size: 6, color: '#efe3c5' });
     }
-    if (this.edit) promptBar([['◀▶', 'Digit'], ['▲▼', 'Change'], ['X', 'Use notebook price'], ['A', 'Done']], H - 4);
-    else promptBar([['A', this.held ? 'Place' : 'Grab'], ['X', 'Grab one'], ['Y', 'Set price'], ['LB', 'Bag/Chest'], ['B', 'Back']], H - 4);
+    promptBar([['A', this.held ? 'Place' : 'Grab'], ['X', 'Grab one'], ['Y', 'Set price'], ['LB', 'Bag/Chest'], ['B', 'Back']], H - 4);
+  }
+}
+
+// ---------------------------------------------------------------- price panel (opens when an item is placed on a table)
+// Big +/- buttons with hold-to-repeat, percent steps, and the notebook's
+// known reactions as one-tap prices: easy with a thumb, quick with keys.
+class PriceUI extends Overlay {
+  constructor(i, o = {}) {
+    super(); this.i = i; this.sh = S.shelves[i]; this.orig = this.sh.price; this.fresh = !!o.fresh;
+    this.bump = 0; this.hold = null; this.holdT = 0; this.repT = 0;
+  }
+  set(v) {
+    v = clamp(Math.round(v), 1, 9999999);
+    if (v !== this.sh.price) { this.sh.price = v; this.bump = 0.12; sfx('move'); }
+  }
+  step(k) { const p = this.sh.price; this.set(p + k); }
+  pct(f) { const p = this.sh.price, n = Math.round(p * f); this.set(n === p ? p + Math.sign(f - 1) : n); }
+  layout() {
+    const x = 72, y = 16, w = 240;
+    const bw = 50, gap = 5, bx = x + (w - (bw * 4 + gap * 3)) / 2;
+    const b = (i, row, label, fn, rep) => ({ x: bx + i * (bw + gap), y: y + 84 + row * 25, w: bw, h: 20, label, fn, rep });
+    return {
+      x, y, w, h: 180,
+      buttons: [
+        b(0, 0, '-10', () => this.step(-10), true), b(1, 0, '-1', () => this.step(-1), true), b(2, 0, '+1', () => this.step(1), true), b(3, 0, '+10', () => this.step(10), true),
+        b(0, 1, 'Half', () => this.pct(0.5), false), b(1, 1, '-10%', () => this.pct(0.9), true), b(2, 1, '+10%', () => this.pct(1.1), true), b(3, 1, 'Double', () => this.pct(2), false),
+      ],
+    };
+  }
+  done() { S.lastPrice[this.sh.item.id] = this.sh.price; sfx('confirm'); this.close(); }
+  cancel() { if (!this.fresh) this.sh.price = this.orig; S.lastPrice[this.sh.item.id] = this.sh.price; sfx('cancel'); this.close(); }
+  update(dt) {
+    super.update(dt); this.bump = Math.max(0, this.bump - dt);
+    if (!this.sh.item) { this.close(); return; }
+    const L = this.layout(), ptr = Input.pointer();
+    // hold a +/- button to keep counting, faster the longer you hold
+    if (this.hold) {
+      const b = this.hold, inside = ptr.down && ptr.x >= b.x && ptr.x < b.x + b.w && ptr.y >= b.y && ptr.y < b.y + b.h;
+      if (!inside) this.hold = null;
+      else {
+        this.holdT += dt; this.repT -= dt;
+        if (this.holdT > 0.4 && this.repT <= 0) { this.repT = this.holdT > 1.6 ? 0.03 : 0.08; b.fn(); }
+      }
+    }
+    const t = Input.tap();
+    if (t) {
+      const b = L.buttons.find(b => t.x >= b.x && t.x < b.x + b.w && t.y >= b.y && t.y < b.y + b.h);
+      if (b) { Input.eatTap(); b.fn(); if (b.rep) { this.hold = b; this.holdT = 0; this.repT = 0; } return; }
+      if (tapHits(this)) return;
+    }
+    // keys / pad: left-right = 1, up-down = 10, bumpers = 10%
+    const d = Input.dir();
+    if (d === 'L') this.step(-1); if (d === 'R') this.step(1);
+    if (d === 'U') this.step(10); if (d === 'D') this.step(-10);
+    if (Input.pressed('LB')) this.pct(0.9); if (Input.pressed('RB')) this.pct(1.1);
+    if (Input.pressed('X')) { const nb = S.notes[this.sh.item.id]; if (nb && nb.r.content) this.set(nb.r.content); }
+    if (Input.pressed('A') || Input.pressed('Y')) this.done();
+    else if (Input.pressed('B')) this.cancel();
+  }
+  draw() {
+    this.hits = [];
+    dimScreen(0.6);
+    R(ctx, 0, H - 20, W, 20, '#0c0a10'); // hide the prompts of the screen underneath
+    const L = this.layout(), { x, y, w, h } = L, sh = this.sh, it = sh.item, info = ITEMS[it.id];
+    paperPanel(x, y, w, h);
+    // item header
+    R(ctx, x + 10, y + 8, 36, 36, '#5e2f1d'); R(ctx, x + 11, y + 9, 34, 34, '#d98b52');
+    const ic = itemIcon(it.id); ctx.drawImage(ic, x + 12, y + 10, 32, 32);
+    if (it.n > 1) txt('x' + it.n, x + 44, y + 42, { size: 7, align: 'right', color: '#fff', outline: '#1b1420' });
+    txt(info.name, x + 54, y + 18, { size: 8, color: C.paperDark, bold: true });
+    txt(`Popularity: ${popLabel(it.id)}`, x + 54, y + 29, { size: 6, color: C.paperInk });
+    txt('Set a price', x + w - 10, y + 18, { size: 6, align: 'right', color: C.tealText });
+    // the price, big
+    const px = x + 54, pw = w - 64, py = y + 36;
+    R(ctx, px, py, pw, 22, '#1b1420'); R(ctx, px + 1, py + 1, pw - 2, 20, '#f4ecd6'); R(ctx, px + 1, py + 1, pw - 2, 2, '#fffaf0');
+    const s = fmt(sh.price), lift = this.bump > 0 ? 1 : 0;
+    ctx.drawImage(coinIcon(), px + 6, py + 7 - lift);
+    txt(s, px + pw / 2 + 4, py + 16 - lift, { size: 14, align: 'center', color: '#3a2e20', bold: true });
+    txt(it.n > 1 ? `Total for ${it.n}: ${fmt(sh.price * it.n)}` : ' ', x + w - 10, py + 31, { size: 6, align: 'right', color: C.paperInk });
+    // buttons
+    const ptr = Input.pointer();
+    for (const b of L.buttons) {
+      const down = this.hold === b && ptr.down, yy = b.y + (down ? 1 : 0);
+      R(ctx, b.x + 1, b.y + 2, b.w, b.h, 'rgba(0,0,0,0.25)');
+      R(ctx, b.x + 1, yy, b.w - 2, b.h, TB.rim); R(ctx, b.x, yy + 1, b.w, b.h - 2, TB.rim);
+      R(ctx, b.x + 1, yy + 1, b.w - 2, b.h - 2, TB.goldLo); R(ctx, b.x + 1, yy + 1, b.w - 2, 1, TB.goldHi);
+      const neg = b.label[0] === '-' || b.label === 'Half';
+      R(ctx, b.x + 2, yy + 2, b.w - 4, b.h - 4, down ? (neg ? TB.back[2] : TB.use[2]) : (neg ? TB.back[1] : TB.use[1]));
+      R(ctx, b.x + 2, yy + b.h - 4, b.w - 4, 1, neg ? TB.back[0] : TB.use[0]);
+      txt(b.label, b.x + b.w / 2, yy + 13, { size: 8, align: 'center', color: '#f3eedb', bold: true });
+    }
+    // notebook: what customers felt at each price so far; tap one to use it
+    const nb = S.notes[it.id], ny = y + 140;
+    txt('Notebook (tap a price to use it)', x + w / 2, ny, { size: 6, align: 'center', color: C.paperInk });
+    ['ecstatic', 'content', 'expensive', 'angry'].forEach((f, i) => {
+      const cw = 52, cx = x + (w - (cw * 4 + 12)) / 2 + i * (cw + 4), cy = ny + 5;
+      const known = nb && nb.r[f];
+      R(ctx, cx, cy, cw, 22, known ? '#e8dcbc' : '#e2d6b8'); R(ctx, cx, cy + 21, cw, 1, '#c8b890');
+      if (known && sh.price === nb.r[f]) { R(ctx, cx - 1, cy - 1, cw + 2, 1, C.teal); R(ctx, cx - 1, cy + 22, cw + 2, 1, C.teal); R(ctx, cx - 1, cy, 1, 22, C.teal); R(ctx, cx + cw, cy, 1, 22, C.teal); }
+      ctx.drawImage(faceIcon(f), cx + 3, cy + 4);
+      txt(known ? fmt(nb.r[f]) : '?', cx + 32, cy + 14, { size: 7, align: 'center', color: known ? '#3a2e20' : '#a89a7a', bold: !!known });
+      if (known) hit(this, cx, cy, cw, 22, () => this.set(nb.r[f]));
+    });
+    promptBar(Input.device() === 'touch' ? [['A', 'Done'], ['B', this.fresh ? 'Keep' : 'Cancel']]
+      : [['◀▶', '1'], ['▲▼', '10'], ['LB', '10%'], ['A', 'Done'], ['B', this.fresh ? 'Keep' : 'Cancel']], H - 4);
   }
 }
 

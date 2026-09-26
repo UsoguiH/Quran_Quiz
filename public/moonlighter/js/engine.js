@@ -250,9 +250,13 @@ const Input = (() => {
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
   }
   // taps / clicks on the game canvas, in logical coordinates
+  const ptr = { x: 0, y: 0, down: false, id: null };
+  const toLogical = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
+  window.addEventListener('pointermove', e => { if (ptr.down && e.pointerId === ptr.id) Object.assign(ptr, toLogical(e)); });
+  for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, e => { if (e.pointerId === ptr.id) ptr.down = false; });
   cv.addEventListener('pointerdown', e => {
-    const r = cv.getBoundingClientRect();
-    tapQ = { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+    tapQ = toLogical(e);
+    Object.assign(ptr, tapQ, { down: true, id: e.pointerId });
     anyPressedFlag = true; AudioSys.unlock();
     if (e.pointerType === 'touch') lastDevice = 'touch';
   });
@@ -379,6 +383,8 @@ const Input = (() => {
     clearAll() { for (const k in down) { prev[k] = true; } },
     device: () => lastDevice,
     tap: () => tapNow,
+    // finger / mouse currently held on the game view (logical coords), for hold-to-repeat
+    pointer: () => ptr,
     tapIn: (x, y, w, h) => !!tapNow && tapNow.x >= x && tapNow.x < x + w && tapNow.y >= y && tapNow.y < y + h,
     eatTap() { tapNow = null; },
     // run: hold Shift / RT, or push the analog stick (pad or touch) all the way

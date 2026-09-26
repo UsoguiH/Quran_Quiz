@@ -16,7 +16,8 @@ const UI = {
   top() { return this.stack[this.stack.length - 1]; },
   has(cls) { return this.stack.some(o => o instanceof cls); },
   update(dt) { const t = this.top(); if (t) t.update(dt); },
-  draw() { for (const o of this.stack) o.draw(); },
+  // only the top overlay's prompt chips stay tappable
+  draw() { for (const o of this.stack) { if (o === this.top() && typeof PROMPT_HITS !== 'undefined') PROMPT_HITS.length = 0; o.draw(); } },
   blocking() { return this.stack.length > 0; },
   clear() { while (this.stack.length) this.close(this.stack[this.stack.length - 1]); },
 };
