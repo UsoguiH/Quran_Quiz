@@ -13,6 +13,7 @@ const PostFX = (() => {
 precision mediump float;
 varying vec2 uv;
 uniform sampler2D t;
+uniform sampler2D bt;
 uniform vec2 lres;
 uniform float time, sat, contrast, vig, bloom, grain, aberr, lowhp, dead, rays, warm;
 uniform vec3 tint;
@@ -23,15 +24,8 @@ void main(){
   if (aberr > 0.001) { vec2 o = (q - 0.5) * aberr * 0.014; c = vec3(texture2D(t, q + o).r, texture2D(t, q).g, texture2D(t, q - o).b); }
   else c = tx(q);
   vec2 px = 1.0 / lres;
-  vec3 b = vec3(0.0);
-  for (int i = 0; i < 12; i++) {
-    float a = float(i) * 0.5236;
-    vec2 d = vec2(cos(a), sin(a)) * px;
-    b += max(tx(q + d * 2.5) - 0.74, 0.0);
-    b += max(tx(q + d * 6.0) - 0.74, 0.0) * 0.7;
-    b += max(tx(q + d * 11.0) - 0.78, 0.0) * 0.4;
-  }
-  c += b / 12.0 * bloom * 2.6;
+  vec3 b = texture2D(bt, q).rgb * 0.4 + (texture2D(bt, q + vec2(px.x * 4.0, 0.0)).rgb + texture2D(bt, q - vec2(px.x * 4.0, 0.0)).rgb + texture2D(bt, q + vec2(0.0, px.y * 4.0)).rgb + texture2D(bt, q - vec2(0.0, px.y * 4.0)).rgb) * 0.15;
+  c += b * bloom * 2.2;
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(vec3(l), c, sat);
   c = (c - 0.5) * contrast + 0.5;
@@ -52,6 +46,20 @@ void main(){
   c += (n - 0.5) * grain;
   gl_FragColor = vec4(c, 1.0);
 }`;
+  const BFS = `
+precision mediump float;
+varying vec2 uv;
+uniform sampler2D t;
+uniform vec2 lres;
+vec3 br(vec2 q){ return max(texture2D(t, q).rgb - 0.74, 0.0); }
+void main(){
+  vec2 px = 1.0 / lres;
+  vec3 b = br(uv);
+  for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854; vec2 d = vec2(cos(a), sin(a)) * px; b += br(uv + d * 3.0) + br(uv + d * 7.0) * 0.6; }
+  gl_FragColor = vec4(b / 9.0, 1.0);
+}`;
+  let bprog = null, fbo = null, btex = null, BU = {};
+  const BW = 192, BH = 108;
   function compile(type, src) {
     const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
@@ -66,20 +74,33 @@ void main(){
       if (!gl) throw new Error('no webgl');
       prog = gl.createProgram();
       gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
-      gl.linkProgram(prog);
+      gl.bindAttribLocation(prog, 0, 'p'); gl.linkProgram(prog);
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
       gl.useProgram(prog);
       const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      // bloom program + small framebuffer
+      bprog = gl.createProgram();
+      gl.attachShader(bprog, compile(gl.VERTEX_SHADER, VS)); gl.attachShader(bprog, compile(gl.FRAGMENT_SHADER, BFS));
+      gl.bindAttribLocation(bprog, 0, 'p'); gl.linkProgram(bprog);
+      if (!gl.getProgramParameter(bprog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(bprog));
+      BU.t = gl.getUniformLocation(bprog, 't'); BU.lres = gl.getUniformLocation(bprog, 'lres');
+      btex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, btex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, BW, BH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      for (const [k, v] of [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+      fbo = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, btex, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.useProgram(prog);
+      U.bt = gl.getUniformLocation(prog, 'bt');
       for (const n of ['t', 'lres', 'time', 'sat', 'contrast', 'vig', 'bloom', 'grain', 'aberr', 'lowhp', 'dead', 'rays', 'warm', 'tint']) U[n] = gl.getUniformLocation(prog, n);
       ok = true; resize();
     } catch (e) { console.warn('PostFX disabled:', e.message); ok = false; if (glcv) glcv.remove(); }
   }
-  function active() { return ok && OPTS.fx !== false; }
   function resize() {
     if (!ok) return;
     glcv.width = cv.width; glcv.height = cv.height;
@@ -94,17 +115,39 @@ void main(){
     if (glcv) glcv.style.display = on ? 'block' : 'none';
     cv.style.opacity = on ? '0' : '1';
   }
-  function render(p) {
+  // adaptive quality: if the device can't keep ~30fps with effects on, turn them off once
+  let perfT = 0, perfN = 0, perfDone = false;
+  function watchPerf(dt) {
+    if (perfDone || !active() || Game.time < 3) return;
+    perfT += dt; perfN++;
+    if (perfT >= 3) {
+      perfDone = true;
+      if (perfN / perfT < 30) { OPTS.fx = false; saveOpts(); sync(); resize2d(); if (typeof toast === 'function') toast('Shaders turned off to keep the game smooth (Settings > Video)'); }
+    }
+  }
+  function resize2d() { if (typeof resize === 'function') window.dispatchEvent(new Event('resize')); }
+  function render(p, dt) {
+    watchPerf(dt || 0);
     if (!active()) return;
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    // pass 1: bright-pass bloom into the small framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, BW, BH);
+    gl.useProgram(bprog); gl.uniform1i(BU.t, 0); gl.uniform2f(BU.lres, W, H);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // pass 2: composite at full size
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, glcv.width, glcv.height);
+    gl.useProgram(prog);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, btex); gl.uniform1i(U.bt, 1);
+    gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(U.t, 0); gl.uniform2f(U.lres, W, H); gl.uniform1f(U.time, Game.time % 1000);
     gl.uniform1f(U.sat, p.sat); gl.uniform1f(U.contrast, p.contrast); gl.uniform1f(U.vig, p.vig); gl.uniform1f(U.bloom, p.bloom);
     gl.uniform1f(U.grain, p.grain); gl.uniform1f(U.aberr, p.aberr); gl.uniform1f(U.lowhp, p.lowhp); gl.uniform1f(U.dead, p.dead);
     gl.uniform1f(U.rays, p.rays); gl.uniform1f(U.warm, p.warm); gl.uniform3f(U.tint, p.tint[0], p.tint[1], p.tint[2]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
-  return { init, resize, render, sync, get ok() { return ok; } };
+  function active() { return ok && OPTS.fx !== false; }
+  return { init, resize, render, sync, active, get ok() { return ok; } };
 })();
 
 // per-scene look

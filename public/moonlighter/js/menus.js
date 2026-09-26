@@ -141,7 +141,7 @@ class OptionsUI extends Overlay {
     ];
     if (this.tab === 1) return [
       { name: 'Fullscreen', val: () => document.fullscreenElement ? 'On' : 'Off', left: toggleFS, right: toggleFS },
-      { name: 'Shaders', val: () => PostFX.ok ? (OPTS.fx !== false ? 'On' : 'Off') : 'N/A', left() { OPTS.fx = OPTS.fx === false; PostFX.sync(); }, right() { OPTS.fx = OPTS.fx === false; PostFX.sync(); } },
+      { name: 'Shaders', val: () => PostFX.ok ? (OPTS.fx !== false ? 'On' : 'Off') : 'N/A', left() { OPTS.fx = OPTS.fx === false; resize(); }, right() { OPTS.fx = OPTS.fx === false; resize(); } },
       { name: 'Touch controls', val: () => document.body.classList.contains('touch') ? 'On' : 'Off', left: toggleTouch, right: toggleTouch },
     ];
     if (this.tab === 2) return [

@@ -15,7 +15,7 @@ const ctx = cv.getContext('2d');
 let VIEW = { s: 1, left: 0, top: 0 };
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  let dpr = Math.min(window.devicePixelRatio || 1, 3);
   const touch = document.body.classList.contains('touch');
   const portrait = innerHeight > innerWidth;
   document.body.classList.toggle('portrait', portrait);
@@ -25,6 +25,8 @@ function resize() {
   VIEW.s = s;
   cv.style.width = Math.floor(W * s) + 'px';
   cv.style.height = Math.floor(H * s) + 'px';
+  // with post-processing on, cap the backing store (~1.6 MP) so the per-frame GPU upload stays cheap
+  if (typeof PostFX !== 'undefined' && PostFX.active()) { const px = W * s * dpr * H * s * dpr; if (px > 1.6e6) dpr *= Math.sqrt(1.6e6 / px); }
   cv.width = Math.round(W * s * dpr);
   cv.height = Math.round(H * s * dpr);
   const wrap = document.getElementById('wrap');
