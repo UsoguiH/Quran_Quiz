@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قدراتي — دقيقة قبل منتصف الليل</title>
+<style>
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 500; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-500-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 700; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-700-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 800; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-arabic-800-normal.woff2) format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 500; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 700; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Baloo Bhaijaan 2'; font-weight: 800; font-display: block;
+  src: url(assets/fonts/baloo-bhaijaan-2-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+
+:root {
+  --green: #58CC02; --green-dk: #58A700; --green-lip: #478700; --green-bg: #D7FFB8;
+  --blue: #1CB0F6; --blue-dk: #1899D6; --blue-light: #DDF4FF;
+  --gold: #FFC800; --orange: #FF9600; --orange-dk: #E08600; --orange-bg: #FFEFD6;
+  --red: #FF4B4B; --red-dk: #EA2B2B; --red-bg: #FFDFE0;
+  --ink: #4B4B4B; --gray: #777777; --gray-icon: #AFAFAF; --line: #E5E5E5;
+  --night: #27347E; --night-lo: #212D6E; --night-floor: #1A2560; --night-frame: #3A4DA6; --night-glass: #101B4D;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #16181d; overflow: hidden; }
+body { font-family: 'Baloo Bhaijaan 2', sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+.scene { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }
+.cam { position: absolute; inset: 0; }
+.mask { display: inline-block; overflow: hidden; vertical-align: top; padding: .1em .05em .24em; margin: -.1em -.05em -.24em; }
+.mask > .w { display: inline-block; }
+
+/* ---------- characters ---------- */
+.rig { position: absolute; }
+.rig .r-pos, .rig .r-rot, .rig .r-sq { position: absolute; inset: 0; }
+.rig img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.shadow { position: absolute; border-radius: 50%; }
+.stack { position: absolute; }
+.flm { position: absolute; }
+.flm svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.bubble {
+  position: absolute; background: #fff; border: 7px solid var(--line); border-radius: 44px;
+  color: var(--ink); font-weight: 800; line-height: 1; white-space: nowrap; padding: 26px 48px 20px;
+}
+.bubble::before, .bubble::after { content: ''; position: absolute; border-style: solid; }
+.bubble.tail-br::before { bottom: -40px; right: 70px; border-width: 34px 0 0 36px; border-color: var(--line) transparent transparent; }
+.bubble.tail-br::after  { bottom: -26px; right: 77px; border-width: 24px 0 0 26px; border-color: #fff transparent transparent; }
+.bubble.tail-bl::before { bottom: -40px; left: 70px; border-width: 34px 36px 0 0; border-color: var(--line) transparent transparent; }
+.bubble.tail-bl::after  { bottom: -26px; left: 77px; border-width: 24px 26px 0 0; border-color: #fff transparent transparent; }
+
+/* ============ NIGHT ============ */
+#night { background: var(--night); }
+#room { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+#warm { position: absolute; inset: 0; background: radial-gradient(circle at 500px 760px, rgba(255, 170, 70, .75), rgba(255, 140, 40, .28) 34%, rgba(255, 120, 30, 0) 62%); mix-blend-mode: screen; opacity: 0; }
+#glow { position: absolute; left: 500px; top: 780px; width: 900px; height: 900px; margin: -450px 0 0 -450px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 150, 40, .42), rgba(255, 150, 40, .12) 55%, rgba(255, 150, 40, 0)); }
+#clock { position: absolute; left: 640px; top: 700px; width: 190px; height: 200px; }
+#clock svg { width: 100%; height: 100%; overflow: visible; }
+.zz { position: absolute; color: #C9D4FF; font-weight: 800; opacity: 0; }
+#bubbleWait { left: 560px; top: 150px; font-size: 96px; }
+.vib { position: absolute; width: 60px; height: 60px; opacity: 0; }
+
+/* ============ LESSON ============ */
+#lesson { background: #fff; }
+.lbar { position: absolute; top: 58px; left: 150px; right: 90px; height: 64px; display: flex; align-items: center; gap: 36px; }
+.lbar .x { width: 46px; height: 46px; flex-shrink: 0; }
+.lbar .prog { flex: 1; height: 36px; border-radius: 18px; background: var(--line); position: relative; overflow: hidden; }
+.lbar .prog i { position: absolute; right: 0; top: 0; bottom: 0; width: 8%; border-radius: 18px; background: var(--green); }
+.lbar .prog i::after { content: ''; position: absolute; left: 14px; right: 14px; top: 8px; height: 9px; border-radius: 5px; background: rgba(255,255,255,.3); }
+.lbar .hearts { display: flex; align-items: center; gap: 10px; color: var(--red); font-size: 46px; font-weight: 800; }
+.lbar .hearts svg { width: 52px; }
+#tchip { position: absolute; left: 70px; top: 160px; display: flex; align-items: center; gap: 12px; height: 76px; padding: 0 30px; border-radius: 38px;
+  background: var(--red-bg); color: var(--red-dk); font-size: 50px; font-weight: 800; direction: ltr; }
+#tchip svg { width: 46px; }
+.qcard { position: absolute; left: 740px; top: 180px; width: 1080px; height: 830px; }
+.qcard .qk { position: absolute; right: 60px; top: 30px; font-size: 48px; font-weight: 800; color: var(--gray); }
+.qcard .qs { position: absolute; right: 60px; top: 100px; font-size: 104px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.tile { position: absolute; width: 470px; height: 180px; }
+.tile .face, .tile .ok { position: absolute; inset: 0 0 10px 0; border-radius: 34px; display: flex; align-items: center; justify-content: center; font-size: 110px; font-weight: 800; }
+.tile .face { background: #fff; border: 6px solid var(--line); box-shadow: 0 10px 0 var(--line); color: var(--ink); }
+.tile .ok { background: var(--green-bg); border: 6px solid var(--green); box-shadow: 0 10px 0 var(--green); color: var(--green-dk); opacity: 0; }
+.tile .badge { position: absolute; left: -22px; top: -22px; width: 84px; height: 84px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 0 var(--green-lip); }
+.tile .badge svg { width: 50px; }
+.touch { position: absolute; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; background: rgba(75,75,75,.28); opacity: 0; }
+#praise { position: absolute; left: 1280px; top: 380px; font-size: 230px; font-weight: 800; color: var(--green); white-space: nowrap; text-shadow: 0 14px 0 var(--green-lip); }
+
+/* ============ STREAK ============ */
+#streak { background: #FFF8EE; }
+#num { position: absolute; left: 960px; top: 470px; height: 300px; direction: ltr; display: flex; font-size: 290px; font-weight: 800; line-height: 300px; color: var(--orange); text-shadow: 0 14px 0 var(--orange-dk); }
+#num .roll { height: 320px; overflow: hidden; padding: 0 2px; margin-bottom: -20px; }
+#num .roll > div { display: flex; flex-direction: column; }
+#num .roll span { display: block; height: 300px; }
+#slabel { position: absolute; left: 960px; top: 770px; font-size: 76px; font-weight: 800; color: var(--orange); white-space: nowrap; }
+#week { position: absolute; left: 960px; top: 880px; display: flex; gap: 26px; }
+.day { width: 96px; text-align: center; }
+.day b { display: block; font-size: 34px; font-weight: 800; color: var(--gray-icon); height: 46px; }
+.day .dot { position: relative; width: 96px; height: 96px; border-radius: 50%; background: var(--line); }
+.day .fill { position: absolute; inset: 0; border-radius: 50%; background: var(--orange); box-shadow: inset 0 -8px 0 var(--orange-dk); display: flex; align-items: center; justify-content: center; }
+.day .fill svg { width: 54px; }
+#flood { position: absolute; left: 2150px; top: 1250px; width: 5200px; height: 5200px; margin: -2600px 0 0 -2600px; border-radius: 50%; background: var(--blue); }
+
+/* ============ TAGLINE ============ */
+#tag { background: #fff; }
+.tl1, .tl2 { position: absolute; right: 150px; font-size: 250px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+.tl1 { top: 90px; color: var(--ink); }
+.tl2 { top: 420px; color: var(--orange); text-shadow: 0 16px 0 var(--orange-dk); }
+.tl1 .wd, .tl2 .wd { display: inline-block; }
+#tsub { position: absolute; right: 160px; top: 800px; font-size: 76px; font-weight: 800; color: var(--gray); white-space: nowrap; }
+
+/* ============ END ============ */
+#end { background: var(--green); }
+.dia { position: absolute; border-radius: 22%; background: rgba(255,255,255,.14); }
+#wordmark { position: absolute; left: 560px; top: 104px; font-size: 300px; font-weight: 800; line-height: 1.15; color: #fff; text-shadow: 0 16px 0 var(--green-lip); white-space: nowrap; }
+#esub { position: absolute; left: 560px; top: 846px; font-size: 62px; font-weight: 800; color: #fff; white-space: nowrap; }
+#url { position: absolute; left: 560px; top: 662px; width: 600px; height: 136px; margin-left: -300px; }
+.btn3d { position: absolute; inset: 0; }
+.btn3d .blip, .btn3d .bface { position: absolute; left: 0; right: 0; border-radius: 38px; }
+.btn3d .blip { top: 14px; bottom: 0; background: var(--green-lip); }
+.btn3d .bface { top: 0; bottom: 14px; background: #fff; color: var(--green); font-size: 78px; font-weight: 800; display: flex; align-items: center; justify-content: center; direction: ltr; }
+#bubbleEnd { left: 1130px; top: 96px; font-size: 76px; }
+#wipe { position: absolute; left: -200px; right: -200px; top: 0; height: 1500px; background: var(--green); border-radius: 50% 50% 0 0 / 180px 180px 0 0; }
+
+#ui { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  background: #0d0f13; color: #cfd3da; font: 600 14px/1 system-ui, sans-serif; direction: ltr; z-index: 9; }
+#ui button { background: #58CC02; color: #fff; border: 0; border-radius: 10px; font: 800 14px/1 system-ui; padding: 10px 16px; box-shadow: 0 3px 0 #478700; cursor: pointer; }
+#ui input { flex: 1; accent-color: #FF9600; }
+#ui span { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+.render #ui { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ================= NIGHT: the room ================= -->
+  <section class="scene" id="night">
+    <div class="cam" id="ncam">
+      <svg id="room" viewBox="0 0 1920 1080">
+        <rect width="1920" height="1080" fill="#27347E"/>
+        <rect y="700" width="1920" height="190" fill="#212D6E"/>
+        <rect y="694" width="1920" height="10" rx="5" fill="#2E3C8A"/>
+        <rect y="880" width="1920" height="200" fill="#1A2560"/>
+        <rect y="876" width="1920" height="8" fill="#2A3780"/>
+        <ellipse cx="1000" cy="990" rx="620" ry="66" fill="#222F72"/>
+        <ellipse cx="1000" cy="988" rx="560" ry="50" fill="#27357C"/>
+        <!-- window -->
+        <rect x="170" y="110" width="480" height="430" rx="48" fill="#3A4DA6"/>
+        <rect x="196" y="136" width="428" height="378" rx="30" fill="#101B4D"/>
+        <g id="sky">
+          <circle cx="528" cy="222" r="58" fill="#FFE9A8"/>
+          <circle cx="552" cy="200" r="52" fill="#101B4D"/>
+          <path id="st1" d="M268 170 l7 17 17 7 -17 7 -7 17 -7 -17 -17 -7 17 -7z" fill="#fff"/>
+          <path id="st2" d="M345 250 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z" fill="#fff"/>
+          <path id="st3" d="M560 400 l6 14 14 6 -14 6 -6 14 -6 -14 -14 -6 14 -6z" fill="#fff"/>
+          <path id="st4" d="M282 430 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" fill="#fff"/>
+        </g>
+        <rect x="401" y="136" width="18" height="378" fill="#3A4DA6"/>
+        <rect x="196" y="316" width="428" height="18" fill="#3A4DA6"/>
+        <rect x="150" y="528" width="520" height="34" rx="14" fill="#3A4DA6"/>
+        <!-- a framed π on the far wall -->
+        <rect x="1560" y="190" width="230" height="270" rx="26" fill="#3A4DA6"/>
+        <rect x="1582" y="212" width="186" height="226" rx="16" fill="#2B3A8C"/>
+        <text x="1675" y="370" text-anchor="middle" font-family="Baloo Bhaijaan 2" font-weight="800" font-size="170" fill="#5B70C8" direction="ltr">π</text>
+      </svg>
+      <div id="warm"></div>
+      <div id="glow"></div>
+      <div id="clock">
+        <svg viewBox="0 0 190 200">
+          <g id="clkBody">
+            <rect x="34" y="170" width="26" height="28" rx="10" fill="#B7282E" transform="rotate(18 47 184)"/>
+            <rect x="130" y="170" width="26" height="28" rx="10" fill="#B7282E" transform="rotate(-18 143 184)"/>
+            <g id="bellL"><circle cx="42" cy="40" r="30" fill="#FFC800"/><circle cx="36" cy="32" r="9" fill="#FFE27A"/></g>
+            <g id="bellR"><circle cx="148" cy="40" r="30" fill="#FFC800"/><circle cx="142" cy="32" r="9" fill="#FFE27A"/></g>
+            <rect x="90" y="10" width="10" height="26" rx="5" fill="#9AA3C7"/>
+            <circle cx="95" cy="110" r="80" fill="#FF4B4B"/>
+            <circle cx="95" cy="110" r="80" fill="none" stroke="#EA2B2B" stroke-width="10"/>
+            <path d="M40 78 a64 64 0 0 1 40 -32" stroke="#FF9C9C" stroke-width="10" stroke-linecap="round" fill="none"/>
+            <rect x="30" y="82" width="130" height="64" rx="16" fill="#1A1C33"/>
+            <text id="clkTxt" x="95" y="133" text-anchor="middle" font-family="Baloo Bhaijaan 2" font-weight="800" font-size="50" fill="#FF9600">١١:٥٨</text>
+          </g>
+        </svg>
+      </div>
+      <svg class="vib" id="vibL" viewBox="0 0 60 60" style="left:600px;top:690px"><path d="M40 8 Q18 30 40 52" stroke="#FFE9A8" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M22 18 Q8 30 22 42" stroke="#FFE9A8" stroke-width="7" stroke-linecap="round" fill="none"/></svg>
+      <svg class="vib" id="vibR" viewBox="0 0 60 60" style="left:840px;top:690px"><path d="M20 8 Q42 30 20 52" stroke="#FFE9A8" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M38 18 Q52 30 38 42" stroke="#FFE9A8" stroke-width="7" stroke-linecap="round" fill="none"/></svg>
+      <div id="nightChars"></div>
+      <div class="bubble tail-br" id="bubbleWait">لحظة!</div>
+    </div>
+  </section>
+
+  <!-- ================= LESSON ================= -->
+  <section class="scene" id="lesson">
+    <div class="cam" id="lcam">
+      <div class="lbar">
+        <svg class="x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#AFAFAF" stroke-width="3.4" stroke-linecap="round"/></svg>
+        <div class="prog"><i id="lprog"></i></div>
+        <div class="hearts"><svg viewBox="0 0 23 20"><path fill="#FF4B4B" d="M1.33 2.77C4.15-1.26 9.22 1.09 11.41 2.77c2.01-2.01 6.55-4.53 10.08-1.01 3.52 3.53 0 8.57-1.51 10.08-1.1 1.1-5.37 5.09-7.9 7.44a1 1 0 0 1-1.35.01L2.34 11.84C.83 10.5-1.49 6.8 1.33 2.77Z"/><circle cx="6.37" cy="7.31" r="3.02" fill="#FFB2B2"/></svg><span>٥</span></div>
+      </div>
+      <div id="tchip"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9.7" fill="#fff" stroke="#EA2B2B" stroke-width="2.5"/><circle cx="11" cy="11.2" r="2.3" fill="#EA2B2B"/><path id="tchand" d="M11 11.2L15.6 7.4" stroke="#EA2B2B" stroke-width="2" stroke-linecap="round"/></svg><span id="tcTxt">١١:٥٩:٤٠</span></div>
+      <div id="lessonChars"></div>
+      <div id="cards"></div>
+      <div class="touch" id="ltouch"></div>
+      <div id="praise">أحسنت!</div>
+    </div>
+  </section>
+
+  <!-- ================= STREAK ================= -->
+  <section class="scene" id="streak">
+    <div class="cam" id="scam">
+      <div id="flood"></div>
+      <div id="streakFlame"></div>
+      <div id="num"><div class="roll"><div><span>٤</span></div></div><div class="roll"><div id="ones"><span>٣</span><span>٤</span></div></div></div>
+      <div id="slabel">يوماً متتالياً!</div>
+      <div id="week"></div>
+      <div id="celebChars"></div>
+    </div>
+  </section>
+
+  <!-- ================= TAGLINE ================= -->
+  <section class="scene" id="tag">
+    <div class="cam" id="tcam">
+      <div class="tl1"><span class="wd" id="w1">لا</span> <span class="wd" id="w2">تكسر</span></div>
+      <div class="tl2"><span class="wd" id="w3">السلسلة!</span></div>
+      <div id="tsub"><span class="mask"><span class="w">درس</span></span> <span class="mask"><span class="w">قصير</span></span> <span class="mask"><span class="w">كل</span></span> <span class="mask"><span class="w">يوم</span></span></div>
+      <div id="tagChars"></div>
+    </div>
+    <div id="wipe"></div>
+  </section>
+
+  <!-- ================= END ================= -->
+  <section class="scene" id="end">
+    <div class="dia" id="d1" style="left:80px;top:70px;width:150px;height:150px"></div>
+    <div class="dia" id="d2" style="left:960px;top:60px;width:92px;height:92px"></div>
+    <div class="dia" id="d3" style="left:150px;top:880px;width:110px;height:110px"></div>
+    <div class="dia" id="d4" style="left:1010px;top:560px;width:70px;height:70px"></div>
+    <div id="wordmark"><span class="mask" style="padding-top:.02em"><span class="w">قدراتي</span></span></div>
+    <div id="esub"><span class="mask"><span class="w">مجاني</span></span> <span class="mask"><span class="w">·</span></span> <span class="mask"><span class="w">بدون</span></span> <span class="mask"><span class="w">حساب</span></span></div>
+    <div id="url"><div class="btn3d"><div class="blip"></div><div class="bface" id="urlFace">qudrati.xyz</div></div></div>
+    <div id="endChars"></div>
+    <div class="bubble tail-br" id="bubbleEnd">موعدنا غداً!</div>
+  </section>
+
+</div>
+
+<div id="ui"><button id="play">▶ Play</button><input id="scrub" type="range" min="0" max="15" step="0.001" value="0"><span id="clockUi">0.000 s</span></div>
+<audio id="snd" src="soundtrack.wav" preload="auto"></audio>
+
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/CustomEase.min.js"></script>
+<script src="film.js"></script>
+</body>
+</html>

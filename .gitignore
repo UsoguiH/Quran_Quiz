@@ -34,3 +34,6 @@ dist-ssr
 showreel/.render
 showreel/frames
 showreel/stem-*.wav
+showreel-midnight/.render
+showreel-midnight/frames
+showreel-midnight/stem-*.wav
