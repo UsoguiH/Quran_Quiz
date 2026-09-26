@@ -43,6 +43,45 @@ function resetCtx() {
 }
 window.addEventListener('resize', resize);
 
+// ---------------------------------------------------------------- fullscreen
+// Browsers only allow fullscreen from a real tap/click (pointerup / touchend / keydown),
+// so on phones every tap on the game re-enters fullscreen until the player turns it off.
+const FS = {
+  auto: false, pending: false, hinted: false,
+  supported: () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+  active: () => !!(document.fullscreenElement || document.webkitFullscreenElement),
+  enter() {
+    if (this.active() || this.pending || !this.supported()) return;
+    const el = document.documentElement;
+    let p = null;
+    try { p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null; } catch (e) { return; }
+    this.pending = true;
+    Promise.resolve(p).then(() => { try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* not allowed */ } })
+      .catch(() => {}).then(() => { this.pending = false; });
+  },
+  exit() {
+    try { const p = document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen && document.webkitExitFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ }
+  },
+  toggle() { if (this.active()) this.exit(); else this.enter(); },
+  sync() {
+    document.body.classList.toggle('fs', this.active());
+    document.body.classList.toggle('nofs', !this.supported());
+    if (typeof Input !== 'undefined') Input.layoutTouch();
+  },
+};
+FS.auto = matchMedia('(pointer: coarse)').matches;
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => FS.sync());
+for (const ev of ['pointerup', 'touchend']) document.addEventListener(ev, e => {
+  if (!document.body.classList.contains('touch') || e.target && e.target.id === 'fsBtn') return;
+  if (FS.auto && FS.supported()) FS.enter();
+  else if (!FS.supported() && !FS.hinted && typeof toast === 'function' && typeof Game !== 'undefined' && Game.scene && !(Game.scene instanceof TitleScene)) {
+    // iPhone Safari / embedded previews cannot go fullscreen from a web page
+    FS.hinted = true;
+    const ios = /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone;
+    toast(ios ? 'Fullscreen: Share > Add to Home Screen' : window.self !== window.top ? 'Open the game in its own tab for fullscreen' : 'Fullscreen is not available here', '#efe3c5');
+  }
+}, true);
+
 // ---------------------------------------------------------------- math utils
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -200,6 +239,12 @@ const Input = (() => {
   }
   for (const b of touchEl.querySelectorAll('.tbtn')) {
     const name = b.dataset.b;
+    if (name === 'FS') {
+      b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('on'); haptic(8); });
+      b.addEventListener('pointerup', e => { b.classList.remove('on'); FS.auto = !FS.active(); FS.toggle(); });
+      b.addEventListener('pointercancel', () => b.classList.remove('on'));
+      continue;
+    }
     const on = e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } b.classList.add('on'); src.touch[name] = true; latch.add(name); if (name === 'B') { src.touch.ROLL = true; latch.add('ROLL'); } anyPressedFlag = true; AudioSys.unlock(); haptic(8); };
     const off = e => { b.classList.remove('on'); src.touch[name] = false; if (name === 'B') src.touch.ROLL = false; };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
@@ -212,45 +257,68 @@ const Input = (() => {
     if (e.pointerType === 'touch') lastDevice = 'touch';
   });
   function layoutTouch() {
-    const portrait = innerHeight > innerWidth;
+    const portrait = innerHeight > innerWidth, cl = document.body.classList;
+    const mode = cl.contains('ui') ? 'ui' : cl.contains('peace') ? 'peace' : 'fight';
     const btns = {}; touchEl.querySelectorAll('.tbtn').forEach(b => btns[b.dataset.b] = b);
     const u = Math.min(innerWidth, innerHeight);
-    const size = portrait ? u * 0.17 : u * 0.15;
-    const place = (el, x, y, w, h = w) => { Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
-    let bx, by, sx, sy, sr;
+    const k = clamp(u / 150, 2, 3.2); // css px per art pixel of the button skins
+    // medallion skins are (d+6) x (d+7) art pixels including their drop shadow
+    const place = (el, x, y, w, h = w) => { if (el) Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
+    const med = (el, x, y, d, kk = k) => place(el, x, y + 0.5 * kk, (d + 6) * kk, (d + 7) * kk);
+    const fsShown = !cl.contains('fs') && !cl.contains('nofs');
+    let bx, by, sx, sy, sr, sm = 20;
+    const big = 32 * k, sat = 24 * k;
     if (portrait) {
-      // controls sit right under the game view, centred in the space that is left
-      const top = (VIEW.bottom || innerHeight * 0.58 + 28) + 12;
-      const midY = top + 60 + (innerHeight - top - 60) * 0.45;
-      sr = Math.min(innerWidth * 0.36, (innerHeight - top) * 0.7);
-      sx = innerWidth * 0.26; sy = midY; bx = innerWidth * 0.74; by = midY;
-      const sm = size * 0.95;
-      const rowY = top + 18;
-      ['LB', 'RB', 'SELECT', 'PENDANT', 'START'].forEach((k, i) => place(btns[k], innerWidth * (0.12 + i * 0.19), rowY, sm * 1.1, sm * 0.52));
+      // controls sit under the game view
+      const top = (VIEW.bottom || innerHeight * 0.58 + 28) + 10;
+      const row = ['START', 'SELECT', 'LB', 'RB', 'PENDANT'].concat(fsShown ? ['FS'] : []);
+      const rowY = top + (sm + 7) * k / 2;
+      row.forEach((n, i) => med(btns[n], innerWidth * (i + 0.5) / row.length, rowY, sm));
+      const areaT = rowY + (sm + 7) * k / 2 + 8, midY = (areaT + innerHeight - 12) / 2;
+      sr = Math.min(innerWidth * 0.42, (innerHeight - areaT) * 0.8);
+      sx = innerWidth * 0.26; sy = midY;
+      bx = innerWidth - big / 2 - 20; by = midY + sat * 0.45;
     } else {
       sr = u * 0.42; sx = sr * 0.62 + 14; sy = innerHeight - sr * 0.62 - 14;
-      bx = innerWidth - size * 1.7 - 10; by = innerHeight - size * 1.7 - 10;
-      const sm = size * 0.85;
-      const side = (innerWidth - W * VIEW.s) / 2; // letterbox margin beside the canvas
-      if (side >= 56) {
-        // wide phones: stack the small buttons in the empty side bars, clear of the HUD
-        const bw = Math.min(side - 10, sm * 1.2), bh = sm * 0.55;
-        ['SELECT', 'RB', 'LB', 'PENDANT'].forEach((k, i) => place(btns[k], innerWidth - side / 2, 14 + bh / 2 + i * (bh + 8), bw, bh));
-        place(btns.START, side / 2, 14 + bh / 2, bw * 0.8, bh);
+      bx = innerWidth - big / 2 - 22; by = innerHeight - big / 2 - 14;
+      const side = (innerWidth - W * VIEW.s) / 2; // letterbox bars beside the game view
+      const step = (sm + 9) * k;
+      if (side >= (sm + 8) * k) {
+        // wide phones: small buttons live in the empty side bars, clear of the HUD
+        ['SELECT', 'RB', 'LB'].forEach((n, i) => med(btns[n], innerWidth - side / 2, 10 + step / 2 + i * step, sm));
+        ['START', 'PENDANT', 'FS'].forEach((n, i) => med(btns[n], side / 2, 10 + step / 2 + i * step, sm));
       } else {
-        ['LB', 'RB', 'SELECT', 'PENDANT'].forEach((k, i) => place(btns[k], innerWidth / 2 + 30 + i * (sm * 1.2 + 6), innerHeight - 20, sm * 1.2, sm * 0.55));
-        place(btns.START, innerWidth / 2 - 40, innerHeight - 20, sm * 0.9, sm * 0.55);
+        // 16:9 screens: a compact row between the stick and the action buttons, pause + fullscreen up top
+        const kk = k * 0.8, row = ['SELECT', 'LB', 'RB', 'PENDANT'], st = (sm + 8) * kk;
+        const cx = (sx + sr / 2 + bx - big / 2 - sat - 8) / 2;
+        row.forEach((n, i) => med(btns[n], cx + (i - (row.length - 1) / 2) * st, innerHeight - (sm + 7) * kk / 2 - 4, sm, kk));
+        med(btns.START, innerWidth / 2 - st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
+        med(btns.FS, innerWidth / 2 + st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
       }
     }
     place(stickEl, sx, sy, sr); stickHome = { x: sx, y: sy };
     // the floating-stick zone covers the lower-left of the screen
     if (portrait) { const zt = (VIEW.bottom || innerHeight * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight - zt) + 'px' }); }
     else Object.assign(zone.style, { left: '0px', top: (innerHeight * 0.3) + 'px', width: (innerWidth * 0.45) + 'px', height: (innerHeight * 0.7) + 'px' });
-    const hint = document.getElementById('aHint'); if (hint) { hint.style.left = (bx - size) + 'px'; hint.style.top = (by + size * 1.55) + 'px'; hint.style.width = (size * 2) + 'px'; }
-    const sk = document.getElementById('skipBtn'); if (sk) place(sk, innerWidth - 48, 26, 70, 30);
-    const d = size * 0.95;
-    place(btns.A, bx, by + d, size); place(btns.B, bx + d, by, size);
-    place(btns.X, bx - d, by, size); place(btns.Y, bx, by - d, size);
+    // action buttons: one big thumb button in the corner, the others fanned around it
+    const Rr = (big + sat) / 2 + 6;
+    const at = deg => [bx + Math.cos(deg * Math.PI / 180) * Rr, by + Math.sin(deg * Math.PI / 180) * Rr];
+    let aPos;
+    if (mode === 'fight') {
+      med(btns.X, bx, by, 32);
+      med(btns.B, ...at(185), 24); med(btns.Y, ...at(230), 24);
+      aPos = at(275); med(btns.A, ...aPos, 28, k * 24 / 28);
+    } else {
+      aPos = [bx, by]; med(btns.A, bx, by, 28, k * 32 / 28 * 0.94);
+      med(btns.B, ...at(190), 24);
+    }
+    const hint = document.getElementById('aHint');
+    if (hint) {
+      const r = Math.min(innerWidth - 6, aPos[0] + sat * 0.6), hb = aPos[1] - (mode === 'fight' ? sat : big) / 2 - 4;
+      Object.assign(hint.style, { left: (r - 300) + 'px', width: '300px', top: (hb - 30) + 'px', height: '30px' });
+    }
+    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, innerWidth - 16 - 40 * kk / 2, 12 + 18 * kk / 2, 40 * kk, 18 * kk); }
+    if (cl.contains('cine')) med(btns.FS, 16 + (sm + 6) * k * 0.4, 12 + (sm + 7) * k * 0.4, sm, k * 0.8);
   }
 
   // ---- gamepad
@@ -269,6 +337,12 @@ const Input = (() => {
 
   function update(dt) {
     pollPad();
+    if (tapQ && typeof PROMPT_HITS !== 'undefined') {
+      // a tap on an on-screen prompt chip presses that button
+      const h = PROMPT_HITS.find(h => tapQ.x >= h.x && tapQ.x < h.x + h.w && tapQ.y >= h.y && tapQ.y < h.y + h.h);
+      if (h) { latch.add(h.b); if (h.b === 'B') latch.add('ROLL'); if (h.b === 'ROLL') latch.add('B'); tapQ = null; haptic(8); }
+    }
+    if (typeof PROMPT_HITS !== 'undefined') PROMPT_HITS.length = 0;
     tapNow = tapQ; tapQ = null;
     for (const k in down) prev[k] = down[k];
     const names = new Set([...Object.keys(src.key), ...Object.keys(src.pad), ...Object.keys(src.touch), ...Object.keys(prev)]);

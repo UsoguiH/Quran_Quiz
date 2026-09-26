@@ -43,7 +43,7 @@ class TitleScene {
     this.t += dt;
     // phones: the first tap wakes the audio and goes fullscreen/landscape
     if (!this.awake) {
-      if (Input.tap() || Input.any()) { this.awake = true; Input.eatTap(); Input.clearAll(); AudioSys.unlock(); if (document.body.classList.contains('touch')) goImmersive(); sfx('confirm'); }
+      if (Input.tap() || Input.any()) { this.awake = true; Input.eatTap(); Input.clearAll(); AudioSys.unlock(); sfx('confirm'); }
       return;
     }
     for (const b of this.blobs) { b.x += b.vx * dt; b.y += b.vy * dt; if (b.x < -60) b.x = W + 60; if (b.x > W + 60) b.x = -60; if (b.y < -60) b.y = H + 60; if (b.y > H + 60) b.y = -60; }
@@ -158,7 +158,7 @@ class OptionsUI extends Overlay {
       { name: 'Text speed', val: () => ['Slow', 'Normal', 'Fast'][OPTS.textSpeed], left() { OPTS.textSpeed = (OPTS.textSpeed + 2) % 3; }, right() { OPTS.textSpeed = (OPTS.textSpeed + 1) % 3; } },
     ];
     if (this.tab === 1) return [
-      { name: 'Fullscreen', val: () => document.fullscreenElement ? 'On' : 'Off', left: toggleFS, right: toggleFS },
+      { name: 'Fullscreen', val: () => FS.supported() ? FS.active() ? 'On' : 'Off' : 'N/A', left: toggleFS, right: toggleFS },
       { name: 'Shaders', val: () => PostFX.ok ? (OPTS.fx !== false ? 'On' : 'Off') : 'N/A', left() { OPTS.fx = OPTS.fx === false; resize(); }, right() { OPTS.fx = OPTS.fx === false; resize(); } },
       { name: 'Touch controls', val: () => document.body.classList.contains('touch') ? 'On' : 'Off', left: toggleTouch, right: toggleTouch },
     ];
@@ -198,7 +198,7 @@ class OptionsUI extends Overlay {
       ctx.drawImage(pIcon(icon), x + 4, y + 4);
       pText(ctx, name, x + 14, y + 6, on ? PK.cream : PK.creamDim);
     });
-    btnGlyph(tx0 - 22, fy + 36, 'LB'); btnGlyph(tx0 + this.tabs.length * (tw + gap) + 2, fy + 36, 'RB');
+    btnGlyph(tx0 - 22, fy + 36, 'LB', true); btnGlyph(tx0 + this.tabs.length * (tw + gap) + 2, fy + 36, 'RB', true);
     const it = this.items();
     if (this.tab === 3) this.drawControls(fx, fy + 48, fw);
     it.forEach((o, i) => {
@@ -238,7 +238,7 @@ class OptionsUI extends Overlay {
   }
 }
 function toggleFS() {
-  try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { /* ignore */ }
+  FS.auto = !FS.active(); FS.toggle();
 }
 function toggleTouch() { document.body.classList.toggle('touch'); resize(); }
 
@@ -463,7 +463,7 @@ class BalanceUI extends Overlay {
     // teal header block
     R(ctx, x - 4, y, w + 8, 40, C.teal3); R(ctx, x - 3, y + 1, w + 6, 38, C.teal);
     R(ctx, x + 40, y + 5, w - 80, 9, C.paper); txt('BALANCE', W / 2, y + 12, { size: 7, align: 'center', color: C.paperDark, fam: FONT_TITLE });
-    btnGlyph(x + 26, y + 13, 'LB'); btnGlyph(x + w - 38, y + 13, 'RB');
+    btnGlyph(x + 26, y + 13, 'LB', true); btnGlyph(x + w - 38, y + 13, 'RB', true);
     ell(ctx, x + 6, y + 23, 8, 8, C.gold); R(ctx, x + 18, y + 24, w - 36, 6, C.paper2); R(ctx, x + 18, y + 24, w - 36, 6, C.mint);
     ell(ctx, x + w - 14, y + 23, 8, 8, '#e8e0c0'); ell(ctx, x + w - 12, y + 22, 7, 7, C.teal);
     zigzag(x - 3, y + 39, w + 6, C.teal, 3);

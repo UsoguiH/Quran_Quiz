@@ -155,26 +155,28 @@ function drawError(msg) {
   resetCtx(); R(ctx, 0, 0, W, 40, '#400'); txt('Error: ' + msg, 4, 12, { size: 7, color: '#fff' });
 }
 // touch layout follows what is on screen: cutscene (tap to advance), menus (tap targets), or play
-let _touchMode = '';
+let _touchMode = '', _touchLayout = '';
 function syncTouchMode() {
   const sc = Game.scene, cine = sc instanceof Cutscene;
   const ui = !cine && (UI.blocking() || sc instanceof TitleScene || sc instanceof SlotScene);
+  const peace = !cine && !ui && !(sc instanceof DungeonScene);
   const near = !cine && !ui && sc && sc.near;
   const hint = near ? (near.label || near.interact || '') : '';
   const key = cine + '|' + ui + '|' + hint + '|' + (sc && sc.constructor.name);
   if (key === _touchMode) return;
   _touchMode = key;
-  document.body.classList.toggle('cine', cine); document.body.classList.toggle('ui', ui);
-  document.body.classList.toggle('menu', sc instanceof TitleScene || sc instanceof SlotScene);
-  const h = document.getElementById('aHint'); if (h) h.textContent = hint;
+  const cl = document.body.classList;
+  cl.toggle('cine', cine); cl.toggle('ui', ui); cl.toggle('peace', peace);
+  cl.toggle('menu', sc instanceof TitleScene || sc instanceof SlotScene);
+  const h = document.getElementById('aHint');
+  if (h) { h.replaceChildren(); if (hint) { const sp = document.createElement('span'); sp.textContent = hint; h.appendChild(sp); } }
+  const a = document.querySelector('.tbtn[data-b="A"]');
+  if (a) { a.classList.toggle('ready', !!hint); a.classList.toggle('idle', !hint && !ui && !cine); }
+  const lay = cine + '|' + ui + '|' + peace;
+  if (lay !== _touchLayout) { _touchLayout = lay; Input.layoutTouch(); }
 }
-// on phones: go fullscreen and landscape after the first tap (needs a user gesture)
-async function goImmersive() {
-  try {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
-  } catch (e) { /* not supported (e.g. iPhone): the portrait layout still works */ }
-}
+// on phones: fullscreen + landscape (the browser needs a tap, see FS in engine.js)
+function goImmersive() { FS.auto = true; FS.enter(); }
 let lastT = performance.now(), crashed = null;
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
@@ -213,6 +215,7 @@ async function boot() {
   } catch (e) { /* offline: fall back to monospace */ }
   _mcache.clear();
   skinTouchButtons();
+  FS.sync();
   PostFX.init();
   Voice.init();
   resize();

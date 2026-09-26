@@ -41,8 +41,8 @@ const toast = (m, c) => Toasts.add(m, c);
 // ---------------------------------------------------------------- button glyphs
 const KEY_LABEL = { RUN: 'SHF', A: 'E', B: 'Esc', X: 'J', Y: 'K', ROLL: 'Spc', LB: 'Q', RB: 'R', SELECT: 'I', START: 'P', PENDANT: 'F', LT: 'Z', RT: 'C' };
 const PAD_COL = { A: C.btnA, B: C.btnB, X: C.btnX, Y: C.btnY };
-function btnGlyph(x, y, b) {
-  // pixel keycap / round gamepad button; returns the drawn width
+function btnGlyph(x, y, b, tab = false) {
+  // pixel keycap / round gamepad button / phone action medallion; returns the drawn width
   const dev = Input.device();
   const fix = l => l.replace('◀▶', '<>').replace('▲▼', '^v');
   x = Math.round(x); y = Math.round(y);
@@ -51,14 +51,38 @@ function btnGlyph(x, y, b) {
     ctx.drawImage(img, x - 2, y - 10);
     return img.width - 4;
   }
+  if (dev === 'touch') {
+    // phones: no gamepad letters; tabs get arrows, actions get their button's icon
+    if (tab) { const img = keyCap(b === 'LB' ? '<' : '>'); ctx.drawImage(img, x - 2, y - 10); return img.width - 4; }
+    const m = miniAction(b);
+    if (m) { ctx.drawImage(m, x - 3, y - 11); return 13; }
+  }
   if (b === 'ROLL') b = 'B';
   if (PAD_LETTER_COL[b]) { const img = roundBtn(b, PAD_LETTER_COL[b]); ctx.drawImage(img, x - 2, y - 10); return 13; }
   const img = keyCap(fix(b === 'PENDANT' ? 'HOME' : b === 'SELECT' ? 'BAG' : b === 'START' ? 'II' : b));
   ctx.drawImage(img, x - 2, y - 10);
   return img.width - 4;
 }
-// prompts: [['A','Grab'],['B','Back']]; drawn centered at y
+// tappable prompts: whatever was drawn last frame can be tapped to press its button
+const PROMPT_HITS = [];
+function promptHit(x, y, w, h, b) { if (b === 'ROLL' || /^[A-Z]+$/.test(b)) PROMPT_HITS.push({ x, y, w, h, b }); }
+// prompts: [['A','Grab'],['B','Back']]; drawn centered at y. On phones they become tappable chips.
 function promptBar(list, y = H - 6, col = '#efe3c5', center = W / 2) {
+  if (Input.device() === 'touch') {
+    const items = list.filter(([b]) => /^[A-Z]+$/.test(b));
+    const ws = items.map(([, l]) => textW(l, 7) + 12);
+    let x = Math.round(center - (ws.reduce((a, v) => a + v, 0) + (items.length - 1) * 4) / 2);
+    items.forEach(([b, l], i) => {
+      const w = ws[i], y0 = y - 10, h = 13;
+      R(ctx, x + 1, y0, w - 2, h, TB.rim); R(ctx, x, y0 + 1, w, h - 2, TB.rim);
+      R(ctx, x + 1, y0 + 1, w - 2, h - 2, TB.goldLo); R(ctx, x + 1, y0 + 1, w - 2, 1, TB.goldHi);
+      R(ctx, x + 2, y0 + 2, w - 4, h - 4, b === 'A' ? TB.use[1] : b === 'B' ? TB.back[1] : TB.slate[1]);
+      txt(l, x + w / 2, y, { size: 7, align: 'center', color: '#f3eedb' });
+      promptHit(x - 2, y0 - 5, w + 4, h + 8, b);
+      x += w + 4;
+    });
+    return;
+  }
   let tot = 0; const parts = list.map(([b, l]) => { const w = 11 + textW(l, 7) + 10; tot += w; return w; });
   let x = center - tot / 2;
   list.forEach(([b, l], i) => { const bw = btnGlyph(x, y, b); txt(l, x + bw + 3, y, { size: 7, color: col, outline: col === '#efe3c5' ? '#1b1420' : undefined }); x += Math.max(parts[i], bw + textW(l, 7) + 12); });

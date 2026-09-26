@@ -623,7 +623,7 @@ function worldPrompt(x, y, list) {
   R(ctx, x0 + 2, y0, w - 4, h, PK.outline); R(ctx, x0, y0 + 2, w, h - 4, PK.outline); R(ctx, x0 + 1, y0 + 1, w - 2, h - 2, PK.outline);
   R(ctx, x0 + 2, y0 + 1, w - 4, h - 2, '#efe3c5'); R(ctx, x0 + 1, y0 + 2, w - 2, h - 4, '#efe3c5'); R(ctx, x0 + 2, y0 + h - 3, w - 4, 2, '#d8c9a0');
   let xx = x0 + 4;
-  list.forEach(([b, l]) => { const bw = btnGlyph(xx, y + 1, b); txt(l, xx + bw + 4, y, { size: 7, color: '#4a3b28' }); xx += bw + 8 + textW(l, 7); });
+  list.forEach(([b, l]) => { const bw = btnGlyph(xx, y + 1, b); txt(l, xx + bw + 4, y, { size: 7, color: '#4a3b28' }); promptHit(xx - 4, y0 - 4, bw + 8 + textW(l, 7), h + 8, b); xx += bw + 8 + textW(l, 7); });
 }
 function drawCombatHUD(sc) {
   const st = playerStats();
@@ -636,25 +636,27 @@ function drawCombatHUD(sc) {
   ctx.drawImage(gearIcon(WEAPON_LINES[line].icon, S.gear[line]), wx + 3, wy + 3);
   const other = S.equip.w[S.equip.active ^ 1];
   if (other) { circ(wx - 14, wy + 2, 14, '#a8a090'); const ic = gearIcon(WEAPON_LINES[other].icon, S.gear[other]); ctx.drawImage(ic, wx - 14 + 1, wy + 2 + 1, 12, 12); }
-  btnGlyph(wx - 14, wy + 22, 'LB');
+  if (Input.device() !== 'touch') btnGlyph(wx - 14, wy + 22, 'LB');
   // potion
   const px = W - 26, py = 32;
   circ(px, py, 18, '#e8dcc0');
   let tier = -1, count = 0; for (let t = 3; t >= 0; t--) { if (S.potions[t] > 0 && tier < 0) tier = t; count += S.potions[t]; }
   if (tier >= 0) ctx.drawImage(potionIcon(tier), px + 2, py + 2, 14, 14);
   txt(count, px + 18, py + 17, { size: 7, align: 'right', color: '#fff', outline: '#1b1420' });
-  btnGlyph(px - 12, py + 14, 'RB');
+  if (Input.device() !== 'touch') btnGlyph(px - 12, py + 14, 'RB');
   // bag count
   const used = S.bag.filter(Boolean).length;
   txt(`${used}/20`, W - 8, 62, { size: 6, align: 'right', color: used >= 20 ? '#ff8a7a' : '#fff', outline: '#1b1420' });
   // pendant bottom-right
-  if (sc && sc.pendantT !== undefined) {
-    const cx = W - 16, cy = H - 16;
+  // (phones: the pendant has its own button, so the ring only appears above the hero while held)
+  const touch = Input.device() === 'touch';
+  if (sc && sc.pendantT !== undefined && (!touch || sc.pendantT > 0)) {
+    const cx = touch ? Math.round(sc.player.x) : W - 16, cy = touch ? Math.max(14, Math.round(sc.player.y) - 40) : H - 16;
     ell(ctx, cx - 11, cy - 11, 22, 22, '#1b1420'); ell(ctx, cx - 10, cy - 10, 20, 20, '#e8dcc0');
     R(ctx, cx - 1, cy - 7, 2, 4, '#8a6a4a'); ell(ctx, cx - 5, cy - 4, 10, 10, C.teal); ell(ctx, cx - 3, cy - 2, 6, 6, C.mint);
     if (sc.pendantT > 0) {
       ctx.strokeStyle = C.mint; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * sc.pendantT / 1.2); ctx.stroke();
     }
-    btnGlyph(cx - 22, cy + 6, 'PENDANT');
+    if (Input.device() !== 'touch') btnGlyph(cx - 22, cy + 6, 'PENDANT');
   }
 }

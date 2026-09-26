@@ -14,7 +14,7 @@ function tabsHeader(labels, active, cx, y, owner, onTap) {
     txt(l, x + 21, y + 10, { size: 6, align: 'center', color: on ? '#fff' : '#b8b8c8' });
     x += 44;
   });
-  btnGlyph(cx - w / 2 - 16, y + 10, 'LB'); btnGlyph(cx + w / 2 + 4, y + 10, 'RB');
+  btnGlyph(cx - w / 2 - 16, y + 10, 'LB', true); btnGlyph(cx + w / 2 + 4, y + 10, 'RB', true);
 }
 function statsTab(x, y, st, extra) {
   R(ctx, x, y, 38, 84, C.teal3); R(ctx, x + 1, y + 1, 36, 82, C.teal);

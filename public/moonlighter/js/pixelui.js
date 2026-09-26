@@ -140,28 +140,148 @@ function pIcon(name, scale = 1) {
   });
 }
 
-// ---------------------------------------------------------------- touch buttons skin (DOM)
-function skinTouchButtons() {
-  const map = {
-    A: () => [roundBtn('A', PK.xbA, false, 6), roundBtn('A', PK.xbA, true, 6)],
-    B: () => [roundBtn('B', PK.xbB, false, 6), roundBtn('B', PK.xbB, true, 6)],
-    X: () => [roundBtn('X', PK.xbX, false, 6), roundBtn('X', PK.xbX, true, 6)],
-    Y: () => [roundBtn('Y', PK.xbY, false, 6), roundBtn('Y', PK.xbY, true, 6)],
-    SELECT: () => [keyCap('BAG', false, 6), keyCap('BAG', true, 6)],
-    RB: () => [keyCap('POT', false, 6), keyCap('POT', true, 6)],
-    LB: () => [keyCap('SWAP', false, 6), keyCap('SWAP', true, 6)],
-    START: () => [keyCap('II', false, 6), keyCap('II', true, 6)],
-    PENDANT: () => [keyCap('HOME', false, 6), keyCap('HOME', true, 6)],
-    SKIP: () => [keyCap('SKIP', false, 6), keyCap('SKIP', true, 6)],
+// ---------------------------------------------------------------- touch controls (phones)
+// Gold-rimmed medallions with action icons (same metal as the health medallion),
+// instead of gamepad letters.
+const TB = {
+  rim: '#2a1a14', gold: '#d8a458', goldHi: '#f4d49a', goldLo: '#8a5a2a', rivet: '#fff0c0',
+  // accent wells: [dark, mid, light]
+  attack: ['#4a1620', '#7a2432', '#a8384a'], dash: ['#12383a', '#1d5a58', '#2f8a80'],
+  guard: ['#18244a', '#27397a', '#3f58a8'], use: ['#1d3b23', '#2d5e36', '#46884e'],
+  slate: ['#1b1f30', '#2c3350', '#414b72'], back: ['#3a1e18', '#5e3226', '#86503a'],
+};
+const TICON = {
+  // big action icons (drawn 1:1 inside the medallion; outline added automatically)
+  sword: (() => { // 13x13 blade pointing up-right
+    const r = Array.from({ length: 13 }, () => Array(13).fill('.'));
+    for (let i = 0; i < 7; i++) { r[7 - i][5 + i] = 'w'; r[7 - i][6 + i] = 's'; }
+    r[1][12] = '.'; r[0][12] = 'w';
+    [[2, 6], [3, 7], [4, 8], [5, 9], [6, 10]].forEach(([x, y]) => r[y][x] = 'g');
+    r[9][3] = 'b'; r[10][2] = 'b'; r[11][1] = 'g'; r[12][0] = 'g'; r[11][0] = 'g'; r[12][1] = 'g';
+    return r.map(a => a.join(''));
+  })(),
+  dash: ['....ccc...', '....ccc...', '.tt.ccc...', '....ccc...', 'tt..cccc..', '....cccccc', '.tt.cccccc', '....bbbbbb'],
+  shield: ['ggggggggg', 'gbbbcbbbg', 'gbbbcbbbg', 'gcccccccg', 'gbbbcbbbg', '.gbbcbbg.', '.gbbcbbg.', '..gbcbg..', '...gcg...', '....g....'],
+  hand: ['..c.c.c..', '..c.c.c.c', '..c.c.c.c', '..ccccccc', 'c.ccccccc', 'cc.cccccc', '.cccccccc', '..cccccc.', '...cccc..'],
+  check: ['........c', '.......cc', '......cc.', 'c....cc..', 'cc..cc...', '.cccc....', '..cc.....'],
+  back: ['...c.....', '..cc.....', '.ccccccc.', 'cccccccc.', '.ccccccc.', '..cc.....', '...c.....'],
+  // small buttons
+  bag: ['...ddd...', '..d...d..', '.bbbbbbb.', 'bbbbbbbbb', 'bbbbybbbb', 'bdddydddb', 'bbbbbbbbb', '.bbbbbbb.'],
+  potion: ['..nnn..', '..www..', '..w.w..', '.wpppw.', 'wpppppw', 'wphpppw', 'wpppppw', '.wwwww.'],
+  swap: ['.....c...', '.....cc..', 'ccccccccc', '.....cc..', '.....c...', '.........', '...c.....', '..cc.....', 'ccccccccc', '..cc.....', '...c.....'],
+  pause: ['cc..cc', 'cc..cc', 'cc..cc', 'cc..cc', 'cc..cc', 'cc..cc', 'cc..cc'],
+  pendant: ['.c...c.', '..c.c..', '...g...', '..ggg..', '.gtttg.', 'gtmmmtg', '.gtttg.', '..ggg..'],
+  full: ['ccc...ccc', 'c.......c', 'c.......c', '.........', '.........', '.........', 'c.......c', 'c.......c', 'ccc...ccc'],
+  unfull: ['..c...c..', '..c...c..', 'ccc...ccc', '.........', '.........', '.........', 'ccc...ccc', '..c...c..', '..c...c..'],
+  skip: ['c...c...', 'cc..cc..', 'ccc.ccc.', 'cccccccc', 'ccc.ccc.', 'cc..cc..', 'c...c...'],
+  // mini (7px) versions for in-game prompts
+  mSword: ['......w', '.....ws', '....ws.', '.g.ws..', '..gs...', '.bgg...', 'g..g...'],
+  mDash: ['...cc..', '...cc..', 't..cc..', '...ccc.', 'tt.cccc', '...bbbb'],
+  mShield: ['ggggg', 'gbcbg', 'gcccg', '.gcg.', '..g..'],
+  mHand: PICON.hand,
+};
+const TPAL = { c: PK.cream, w: '#f4f6f8', s: '#9aa8b8', g: '#e8b84a', b: '#8a5a34', t: '#5ad0c0', d: '#6a4424', y: '#eab432',
+  n: '#8a6a4a', p: '#e24a5a', h: '#ffb0b8', m: '#bff4e0' };
+function tIcon(name) {
+  return cached('ticon_' + name, () => {
+    const rows = TICON[name], w = rows[0].length, h = rows.length;
+    const c = mkCanvas(w + 2, h + 2), g = c.getContext('2d');
+    rows.forEach((row, j) => { for (let i = 0; i < w; i++) if (row[i] !== '.') P(g, 1 + i, 1 + j, TPAL[row[i]] || PK.cream); });
+    return addOutline(c, PK.outline);
+  });
+}
+// round gold-rimmed button; d = diameter in art pixels. Canvas has 2px padding + drop shadow.
+function medallion(d, well, icon, on = false, s = 1, glow = false) {
+  return cached(`med_${d}_${well}_${icon}_${on}_${s}_${glow}`, () => {
+    const pad = 3, c = mkCanvas((d + pad * 2) * s, (d + pad * 2 + 1) * s), g = c.getContext('2d');
+    g.scale(s, s);
+    const W3 = TB[well], oy = on ? 1 : 0, t = d >= 28 ? 3 : d >= 16 ? 2 : 1;
+    g.globalAlpha = 0.45; ell(g, pad, pad + 2, d, d, '#000'); g.globalAlpha = 1;
+    if (on || glow) { ell(g, pad - 2, pad - 2 + oy, d + 4, d + 4, on ? PK.cream : '#f4d49a'); }
+    g.translate(pad, pad + oy);
+    ell(g, 0, 0, d, d, TB.rim);
+    ell(g, 1, 1, d - 2, d - 2, TB.goldLo); ell(g, 1, 1, d - 2, d - 3, TB.goldHi); ell(g, 1, 2, d - 2, d - 4, on ? TB.goldHi : TB.gold);
+    // rivets on the rim
+    if (d >= 22) { const m = (d / 2) | 0; [[m - 1, 1], [m - 1, d - 3], [1, m - 1], [d - 3, m - 1]].forEach(([x, y]) => { P(g, x, y, TB.rivet); P(g, x + 1, y + 1, TB.goldLo); }); }
+    const iw = d - 2 - t * 2;
+    ell(g, 1 + t, 1 + t, iw, iw, TB.rim);
+    ell(g, 2 + t, 2 + t, iw - 2, iw - 2, W3[0]);
+    ell(g, 2 + t, 3 + t, iw - 2, iw - 3, on ? W3[2] : W3[1]);
+    // soft glint
+    ell(g, 3 + t + iw * 0.12, 3 + t + iw * 0.5, iw * 0.55, iw * 0.35, 'rgba(255,255,255,0.06)');
+    R(g, 3 + t + (iw * 0.18 | 0), 3 + t + (iw * 0.12 | 0), 2, 1, 'rgba(255,255,255,0.35)');
+    if (icon) { const ic = tIcon(icon); g.drawImage(ic, Math.round((d - ic.width) / 2), Math.round((d - ic.height) / 2) + 1); }
+    return c;
+  });
+}
+// slate pill with an icon and/or label (skip, prompt chips)
+function pillBtn(label, icon, on = false, s = 1) {
+  return cached(`pill_${label}_${icon}_${on}_${s}`, () => {
+    const ic = icon ? tIcon(icon) : null, tw = label ? pTextW(label) : 0;
+    const w = 8 + (ic ? ic.width : 0) + (ic && label ? 3 : 0) + tw, h = 13, pad = 2;
+    const c = mkCanvas((w + pad * 2) * s, (h + pad * 2 + 1) * s), g = c.getContext('2d');
+    g.scale(s, s);
+    g.globalAlpha = 0.45; R(g, pad + 1, pad + 2, w - 2, h, '#000'); g.globalAlpha = 1;
+    g.translate(pad, pad + (on ? 1 : 0));
+    R(g, 2, 0, w - 4, h, TB.rim); R(g, 1, 1, w - 2, h - 2, TB.rim); R(g, 0, 2, w, h - 4, TB.rim);
+    R(g, 2, 1, w - 4, h - 2, TB.goldLo); R(g, 1, 2, w - 2, h - 4, TB.goldLo); R(g, 2, 1, w - 4, 1, TB.goldHi);
+    R(g, 2, 2, w - 4, h - 4, on ? TB.slate[2] : TB.slate[1]); R(g, 2, h - 4, w - 4, 1, TB.slate[0]);
+    let x = 4;
+    if (ic) { g.drawImage(ic, x - 1, Math.round((h - ic.height) / 2)); x += ic.width + 1; }
+    if (label) pText(g, label, x, 4, PK.cream);
+    return c;
+  });
+}
+// joystick: a dark ring with a gold bezel, and a gold knob
+function stickBase(s = 1) {
+  return cached('stickBase' + s, () => {
+    const d = 44, c = mkCanvas(d * s, d * s), g = c.getContext('2d'); g.scale(s, s);
+    ell(g, 0, 0, d, d, 'rgba(42,26,20,0.85)'); ell(g, 1, 1, d - 2, d - 2, 'rgba(138,90,42,0.75)'); ell(g, 1, 1, d - 2, d - 3, 'rgba(216,164,88,0.8)');
+    ell(g, 3, 3, d - 6, d - 6, 'rgba(42,26,20,0.9)'); ell(g, 4, 4, d - 8, d - 8, 'rgba(22,20,34,0.45)');
+    // direction notches
+    const m = d / 2;
+    [[m - 1, 6, 2, 3], [m - 1, d - 9, 2, 3], [6, m - 1, 3, 2], [d - 9, m - 1, 3, 2]].forEach(([x, y, w, h]) => R(g, x, y, w, h, 'rgba(244,212,154,0.55)'));
+    return c;
+  });
+}
+// the pressed/released image pair for each touch button
+function touchSkins() {
+  const S6 = 6;
+  return {
+    X: [medallion(32, 'attack', 'sword', false, S6), medallion(32, 'attack', 'sword', true, S6)],
+    B: [medallion(24, 'dash', 'dash', false, S6), medallion(24, 'dash', 'dash', true, S6)],
+    Y: [medallion(24, 'guard', 'shield', false, S6), medallion(24, 'guard', 'shield', true, S6)],
+    A: [medallion(24, 'use', 'hand', false, S6), medallion(24, 'use', 'hand', true, S6), medallion(24, 'use', 'hand', false, S6, true)],
+    // menus: A confirms, B goes back
+    'A.ui': [medallion(28, 'use', 'check', false, S6), medallion(28, 'use', 'check', true, S6)],
+    'B.ui': [medallion(24, 'back', 'back', false, S6), medallion(24, 'back', 'back', true, S6)],
+    SELECT: [medallion(20, 'slate', 'bag', false, S6), medallion(20, 'slate', 'bag', true, S6)],
+    RB: [medallion(20, 'slate', 'potion', false, S6), medallion(20, 'slate', 'potion', true, S6)],
+    LB: [medallion(20, 'slate', 'swap', false, S6), medallion(20, 'slate', 'swap', true, S6)],
+    START: [medallion(20, 'slate', 'pause', false, S6), medallion(20, 'slate', 'pause', true, S6)],
+    PENDANT: [medallion(20, 'slate', 'pendant', false, S6), medallion(20, 'slate', 'pendant', true, S6)],
+    FS: [medallion(20, 'slate', 'full', false, S6), medallion(20, 'slate', 'full', true, S6)],
+    SKIP: [pillBtn('SKIP', 'skip', false, S6), pillBtn('SKIP', 'skip', true, S6)],
   };
+}
+function skinTouchButtons() {
+  const sk = touchSkins(), url = c => `url(${c.toDataURL()})`;
   document.querySelectorAll('.tbtn').forEach(b => {
-    const f = map[b.dataset.b]; if (!f) return;
-    const [off, on] = f();
+    const f = sk[b.dataset.b]; if (!f) return;
     b.textContent = '';
     b.classList.add('pix');
-    b.style.setProperty('--img', `url(${off.toDataURL()})`);
-    b.style.setProperty('--img-on', `url(${on.toDataURL()})`);
+    b.style.setProperty('--img', url(f[0])); b.style.setProperty('--img-on', url(f[1]));
+    if (f[2]) b.style.setProperty('--img-glow', url(f[2]));
+    const u = sk[b.dataset.b + '.ui'];
+    if (u) { b.style.setProperty('--img-ui', url(u[0])); b.style.setProperty('--img-ui-on', url(u[1])); }
   });
+  const stick = document.getElementById('stick');
+  if (stick) { stick.classList.add('pix'); stick.style.setProperty('--img', url(stickBase(6))); }
   const knob = document.getElementById('knob');
-  if (knob) { knob.classList.add('pix'); knob.style.setProperty('--img', `url(${roundBtn(' ', PK.cream, false, 6).toDataURL()})`); }
+  if (knob) { knob.classList.add('pix'); knob.style.setProperty('--img', url(medallion(16, 'slate', null, false, 6))); }
+}
+// small version drawn inside in-game prompts on phones; returns the canvas
+function miniAction(b) {
+  const m = { A: ['use', 'mHand'], B: ['dash', 'mDash'], ROLL: ['dash', 'mDash'], X: ['attack', 'mSword'], Y: ['guard', 'mShield'] }[b];
+  return m ? medallion(13, m[0], m[1]) : null;
 }
