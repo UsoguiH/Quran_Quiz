@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<title>Moonkeeper</title>
+<style>
+  /* Pixel fonts bundled locally (SIL Open Font License, see fonts/) */
+  @font-face { font-family: "Pixelify Sans"; font-weight: 400; src: url(fonts/pixelify-sans-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Pixelify Sans"; font-weight: 700; src: url(fonts/pixelify-sans-latin-700-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Silkscreen"; font-weight: 400; src: url(fonts/silkscreen-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Silkscreen"; font-weight: 700; src: url(fonts/silkscreen-latin-700-normal.woff2) format("woff2"); }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #000; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    font-family: "Pixelify Sans", monospace;
+  }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas#game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; }
+  #touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.touch #touch { display: block; }
+  .tbtn {
+    position: absolute; pointer-events: auto; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 18px "Silkscreen", monospace; color: #fff;
+    border: 3px solid rgba(20,16,24,.85); box-shadow: 0 3px 0 rgba(0,0,0,.45);
+    opacity: .82;
+  }
+  .tbtn.on { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); opacity: 1; }
+  .tbtn.small { border-radius: 10px; font-size: 11px; background: rgba(239,227,197,.9); color: #4a3b28; }
+  #stick { position: absolute; pointer-events: auto; border-radius: 50%;
+    background: rgba(239,227,197,.12); border: 3px solid rgba(239,227,197,.35); }
+  #knob { position: absolute; width: 44%; height: 44%; left: 28%; top: 28%; border-radius: 50%;
+    background: rgba(58,169,138,.85); border: 3px solid rgba(20,16,24,.8); }
+  #rotate { position: fixed; left: 0; right: 0; top: 8px; text-align: center; color: #efe3c5;
+    font: 12px "Silkscreen", monospace; display: none; pointer-events: none; opacity: .7; }
+  body.touch.portrait #rotate { display: block; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tbtn" data-b="A" style="background:#4fae52">A</div>
+  <div class="tbtn" data-b="B" style="background:#d2463c">B</div>
+  <div class="tbtn" data-b="X" style="background:#3f7fd0">X</div>
+  <div class="tbtn" data-b="Y" style="background:#e4b637">Y</div>
+  <div class="tbtn small" data-b="SELECT">BAG</div>
+  <div class="tbtn small" data-b="RB">POT</div>
+  <div class="tbtn small" data-b="LB">SWAP</div>
+  <div class="tbtn small" data-b="START">II</div>
+  <div class="tbtn small" data-b="PENDANT">HOME</div>
+</div>
+<div id="rotate">rotate for a bigger view</div>
+
+<script src="js/engine.js"></script>
+<script src="js/art.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/dungeon.js"></script>
+<script src="js/town.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/menus.js"></script>
+<script src="js/craft.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
