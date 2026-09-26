@@ -4,11 +4,12 @@
 //  potion shop and the town board (investments).
 // ============================================================================
 
-function tabsHeader(labels, active, cx, y) {
+function tabsHeader(labels, active, cx, y, owner, onTap) {
   const w = 44 * labels.length;
   let x = cx - w / 2;
   labels.forEach((l, i) => {
     const on = i === active;
+    if (owner) { const xx = x; hit(owner, xx, y - 2, 42, 18, () => { sfx('move'); onTap(i); }); }
     R(ctx, x, y, 42, 14, on ? C.teal3 : '#2a2a30'); R(ctx, x + 1, y + 1, 40, 12, on ? C.teal : '#4a4a55');
     txt(l, x + 21, y + 10, { size: 6, align: 'center', color: on ? '#fff' : '#b8b8c8' });
     x += 44;
@@ -40,9 +41,11 @@ class InventoryUI extends GridUI {
   }
   update(dt) {
     super.update(dt);
+    if (tapHits(this)) return;
     this.navigate();
+    const tA = this.tapA();
     const c = this.cell();
-    if (Input.pressed('A')) {
+    if (Input.pressed('A') || tA) {
       if (c.kind === 'bag') this.grab(true);
       else if (c.kind === 'w0' || c.kind === 'w1') this.cycleWeapon(c.kind === 'w0' ? 0 : 1);
       else if (c.kind === 'mirror') this.dissolve();
@@ -81,8 +84,9 @@ class InventoryUI extends GridUI {
     return null;
   }
   draw() {
+    this.hits = [];
     dimScreen(0.55);
-    tabsHeader(['Inventory', 'Notebook'], 0, W / 2, 4);
+    tabsHeader(['Inventory', 'Notebook'], 0, W / 2, 4, this, i => { if (i === 1) { this.returnHeld(); this.close(); UI.open(new NotebookUI(this.o)); } });
     bookSpread(60, 26, 264, 162);
     drawBagGrid(76, 40, 18, 2);
     // pendant & mirror
@@ -155,6 +159,7 @@ class NotebookUI extends Overlay {
   list() { return ITEM_ORDER.filter(id => ITEMS[id].dungeon === this.tab); }
   update(dt) {
     super.update(dt);
+    if (tapHits(this)) return;
     const L = this.list(), d = Input.dir();
     if (d === 'U') { this.sel = (this.sel + L.length - 1) % L.length; sfx('move'); }
     if (d === 'D') { this.sel = (this.sel + 1) % L.length; sfx('move'); }
@@ -163,15 +168,17 @@ class NotebookUI extends Overlay {
     if (Input.pressed('B') || Input.pressed('SELECT')) { sfx('cancel'); this.close(); }
   }
   draw() {
+    this.hits = [];
     dimScreen(0.55);
-    tabsHeader(['Inventory', 'Notebook'], 1, W / 2, 4);
+    tabsHeader(['Inventory', 'Notebook'], 1, W / 2, 4, this, i => { if (i === 0) { this.close(); UI.open(new InventoryUI(this.o)); } });
     bookSpread(60, 26, 264, 162);
     // dungeon tabs sticking out of the top of the book
-    DUNGEONS.forEach((d, i) => { const x = 74 + i * 24; R(ctx, x, 20 + (i === this.tab ? 0 : 3), 20, 8, d.color); if (i === this.tab) R(ctx, x, 26, 20, 2, shade(d.color, 0.3)); });
+    DUNGEONS.forEach((d, i) => { const x = 74 + i * 24; hit(this, x, 16, 22, 14, () => { this.tab = i; this.sel = 0; sfx('move'); }); R(ctx, x, 20 + (i === this.tab ? 0 : 3), 20, 8, d.color); if (i === this.tab) R(ctx, x, 26, 20, 2, shade(d.color, 0.3)); });
     const L = this.list(), per = 5, page = Math.floor(this.sel / per), pages = Math.ceil(L.length / per);
     txt(DUNGEONS[this.tab].name, 124, 40, { size: 7, align: 'center', color: C.tealText, bold: true });
     L.slice(page * per, page * per + per).forEach((id, k) => {
       const i = page * per + k, y = 48 + k * 24, it = ITEMS[id], known = S.notes[id];
+      hit(this, 66, y, 120, 23, () => { this.sel = i; sfx('move'); });
       txt(ITEM_ORDER.indexOf(id) + 1, 70, y + 12, { size: 5, color: C.paperInk });
       slotBox(80, y, 20, { fill: '#efe6cc' });
       if (known) ctx.drawImage(itemIcon(id), 81 + (18 - itemIcon(id).width) / 2, y + 1 + (18 - itemIcon(id).height) / 2);
@@ -227,8 +234,9 @@ class ChestUI extends GridUI {
   update(dt) {
     super.update(dt);
     this.navigate();
+    const tA = this.tapA();
     const c = this.cell();
-    if (Input.pressed('A')) this.grab(true);
+    if (Input.pressed('A') || tA) this.grab(true);
     if (Input.pressed('X')) this.grab(false);
     if (Input.pressed('RB') && !this.held) this.quickMove(c);
     if (Input.pressed('LB') && !this.held) { for (const cc of this.cells) if (cc.kind === 'bag' && cc.idx >= 5 && cc.get()) this.quickMove(cc); }
@@ -301,9 +309,13 @@ class ShelfUI extends GridUI {
   update(dt) {
     super.update(dt);
     if (this.edit) { this.updateEdit(); return; }
+    if (tapHits(this)) return;
     this.navigate();
+    const tA = this.tapA();
     const c = this.cell();
-    if (Input.pressed('A')) this.grab(true);
+    if (tA && c.kind === 'table' && !this.held && S.shelves[c.idx].item && this.lastTap === c) { this.edit = { i: c.idx, d: 6 }; sfx('select'); this.lastTap = null; return; }
+    if (tA) this.lastTap = c;
+    if (Input.pressed('A') || (tA && !(c.kind === 'table' && !this.held && S.shelves[c.idx].item))) this.grab(true);
     if (Input.pressed('X')) this.grab(false);
     if (Input.pressed('Y') && c.kind === 'table' && S.shelves[c.idx].item) { this.edit = { i: c.idx, d: 6 }; sfx('select'); }
     if ((Input.pressed('LB') || Input.pressed('RB')) && !this.edit) { this.page = (this.page + (Input.pressed('LB') ? 2 : 1)) % 3; sfx('move'); }
@@ -311,8 +323,15 @@ class ShelfUI extends GridUI {
   }
   updateEdit() {
     const e = this.edit, sh = S.shelves[e.i];
-    const d = Input.dir();
+    let d = Input.dir();
     const digits = String(Math.max(0, Math.min(9999999, sh.price | 0))).padStart(7, '0').split('').map(Number);
+    // touch: tap the top half of a digit to raise it, the bottom half to lower it; tap elsewhere to finish
+    const t = Input.tap();
+    if (t && this.digitRects) {
+      const k = this.digitRects.findIndex(r => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y - 6 && t.y < r.y + r.h + 6);
+      if (k >= 0) { e.d = k; d = t.y < this.digitRects[k].y + this.digitRects[k].h / 2 ? 'U' : 'D'; }
+      else { if (sh.price < 1) sh.price = 1; S.lastPrice[sh.item.id] = sh.price; this.edit = null; sfx('confirm'); return; }
+    }
     if (d === 'L') { e.d = Math.max(0, e.d - 1); sfx('move'); }
     if (d === 'R') { e.d = Math.min(6, e.d + 1); sfx('move'); }
     if (d === 'U' || d === 'D') { digits[e.d] = (digits[e.d] + (d === 'U' ? 1 : 9)) % 10; sh.price = +digits.join(''); sfx('select'); }
@@ -320,11 +339,12 @@ class ShelfUI extends GridUI {
     if (Input.pressed('A') || Input.pressed('B') || Input.pressed('Y')) { if (sh.price < 1) sh.price = 1; S.lastPrice[sh.item.id] = sh.price; this.edit = null; sfx('confirm'); }
   }
   draw() {
+    this.hits = [];
     dimScreen(0.5);
     // source page (bag / chest)
     paperPanel(50, 34, 120, 128);
     const names = ['Bag', 'Chest I', 'Chest II'];
-    tabsHeader(names, this.page, 110, 20);
+    tabsHeader(names, this.page, 110, 20, this, i => { if (!this.edit) this.page = i; });
     const arr = this.srcArr(), off = this.srcOff();
     for (let i = 0; i < 20; i++) { const col = i % 5, row = (i / 5) | 0, x = 64 + col * 20, y = 52 + row * 20; slotBox(x, y, 18, { safe: this.page === 0 && row === 0 }); if (arr[off + i]) drawStack(arr[off + i], x + 1, y + 1, 16); }
     txt(this.page === 0 ? 'Your bag' : 'Storage chest', 110, 146, { size: 6, align: 'center', color: C.paperInk });
@@ -339,9 +359,11 @@ class ShelfUI extends GridUI {
       const bx = small ? r.x + 26 : r.x + 6, by = small ? r.y + 4 : r.y + r.h - 32, bw = small ? 60 : 78;
       R(ctx, bx, by, bw, small ? 11 : 12, '#1b1420'); R(ctx, bx + 1, by + 1, bw - 2, small ? 9 : 10, '#f4ecd6');
       const ps = String(sh.price | 0).padStart(7, '0');
+      if (this.edit && this.edit.i === i) this.digitRects = [];
       for (let k = 0; k < 7; k++) {
         const on = this.edit && this.edit.i === i && this.edit.d === k;
         const dx = bx + 4 + k * (small ? 6.5 : 7.5);
+        if (this.edit && this.edit.i === i) this.digitRects.push({ x: dx - 1, y: by, w: small ? 6.5 : 7.5, h: small ? 11 : 12 });
         if (on) { R(ctx, dx - 1, by + 1, small ? 6 : 7, small ? 9 : 10, C.teal); }
         const lead = ps.slice(0, k + 1).split('').every(ch => ch === '0') && k < 6;
         txt(ps[k], dx + 2, by + (small ? 8.5 : 9), { size: 7, align: 'center', color: on ? '#fff' : lead ? '#c8bca0' : '#3a2e20' });
@@ -410,6 +432,7 @@ class ForgeUI extends Overlay {
   sync() { const L = this.lines(); this.row = clamp(this.row, 0, L.length - 1); this.col = clamp(Math.max(0, S.gear[L[this.row]] + 1), 0, 3); }
   update(dt) {
     super.update(dt);
+    if (tapHits(this)) return;
     const L = this.lines(), d = Input.dir();
     if (d === 'U') { this.row = (this.row + L.length - 1) % L.length; this.col = clamp(S.gear[L[this.row]] + 1, 0, 3); sfx('move'); }
     if (d === 'D') { this.row = (this.row + 1) % L.length; this.col = clamp(S.gear[L[this.row]] + 1, 0, 3); sfx('move'); }
@@ -439,13 +462,15 @@ class ForgeUI extends Overlay {
     portraitStage(smithPortrait(), 12, 72);
     banner(160, 8, 150, "BROM'S ANVIL");
     // centre paper with categories
+    this.hits = [];
     paperPanel(92, 34, 140, 112);
-    tabsHeader(['Weapons', 'Armor'], this.tab, 162, 36);
+    tabsHeader(['Weapons', 'Armor'], this.tab, 162, 36, this, i => { if (i !== this.tab) { this.tab = i; this.row = 0; this.sync(); } });
     const L = this.lines();
     L.forEach((line, r) => {
       const y = 56 + r * (this.tab === 0 ? 17 : 26), def = WEAPON_LINES[line] || ARMOR_LINES[line];
       for (let t = 0; t < 4; t++) {
         const x = 104 + t * 32, owned = S.gear[line] >= t, next = S.gear[line] + 1 === t;
+        hit(this, x - 2, y - 1, 21, 18, () => { if (this.row === r && this.col === t) this.craft(); else { this.row = r; this.col = t; sfx('move'); } });
         if (t > 0) txt('›', x - 6, y + 11, { size: 8, align: 'center', color: C.paperInk });
         R(ctx, x, y, 17, 16, owned ? C.teal : next ? '#e6d7b2' : '#d8c8a0');
         const ic = gearIcon(def.icon, t);
@@ -479,6 +504,7 @@ class WitchUI extends Overlay {
   constructor() { super(); this.sel = 0; }
   update(dt) {
     super.update(dt);
+    if (tapHits(this)) return;
     const d = Input.dir();
     if (d === 'L' || d === 'U') { this.sel = (this.sel + 3) % 4; sfx('move'); }
     if (d === 'R' || d === 'D') { this.sel = (this.sel + 1) % 4; sfx('move'); }
@@ -499,8 +525,10 @@ class WitchUI extends Overlay {
     txt('Potions List:', 104, 46, { size: 7, color: C.paperDark });
     R(ctx, 104, 48, 116, 1, C.paperLine);
     R(ctx, 102, 56, 3, 34, C.paper3); R(ctx, 102, 56 + this.sel * 8, 3, 10, C.teal);
+    this.hits = [];
     for (let i = 0; i < 4; i++) {
       const x = 112 + i * 27, y = 58;
+      hit(this, x - 2, y - 2, 26, 26, () => { if (this.sel === i) this.brew(); else { this.sel = i; sfx('move'); } });
       slotBox(x, y, 22, { fill: '#e6d7b2' });
       ctx.drawImage(potionIcon(i), x + 4, y + 4);
       if (S.potions[i]) txt(S.potions[i], x + 21, y + 21, { size: 6, align: 'right', color: '#fff', outline: '#1b1420' });
@@ -529,6 +557,7 @@ class BoardUI extends Overlay {
   level(inv) { return S.invest[inv.id] || 0; }
   update(dt) {
     super.update(dt);
+    if (tapHits(this)) return;
     const d = Input.dir();
     if (d) {
       const pos = [[0, 0], [1, 0], [2, 0], [0.5, 1], [1.5, 1]];
@@ -562,8 +591,10 @@ class BoardUI extends Overlay {
     paperPanel(30, 36, 190, 150);
     zigzag(32, 36, 186, C.teal, 3);
     const pos = [[62, 70], [124, 70], [186, 70], [93, 132], [155, 132]];
+    this.hits = [];
     INVEST.forEach((inv, i) => {
       const [cx, cy] = pos[i], lv = this.level(inv), done = lv >= inv.cost.length;
+      hit(this, cx - 26, cy - 26, 52, 58, () => { if (this.sel === i) this.invest(); else { this.sel = i; sfx('move'); } });
       ell(ctx, cx - 25, cy - 25, 50, 50, done ? C.teal : '#c8b890'); ell(ctx, cx - 22, cy - 22, 44, 44, done ? '#e6d7b2' : '#d8c8a0');
       const drawP = (img) => { const s = 40 / img.height; ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 21, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(img, cx - img.width * s / 2, cy - 20, img.width * s, img.height * s); ctx.restore(); };
       if (inv.id === 'forge') done ? drawP(smithPortrait()) : null;

@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#000000" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Moonkeeper" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <title>Moonkeeper</title>
 <style>
   /* Pixel fonts bundled locally (SIL Open Font License, see fonts/) */
@@ -39,6 +46,18 @@
   .tbtn.pix.on { background-image: var(--img-on) !important; transform: translateY(2px); opacity: 1; }
   #stick { background: rgba(22,26,40,.35) !important; border: 3px solid rgba(59,68,102,.9) !important; box-shadow: inset 0 0 0 3px rgba(22,26,40,.6); }
   #knob.pix { background: var(--img) center/contain no-repeat; border: none; image-rendering: pixelated; }
+  #stickZone { position: absolute; pointer-events: auto; }
+  #stick { transition: opacity .2s; opacity: .55; }
+  #stick.active { opacity: 1; transition: none; }
+  #aHint { position: absolute; text-align: center; color: #f3eedb; font: 11px "Silkscreen", monospace; text-shadow: 0 1px 0 #000, 0 0 3px #000; pointer-events: none; }
+  #skipBtn { display: none; }
+  body.cine #touch .tbtn, body.cine #stick, body.cine #stickZone, body.cine #aHint { display: none; }
+  body.cine #touch #skipBtn { display: flex; }
+  body.ui #stickZone { pointer-events: none; }
+  body.ui #stick { display: none; }
+  body.menu #touch .tbtn.small, body.menu #touch .tbtn[data-b="X"] { visibility: hidden; }
+  body.ui #aHint { display: none; }
+  * { -webkit-touch-callout: none; }
   #rotate { position: fixed; left: 0; right: 0; top: 8px; text-align: center; color: #efe3c5;
     font: 12px "Silkscreen", monospace; display: none; pointer-events: none; opacity: .7; }
   body.touch.portrait #rotate { display: block; }
@@ -47,7 +66,10 @@
 <body>
 <div id="wrap"><canvas id="game"></canvas></div>
 <div id="touch">
+  <div id="stickZone"></div>
   <div id="stick"><div id="knob"></div></div>
+  <div id="aHint"></div>
+  <div class="tbtn small" id="skipBtn" data-b="SKIP">SKIP</div>
   <div class="tbtn" data-b="A" style="background:#4fae52">A</div>
   <div class="tbtn" data-b="B" style="background:#d2463c">B</div>
   <div class="tbtn" data-b="X" style="background:#3f7fd0">X</div>

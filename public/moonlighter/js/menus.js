@@ -41,11 +41,20 @@ class TitleScene {
   }
   update(dt) {
     this.t += dt;
+    // phones: the first tap wakes the audio and goes fullscreen/landscape
+    if (!this.awake) {
+      if (Input.tap() || Input.any()) { this.awake = true; Input.eatTap(); Input.clearAll(); AudioSys.unlock(); if (document.body.classList.contains('touch')) goImmersive(); sfx('confirm'); }
+      return;
+    }
     for (const b of this.blobs) { b.x += b.vx * dt; b.y += b.vy * dt; if (b.x < -60) b.x = W + 60; if (b.x > W + 60) b.x = -60; if (b.y < -60) b.y = H + 60; if (b.y > H + 60) b.y = -60; }
     const d = Input.dir();
     if (d === 'U') { this.sel = (this.sel + 2) % 3; sfx('move'); }
     if (d === 'D') { this.sel = (this.sel + 1) % 3; sfx('move'); }
-    if (Input.pressed('A') || Input.pressed('X')) {
+    if (tapHits(this)) return;
+    if (Input.pressed('A') || Input.pressed('X')) this.activate();
+  }
+  activate() {
+    {
       sfx('confirm');
       if (this.sel === 0) Game.setScene(new SlotScene());
       if (this.sel === 1) UI.open(new OptionsUI());
@@ -68,11 +77,19 @@ class TitleScene {
     for (const s of this.sparks) if (Math.sin(this.t * 2 + s.ph) > 0.6) P(ctx, s.x, s.y, C.mint);
     drawDoorLogo(W / 2, 22);
     drawTitleText(W / 2, 100, 24);
-    this.items.forEach((it, i) => {
+    this.hits = [];
+    if (this.awake) this.items.forEach((it, i) => {
       const y = 140 + i * 16, sel = i === this.sel;
+      hit(this, W / 2 - 60, y - 11, 120, 15, () => { this.sel = i; this.activate(); });
       txt(it, W / 2, y, { size: 8, align: 'center', color: sel ? '#ffffff' : '#d8f4e0', outline: sel ? C.teal3 : undefined });
       if (sel) { const w = textW(it, 8) / 2 + 12; ctx.drawImage(swirlIcon(false), W / 2 - w - 4, y - 7); ctx.drawImage(swirlIcon(true), W / 2 + w - 3, y - 7); }
     });
+    if (!this.awake) {
+      const a = 0.5 + Math.sin(this.t * 3) * 0.5;
+      ctx.globalAlpha = 0.35 + a * 0.65;
+      txt(document.body.classList.contains('touch') ? 'Tap to begin' : 'Press any key', W / 2, 160, { size: 9, align: 'center', color: '#ffffff', outline: C.teal3, fam: FONT_TITLE });
+      ctx.globalAlpha = 1;
+    }
     txt('1.0.0', 36, H - 5, { size: 6, color: '#d8f4e0' });
     txt('a tribute to the shopkeeper-adventurer genre', W - 36, H - 5, { size: 6, align: 'right', color: '#d8f4e0' });
   }
@@ -98,14 +115,14 @@ class SlotScene {
     const d = Input.dir();
     if (d === 'U') { this.sel = (this.sel + 4) % 5; sfx('move'); }
     if (d === 'D') { this.sel = (this.sel + 1) % 5; sfx('move'); }
-    if (Input.pressed('A') || Input.pressed('X')) {
-      sfx('confirm');
-      if (this.sum[this.sel]) loadSlot(this.sel); else newGame(this.sel);
-    }
+    if (tapHits(this)) return;
+    if (Input.pressed('A') || Input.pressed('X')) this.activate();
     if (Input.pressed('Y') && this.sum[this.sel]) ask(`Delete save slot ${this.sel + 1}? This cannot be undone.`, () => { deleteSlot(this.sel); this.sum = [0, 1, 2, 3, 4].map(slotSummary); });
     if (Input.pressed('B')) { sfx('cancel'); Game.setScene(new TitleScene()); }
   }
+  activate() { sfx('confirm'); if (this.sum[this.sel]) loadSlot(this.sel); else newGame(this.sel); }
   draw() {
+    this.hits = [];
     oliveBG(this.t);
     zigRow(8, 0, 110); zigRow(8, W - 110, W);
     txt('LOAD / NEW GAME', W / 2, 16, { size: 8, align: 'center', color: '#e8e0c8', fam: FONT_TITLE });
@@ -113,6 +130,7 @@ class SlotScene {
     txt('Choose a save slot to begin', W / 2, 32, { size: 7, align: 'center', color: '#b8b098' });
     for (let i = 0; i < 5; i++) {
       const y = 46 + i * 28, sel = i === this.sel, s = this.sum[i];
+      hit(this, 96, y - 3, 196, 26, () => { if (this.sel === i) this.activate(); else { this.sel = i; sfx('move'); } });
       if (sel) { R(ctx, 70, y - 3, W - 140, 1, C.teal); R(ctx, 70, y + 23, W - 140, 1, C.teal); ctx.drawImage(swirlIcon(false), 88, y + 6); ctx.drawImage(swirlIcon(true), W - 96, y + 6); }
       R(ctx, 104, y, 16, 20, sel ? C.teal : '#8a8470'); txt(i + 1, 112, y + 13, { size: 8, align: 'center', color: '#fff' });
       R(ctx, 122, y, 160, 20, sel ? '#8a8470' : '#6e6854');
@@ -156,6 +174,7 @@ class OptionsUI extends Overlay {
     super.update(dt);
     if (Input.pressed('LB') || Input.pressed('LT')) { this.tab = (this.tab + 3) % 4; this.sel = 0; sfx('move'); }
     if (Input.pressed('RB') || Input.pressed('RT')) { this.tab = (this.tab + 1) % 4; this.sel = 0; sfx('move'); }
+    if (tapHits(this)) { saveOpts(); return; }
     const it = this.items(), d = Input.dir();
     if (it.length) {
       if (d === 'U') { this.sel = (this.sel + it.length - 1) % it.length; sfx('move'); }
@@ -170,9 +189,11 @@ class OptionsUI extends Overlay {
     const fx = 36, fy = 8, fw = W - 72, fh = 186;
     pocketFrame(fx, fy, fw, fh, 'SETTINGS');
     // tabs
+    this.hits = [];
     const tw = 64, gap = 6, tx0 = W / 2 - (this.tabs.length * tw + (this.tabs.length - 1) * gap) / 2;
     this.tabs.forEach(([name, icon], i) => {
       const x = tx0 + i * (tw + gap), y = fy + 24, on = i === this.tab;
+      hit(this, x, y, tw, 17, () => { this.tab = i; this.sel = 0; sfx('move'); });
       slateBar(x, y, tw, 17, on, on ? PK.faceHi : PK.face);
       ctx.drawImage(pIcon(icon), x + 4, y + 4);
       pText(ctx, name, x + 14, y + 6, on ? PK.cream : PK.creamDim);
@@ -182,6 +203,8 @@ class OptionsUI extends Overlay {
     if (this.tab === 3) this.drawControls(fx, fy + 48, fw);
     it.forEach((o, i) => {
       const x = fx + 20, y = fy + 52 + i * 26, w = fw - 40, sel = i === this.sel;
+      hit(this, x, y, w / 2, 20, () => { this.sel = i; o.left(); sfx('select'); });
+      hit(this, x + w / 2, y, w / 2, 20, () => { this.sel = i; o.right(); sfx('select'); });
       slateBar(x, y, w, 20, sel);
       pText(ctx, o.name, x + 8, y + 7, sel ? PK.cream : PK.creamDim);
       const vx = x + w - 96;
@@ -237,6 +260,7 @@ class PauseUI extends Overlay {
     const d = Input.dir();
     if (d === 'U') { this.sel = (this.sel + this.items.length - 1) % this.items.length; sfx('move'); }
     if (d === 'D') { this.sel = (this.sel + 1) % this.items.length; sfx('move'); }
+    if (tapHits(this)) return;
     if (Input.pressed('A') || Input.pressed('X')) { sfx('confirm'); this.items[this.sel][2](); }
     if (Input.pressed('B') || Input.pressed('START')) { sfx('cancel'); this.close(); }
   }
@@ -280,8 +304,10 @@ class PauseUI extends Overlay {
     pText(ctx, `GUARDIANS ${S.bosses.filter(Boolean).length}/4`, sx + 4, fy + 166, PK.creamDim);
     // menu
     const mx = fx + fw - 100;
+    this.hits = [];
     this.items.forEach(([n, icon], i) => {
       const y = fy + 26 + i * 28, sel = i === this.sel;
+      hit(this, mx - 2, y - 2, 92, 24, () => { this.sel = i; sfx('confirm'); this.items[i][2](); });
       slateBar(mx, y, 88, 20, sel, sel ? PK.faceHi : PK.face);
       ctx.drawImage(pIcon(icon), mx + 6, y + 6);
       pText(ctx, n, mx + 20, y + 7, sel ? PK.cream : PK.creamDim);
@@ -303,7 +329,7 @@ function parchment(x, y, w, h) {
 }
 class TipUI extends Overlay {
   constructor(kind) { super(); this.kind = kind; this.tip = TIPS[kind]; }
-  update(dt) { super.update(dt); if (this.t > 0.4 && (Input.pressed('A') || Input.pressed('B') || Input.pressed('X'))) { sfx('confirm'); this.close(); } }
+  update(dt) { super.update(dt); if (this.t > 0.4 && (Input.pressed('A') || Input.pressed('B') || Input.pressed('X') || Input.tap())) { sfx('confirm'); this.close(); } }
   draw() {
     dimScreen(0.55);
     const x = 50, y = 50, w = W - 100, h = 74;
@@ -346,7 +372,7 @@ class TipUI extends Overlay {
 
 // ---------------------------------------------------------------- dungeon keys map
 class KeysMapUI extends Overlay {
-  update(dt) { super.update(dt); if (this.t > 0.3 && (Input.pressed('A') || Input.pressed('B'))) { sfx('confirm'); this.close(); } }
+  update(dt) { super.update(dt); if (this.t > 0.3 && (Input.pressed('A') || Input.pressed('B') || Input.tap())) { sfx('confirm'); this.close(); } }
   draw() {
     dimScreen(0.6);
     const x = 50, y = 18, w = W - 100, h = 176;
@@ -380,7 +406,7 @@ class DeathUI extends Overlay {
   constructor(sc) { super(); this.sc = sc; this.killer = sc.lastHitBy; }
   update(dt) {
     super.update(dt);
-    if (this.t > 0.8 && (Input.pressed('A') || Input.pressed('B'))) {
+    if (this.t > 0.8 && (Input.pressed('A') || Input.pressed('B') || Input.tap())) {
       sfx('confirm'); this.close();
       for (let i = 5; i < 20; i++) S.bag[i] = null;
       Game.fade(() => returnFromDungeon(this.sc, 'death'));
@@ -429,7 +455,7 @@ class BalanceUI extends Overlay {
     const d = Input.dir();
     if (d === 'D') this.scroll = Math.min(Math.max(0, this.rows.length - 6), this.scroll + 1);
     if (d === 'U') this.scroll = Math.max(0, this.scroll - 1);
-    if (this.t > 0.6 && (Input.pressed('A') || Input.pressed('B'))) { sfx('confirm'); this.close(); if (this.onDone) this.onDone(); }
+    if (this.t > 0.6 && (Input.pressed('A') || Input.pressed('B') || Input.tap())) { sfx('confirm'); this.close(); if (this.onDone) this.onDone(); }
   }
   draw() {
     dimScreen(0.7);

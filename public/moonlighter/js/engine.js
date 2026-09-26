@@ -30,7 +30,7 @@ function resize() {
   cv.width = Math.round(W * s * dpr);
   cv.height = Math.round(H * s * dpr);
   const wrap = document.getElementById('wrap');
-  if (touch && portrait) { wrap.style.alignItems = 'flex-start'; wrap.style.paddingTop = '28px'; }
+  if (touch && portrait) { wrap.style.alignItems = 'flex-start'; wrap.style.paddingTop = '28px'; VIEW.bottom = 28 + Math.floor(H * s); }
   else { wrap.style.alignItems = 'center'; wrap.style.paddingTop = '0'; }
   resetCtx();
   if (typeof Input !== 'undefined') Input.layoutTouch();
@@ -136,7 +136,7 @@ const Input = (() => {
     KeyQ: ['LB'], KeyR: ['RB'], KeyI: ['SELECT'], Tab: ['SELECT'], KeyP: ['START'], KeyF: ['PENDANT'],
     KeyZ: ['LT'], KeyC: ['RT'],
   };
-  const down = {}, prev = {}, src = { key: {}, pad: {}, touch: {} };
+  const down = {}, prev = {}, src = { key: {}, pad: {}, touch: {} }, latch = new Set(); // latch: presses shorter than a frame still count
   let stick = { x: 0, y: 0 }, padStick = { x: 0, y: 0 }, analogMag = 0;
   let lastDevice = 'key';
   const rep = { dir: null, t: 0 };
@@ -144,43 +144,73 @@ const Input = (() => {
 
   window.addEventListener('keydown', e => {
     const m = KEYMAP[e.code];
-    if (m) { m.forEach(b => src.key[b] = true); e.preventDefault(); }
+    if (m) { m.forEach(b => { src.key[b] = true; latch.add(b); }); e.preventDefault(); }
     lastDevice = 'key'; anyPressedFlag = true;
     AudioSys.unlock();
   });
   window.addEventListener('keyup', e => { const m = KEYMAP[e.code]; if (m) m.forEach(b => src.key[b] = false); });
   window.addEventListener('blur', () => { src.key = {}; src.touch = {}; });
 
-  // ---- touch
+  // ---- touch: floating joystick, on-screen buttons, taps on the canvas
   const touchEl = document.getElementById('touch');
-  const stickEl = document.getElementById('stick'), knob = document.getElementById('knob');
-  let stickId = null, stickC = { x: 0, y: 0 }, stickR = 50;
+  const stickEl = document.getElementById('stick'), knob = document.getElementById('knob'), zone = document.getElementById('stickZone');
+  let stickId = null, stickC = { x: 0, y: 0 }, stickR = 50, stickHome = { x: 0, y: 0 }, tapQ = null, tapNow = null, floating = false;
   function enableTouch() {
     if (!document.body.classList.contains('touch')) { document.body.classList.add('touch'); resize(); }
     lastDevice = 'touch';
   }
   if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
   window.addEventListener('touchstart', () => { enableTouch(); AudioSys.unlock(); }, { passive: true });
-  stickEl.addEventListener('pointerdown', e => {
-    stickId = e.pointerId; try { stickEl.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or stale pointer */ }
-    const r = stickEl.getBoundingClientRect(); stickC = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; stickR = r.width / 2;
-    moveStick(e); anyPressedFlag = true;
-  });
-  stickEl.addEventListener('pointermove', e => { if (e.pointerId === stickId) moveStick(e); });
-  const endStick = e => { if (e.pointerId === stickId) { stickId = null; stick = { x: 0, y: 0 }; knob.style.transform = ''; } };
-  stickEl.addEventListener('pointerup', endStick); stickEl.addEventListener('pointercancel', endStick);
+  function grabStick(e, fl) {
+    stickId = e.pointerId; floating = fl;
+    try { (floating ? zone : stickEl).setPointerCapture(e.pointerId); } catch (err) { /* synthetic or stale pointer */ }
+    const r = stickEl.getBoundingClientRect(); stickR = r.width / 2;
+    if (floating) {
+      // the stick jumps under the thumb
+      stickC = { x: e.clientX, y: e.clientY };
+      stickEl.style.left = (e.clientX - stickR) + 'px'; stickEl.style.top = (e.clientY - stickR) + 'px';
+    } else stickC = { x: r.left + stickR, y: r.top + stickR };
+    stickEl.classList.add('active');
+    moveStick(e); anyPressedFlag = true; AudioSys.unlock();
+  }
+  stickEl.addEventListener('pointerdown', e => grabStick(e, false));
+  zone.addEventListener('pointerdown', e => grabStick(e, true));
+  const onMove = e => { if (e.pointerId === stickId) moveStick(e); };
+  stickEl.addEventListener('pointermove', onMove); zone.addEventListener('pointermove', onMove);
+  const endStick = e => {
+    if (e.pointerId !== stickId) return;
+    stickId = null; stick = { x: 0, y: 0 }; knob.style.transform = '';
+    stickEl.classList.remove('active');
+    stickEl.style.left = (stickHome.x - stickR) + 'px'; stickEl.style.top = (stickHome.y - stickR) + 'px';
+  };
+  for (const el of [stickEl, zone]) { el.addEventListener('pointerup', endStick); el.addEventListener('pointercancel', endStick); }
   function moveStick(e) {
     let dx = (e.clientX - stickC.x) / stickR, dy = (e.clientY - stickC.y) / stickR;
-    const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    const l = Math.hypot(dx, dy);
+    if (l > 1) {
+      // drag the base along when the thumb slides past the rim (dynamic joystick)
+      if (floating) {
+        stickC.x += (dx / l) * (l - 1) * stickR; stickC.y += (dy / l) * (l - 1) * stickR;
+        stickEl.style.left = (stickC.x - stickR) + 'px'; stickEl.style.top = (stickC.y - stickR) + 'px';
+      }
+      dx /= l; dy /= l;
+    }
     stick = { x: dx, y: dy };
     knob.style.transform = `translate(${dx * stickR * 0.6}px, ${dy * stickR * 0.6}px)`;
   }
   for (const b of touchEl.querySelectorAll('.tbtn')) {
     const name = b.dataset.b;
-    const on = e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } b.classList.add('on'); src.touch[name] = true; if (name === 'B') src.touch.ROLL = true; anyPressedFlag = true; AudioSys.unlock(); if (OPTS.vibration && navigator.vibrate) navigator.vibrate(8); };
+    const on = e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } b.classList.add('on'); src.touch[name] = true; latch.add(name); if (name === 'B') { src.touch.ROLL = true; latch.add('ROLL'); } anyPressedFlag = true; AudioSys.unlock(); haptic(8); };
     const off = e => { b.classList.remove('on'); src.touch[name] = false; if (name === 'B') src.touch.ROLL = false; };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
   }
+  // taps / clicks on the game canvas, in logical coordinates
+  cv.addEventListener('pointerdown', e => {
+    const r = cv.getBoundingClientRect();
+    tapQ = { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+    anyPressedFlag = true; AudioSys.unlock();
+    if (e.pointerType === 'touch') lastDevice = 'touch';
+  });
   function layoutTouch() {
     const portrait = innerHeight > innerWidth;
     const btns = {}; touchEl.querySelectorAll('.tbtn').forEach(b => btns[b.dataset.b] = b);
@@ -189,8 +219,9 @@ const Input = (() => {
     const place = (el, x, y, w, h = w) => { Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
     let bx, by, sx, sy, sr;
     if (portrait) {
-      const top = innerHeight * 0.58 + 28;
-      const midY = top + (innerHeight - top) * 0.55;
+      // controls sit right under the game view, centred in the space that is left
+      const top = (VIEW.bottom || innerHeight * 0.58 + 28) + 12;
+      const midY = top + 60 + (innerHeight - top - 60) * 0.45;
       sr = Math.min(innerWidth * 0.36, (innerHeight - top) * 0.7);
       sx = innerWidth * 0.26; sy = midY; bx = innerWidth * 0.74; by = midY;
       const sm = size * 0.95;
@@ -211,7 +242,12 @@ const Input = (() => {
         place(btns.START, innerWidth / 2 - 40, innerHeight - 20, sm * 0.9, sm * 0.55);
       }
     }
-    place(stickEl, sx, sy, sr);
+    place(stickEl, sx, sy, sr); stickHome = { x: sx, y: sy };
+    // the floating-stick zone covers the lower-left of the screen
+    if (portrait) { const zt = (VIEW.bottom || innerHeight * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight - zt) + 'px' }); }
+    else Object.assign(zone.style, { left: '0px', top: (innerHeight * 0.3) + 'px', width: (innerWidth * 0.45) + 'px', height: (innerHeight * 0.7) + 'px' });
+    const hint = document.getElementById('aHint'); if (hint) { hint.style.left = (bx - size) + 'px'; hint.style.top = (by + size * 1.55) + 'px'; hint.style.width = (size * 2) + 'px'; }
+    const sk = document.getElementById('skipBtn'); if (sk) place(sk, innerWidth - 48, 26, 70, 30);
     const d = size * 0.95;
     place(btns.A, bx, by + d, size); place(btns.B, bx + d, by, size);
     place(btns.X, bx - d, by, size); place(btns.Y, bx, by - d, size);
@@ -233,9 +269,12 @@ const Input = (() => {
 
   function update(dt) {
     pollPad();
+    tapNow = tapQ; tapQ = null;
     for (const k in down) prev[k] = down[k];
     const names = new Set([...Object.keys(src.key), ...Object.keys(src.pad), ...Object.keys(src.touch), ...Object.keys(prev)]);
-    for (const n of names) down[n] = !!(src.key[n] || src.pad[n] || src.touch[n]);
+    for (const n of latch) names.add(n);
+    for (const n of names) down[n] = !!(src.key[n] || src.pad[n] || src.touch[n] || latch.has(n));
+    latch.clear();
     // menu direction repeat
     const a = axis();
     let d = null;
@@ -265,6 +304,9 @@ const Input = (() => {
     consume(b) { prev[b] = true; down[b] = true; },
     clearAll() { for (const k in down) { prev[k] = true; } },
     device: () => lastDevice,
+    tap: () => tapNow,
+    tapIn: (x, y, w, h) => !!tapNow && tapNow.x >= x && tapNow.x < x + w && tapNow.y >= y && tapNow.y < y + h,
+    eatTap() { tapNow = null; },
     // run: hold Shift / RT, or push the analog stick (pad or touch) all the way
     runHeld: () => !!down.RUN || !!down.RT || analogMag > 0.85,
   };
@@ -287,6 +329,7 @@ const AudioSys = (() => {
       noiseBuf = ac.createBuffer(1, ac.sampleRate * 1, ac.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       if (musicState.name) { const n = musicState.name; musicState.name = null; music(n); }
+      if (pendingAmb) { const a = pendingAmb; pendingAmb = null; setTimeout(() => ambient(a), 0); }
     } catch (e) { ac = null; }
   }
   function applyVol() { if (!ac) return; sfxG.gain.value = OPTS.sfx * 0.6; musG.gain.value = OPTS.music * 0.32; }
@@ -343,7 +386,25 @@ const AudioSys = (() => {
     teleport: () => { for (let i = 0; i < 8; i++) tone('sine', 300 + i * 120, 300 + i * 160, 0.12, 0.08, i * 0.05); },
     bossRoar: () => { tone('sawtooth', 110, 55, 1.0, 0.35); noise(1.0, 0.35, 300, 60, 0, 0.5, 'lowpass'); },
     text: () => tone('square', 520 + Math.random() * 80, 520, 0.02, 0.03),
+    thunder: () => { noise(0.12, 0.6, 3000, 800, 0, 0.7); noise(2.4, 0.55, 380, 40, 0.1, 0.5, 'lowpass'); tone('sine', 55, 32, 2.0, 0.35, 0.1); },
+    boom: () => { tone('sine', 90, 28, 1.6, 0.5); noise(1.2, 0.4, 300, 30, 0, 0.6, 'lowpass'); },
+    whoosh: () => noise(0.9, 0.3, 300, 2400, 0, 1.2),
+    rumble: () => { noise(2.5, 0.35, 160, 60, 0, 0.5, 'lowpass'); tone('sine', 45, 38, 2.5, 0.25); },
   };
+  // looping ambience (rain), faded in and out
+  let amb = null;
+  function ambient(name) {
+    if (!ac) { pendingAmb = name; return; }
+    if (amb) { const a = amb; a.g.gain.linearRampToValueAtTime(0.0001, ac.currentTime + 1.2); setTimeout(() => { try { a.s.stop(); } catch (e) { /* ignore */ } }, 1400); amb = null; }
+    if (name !== 'rain') return;
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
+    const f2 = ac.createBiquadFilter(); f2.type = 'highpass'; f2.frequency.value = 300;
+    const g = ac.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(0.16 * OPTS.sfx, ac.currentTime + 1.5);
+    s.connect(f); f.connect(f2); f2.connect(g); g.connect(master); s.start();
+    amb = { s, g };
+  }
+  let pendingAmb = null;
   function sfx(name) { if (!ac || !SFX[name]) return; try { SFX[name](); } catch (e) { /* ignore */ } }
 
   // ---- music: tiny tracker. tokens "C4", ".", "-" (hold)
@@ -384,6 +445,14 @@ const AudioSys = (() => {
     { inst: 'lead', vol: 0.15, seq: 'A4 . A4 C5 . A4 D5 . C5 . A4 . G4 . E4 . A4 . A4 C5 . A4 E5 . D5 . C5 . B4 . G#4 . A4 . A4 C5 . A4 D5 . C5 . A4 . G4 . E4 . F4 . F4 E4 . D4 E4 - - - - - - - . .' },
     { inst: 'bass', vol: 0.32, seq: 'A2 A2 . A2 A2 . A2 A2 G2 G2 . G2 G2 . G2 G2 F2 F2 . F2 F2 . F2 F2 E2 E2 . E2 E2 . E2 E2 A2 A2 . A2 A2 . A2 A2 G2 G2 . G2 G2 . G2 G2 F2 F2 . F2 F2 . F2 F2 E2 E2 . E2 G#2 . B2 E2' },
   ]);
+  // the Keeper's theme: slow pads, a bell motif and a low pulse
+  defTrack('story', 64, [
+    { inst: 'pad', vol: 0.09, seq: 'A3 - - - - - - - - - - - - - - - F3 - - - - - - - - - - - - - - - C4 - - - - - - - - - - - - - - - G3 - - - - - - - - - - - - - - -' },
+    { inst: 'pad', vol: 0.07, seq: 'E4 - - - - - - - - - - - - - - - C4 - - - - - - - - - - - - - - - G4 - - - - - - - - - - - - - - - D4 - - - - - - - - - - - - - - -' },
+    { inst: 'pad', vol: 0.06, seq: 'C5 - - - - - - - - - - - - - - - A4 - - - - - - - - - - - - - - - E5 - - - - - - - - - - - - - - - B4 - - - - - - - - - - - - - - -' },
+    { inst: 'bell', vol: 0.12, seq: 'E5 . . . . . . . A5 . . . G5 . . . . . . . . . . . E5 . . . . . . . G5 . . . . . . . C6 . . . B5 . . . . . . . . . . . D5 . . . . . . .' },
+    { inst: 'bass', vol: 0.18, seq: 'A1 - - - . . . . A1 - - - . . . . F1 - - - . . . . F1 - - - . . . . C2 - - - . . . . C2 - - - . . . . G1 - - - . . . . G1 - - - . . . .' },
+  ]);
   defTrack('death', 60, [
     { inst: 'lead', vol: 0.18, seq: 'A4 - - - - - G4 - E4 - - - - - - - F4 - - - E4 - D4 - E4 - - - - - - - . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .' },
     { inst: 'bass', vol: 0.25, seq: 'A2 - - - - - - - - - - - - - - - D2 - - - - - - - E2 - - - - - - - . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .' },
@@ -396,6 +465,8 @@ const AudioSys = (() => {
     if (inst === 'bass') { type = 'triangle'; att = 0.01; }
     if (inst === 'arp') { type = 'square'; att = 0.005; rel = Math.min(dur, 0.15); }
     if (inst === 'lead') { type = 'triangle'; att = 0.03; }
+    if (inst === 'pad') { type = 'sine'; att = Math.min(0.9, dur * 0.4); rel = dur * 1.1; }
+    if (inst === 'bell') { type = 'sine'; att = 0.005; rel = Math.max(dur, 1.2); }
     o.type = type; o.frequency.setValueAtTime(f, t);
     if (inst === 'lead') { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 5; lg.gain.value = f * 0.006; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + rel + 0.1); }
     g.gain.setValueAtTime(0.0001, t);
@@ -434,6 +505,7 @@ const AudioSys = (() => {
     if (!musicState.timer) musicState.timer = setInterval(schedule, 40);
   }
   function blip(f, v = 1) { tone('triangle', f, f * 0.93, 0.055, 0.1 * v); tone('square', f * 2, f * 2, 0.025, 0.018 * v); }
-  return { unlock, sfx, music, applyVol, blip, get ready() { return !!ac; } };
+  return { unlock, sfx, music, applyVol, blip, ambient, get ready() { return !!ac; } };
 })();
 const sfx = n => AudioSys.sfx(n);
+function haptic(ms) { if (OPTS.vibration && navigator.vibrate && Input.device() === 'touch') { try { navigator.vibrate(ms); } catch (e) { /* ignore */ } } }

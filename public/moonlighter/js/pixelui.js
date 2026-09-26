@@ -152,6 +152,7 @@ function skinTouchButtons() {
     LB: () => [keyCap('SWAP', false, 6), keyCap('SWAP', true, 6)],
     START: () => [keyCap('II', false, 6), keyCap('II', true, 6)],
     PENDANT: () => [keyCap('HOME', false, 6), keyCap('HOME', true, 6)],
+    SKIP: () => [keyCap('SKIP', false, 6), keyCap('SKIP', true, 6)],
   };
   document.querySelectorAll('.tbtn').forEach(b => {
     const f = map[b.dataset.b]; if (!f) return;

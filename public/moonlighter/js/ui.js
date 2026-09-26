@@ -179,6 +179,14 @@ function navMove(cells, idx, dir) {
   return best >= 0 ? best : idx;
 }
 
+// ---------------------------------------------------------------- tap targets (touch / mouse)
+// screens register rectangles while drawing; the next update checks taps against them
+function hit(o, x, y, w, h, fn) { (o.hits || (o.hits = [])).push({ x, y, w, h, fn }); }
+function tapHits(o) {
+  const t = Input.tap(); if (!t || !o.hits) return false;
+  for (let i = o.hits.length - 1; i >= 0; i--) { const h = o.hits[i]; if (t.x >= h.x && t.x < h.x + h.w && t.y >= h.y && t.y < h.y + h.h) { Input.eatTap(); h.fn(t); return true; } }
+  return false;
+}
 // ---------------------------------------------------------------- base overlay
 class Overlay {
   constructor() { this.t = 0; }
@@ -203,7 +211,7 @@ class Dialogue extends Overlay {
     const before = this.chars | 0;
     this.chars = Math.min(line.length, this.chars + dt * speed);
     for (let k = before; k < (this.chars | 0); k++) Voice.blip(line[k], k);
-    if (Input.pressed('A') || Input.pressed('X') || Input.pressed('B')) {
+    if (Input.pressed('A') || Input.pressed('X') || Input.pressed('B') || Input.tap()) {
       if (this.chars < line.length) this.chars = line.length;
       else if (this.i < this.lines.length - 1) { this.i++; this.chars = 0; sfx('select'); Voice.speak(this.lines[this.i], this.who); }
       else { this.close(); if (this.o.onDone) this.o.onDone(); }
@@ -236,6 +244,7 @@ class Confirm extends Overlay {
     const d = Input.dir();
     if (d === 'L' || d === 'U') { this.sel = (this.sel + this.opts.length - 1) % this.opts.length; sfx('move'); }
     if (d === 'R' || d === 'D') { this.sel = (this.sel + 1) % this.opts.length; sfx('move'); }
+    if (tapHits(this)) return;
     if (Input.pressed('A') || Input.pressed('X')) {
       this.close();
       if (this.o.opts) { sfx('confirm'); this.onYes(this.sel); }
@@ -243,7 +252,13 @@ class Confirm extends Overlay {
     }
     if (Input.pressed('B')) { this.close(); sfx('cancel'); if (this.o.onNo) this.o.onNo(); }
   }
+  choose(i) {
+    this.close();
+    if (this.o.opts) { sfx('confirm'); this.onYes(i); }
+    else if (i === 0) { sfx('confirm'); this.onYes(); } else { sfx('cancel'); if (this.o.onNo) this.o.onNo(); }
+  }
   draw() {
+    this.hits = [];
     dimScreen(0.35);
     const lines = wrapText(this.q, 190, 8);
     const w = 214, h = 30 + lines.length * 10 + 6, x = (W - w) / 2 | 0, y = (H - h) / 2 | 0;
@@ -252,6 +267,7 @@ class Confirm extends Overlay {
     const n = this.opts.length, bw = 56, gap = 8, tot = n * bw + (n - 1) * gap;
     this.opts.forEach((op, i) => {
       const bx = W / 2 - tot / 2 + i * (bw + gap), by = y + h - 18;
+      hit(this, bx - 2, by - 3, bw + 4, 19, () => this.choose(i));
       if (i === this.sel) { R(ctx, bx, by, bw, 13, C.teal3); R(ctx, bx + 1, by + 1, bw - 2, 11, C.teal); }
       else { R(ctx, bx, by, bw, 13, C.paper3); R(ctx, bx + 1, by + 1, bw - 2, 11, C.paper2); }
       txt(op, bx + bw / 2, by + 9.5, { align: 'center', color: i === this.sel ? '#fff' : C.paperDark });
@@ -265,6 +281,13 @@ function ask(q, onYes, o) { return UI.open(new Confirm(q, onYes, o)); }
 class GridUI extends Overlay {
   constructor() { super(); this.cells = []; this.cur = 0; this.held = null; this.heldFrom = null; this.info = ''; }
   cell() { return this.cells[this.cur]; }
+  // a tap on a cell moves the cursor there and counts as pressing A
+  tapA() {
+    const t = Input.tap(); if (!t) return false;
+    const i = this.cells.findIndex(c => t.x >= c.x - 1 && t.x < c.x + c.w + 1 && t.y >= c.y - 1 && t.y < c.y + c.h + 1);
+    if (i < 0) return false;
+    Input.eatTap(); this.cur = i; return true;
+  }
   navigate() {
     const d = Input.dir();
     if (d) { const n = navMove(this.cells, this.cur, d); if (n !== this.cur) { this.cur = n; sfx('move'); } }

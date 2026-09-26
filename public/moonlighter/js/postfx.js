@@ -15,7 +15,7 @@ varying vec2 uv;
 uniform sampler2D t;
 uniform sampler2D bt;
 uniform vec2 lres;
-uniform float time, sat, contrast, vig, bloom, grain, aberr, lowhp, dead, rays, warm;
+uniform float time, sat, contrast, vig, bloom, grain, aberr, lowhp, dead, rays, warm, dof;
 uniform vec3 tint;
 vec3 tx(vec2 q){ return texture2D(t, q).rgb; }
 void main(){
@@ -24,6 +24,13 @@ void main(){
   if (aberr > 0.001) { vec2 o = (q - 0.5) * aberr * 0.014; c = vec3(texture2D(t, q + o).r, texture2D(t, q).g, texture2D(t, q - o).b); }
   else c = tx(q);
   vec2 px = 1.0 / lres;
+  // cinematic depth of field: soften the frame edges
+  if (dof > 0.001) {
+    float e = smoothstep(0.22, 0.7, distance(q, vec2(0.5, 0.5)));
+    vec2 o = px * (1.0 + 2.5 * e) * dof;
+    vec3 bl = (tx(q + vec2(o.x, 0.0)) + tx(q - vec2(o.x, 0.0)) + tx(q + vec2(0.0, o.y)) + tx(q - vec2(0.0, o.y))) * 0.25;
+    c = mix(c, bl, e * dof * 0.85);
+  }
   vec3 b = texture2D(bt, q).rgb * 0.4 + (texture2D(bt, q + vec2(px.x * 4.0, 0.0)).rgb + texture2D(bt, q - vec2(px.x * 4.0, 0.0)).rgb + texture2D(bt, q + vec2(0.0, px.y * 4.0)).rgb + texture2D(bt, q - vec2(0.0, px.y * 4.0)).rgb) * 0.15;
   c += b * bloom * 2.2;
   float l = dot(c, vec3(0.299, 0.587, 0.114));
@@ -97,7 +104,7 @@ void main(){
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.useProgram(prog);
       U.bt = gl.getUniformLocation(prog, 'bt');
-      for (const n of ['t', 'lres', 'time', 'sat', 'contrast', 'vig', 'bloom', 'grain', 'aberr', 'lowhp', 'dead', 'rays', 'warm', 'tint']) U[n] = gl.getUniformLocation(prog, n);
+      for (const n of ['t', 'lres', 'time', 'sat', 'contrast', 'vig', 'bloom', 'grain', 'aberr', 'lowhp', 'dead', 'rays', 'warm', 'tint', 'dof']) U[n] = gl.getUniformLocation(prog, n);
       ok = true; resize();
     } catch (e) { console.warn('PostFX disabled:', e.message); ok = false; if (glcv) glcv.remove(); }
   }
@@ -143,7 +150,7 @@ void main(){
     gl.uniform1i(U.t, 0); gl.uniform2f(U.lres, W, H); gl.uniform1f(U.time, Game.time % 1000);
     gl.uniform1f(U.sat, p.sat); gl.uniform1f(U.contrast, p.contrast); gl.uniform1f(U.vig, p.vig); gl.uniform1f(U.bloom, p.bloom);
     gl.uniform1f(U.grain, p.grain); gl.uniform1f(U.aberr, p.aberr); gl.uniform1f(U.lowhp, p.lowhp); gl.uniform1f(U.dead, p.dead);
-    gl.uniform1f(U.rays, p.rays); gl.uniform1f(U.warm, p.warm); gl.uniform3f(U.tint, p.tint[0], p.tint[1], p.tint[2]);
+    gl.uniform1f(U.rays, p.rays); gl.uniform1f(U.dof, p.dof || 0); gl.uniform1f(U.warm, p.warm); gl.uniform3f(U.tint, p.tint[0], p.tint[1], p.tint[2]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
   function active() { return ok && OPTS.fx !== false; }
@@ -168,5 +175,6 @@ function fxParams() {
     p.dead = HUD.dead;
   }
   p.aberr = Game.fxHit || 0;
+  if (Game.scene instanceof Cutscene) { p.vig = Math.min(0.85, p.vig + 0.22); p.grain = 0.05; p.contrast *= 1.07; p.sat *= 0.94; p.dof = 1; p.lowhp = 0; }
   return p;
 }

@@ -154,6 +154,27 @@ const Game = {
 function drawError(msg) {
   resetCtx(); R(ctx, 0, 0, W, 40, '#400'); txt('Error: ' + msg, 4, 12, { size: 7, color: '#fff' });
 }
+// touch layout follows what is on screen: cutscene (tap to advance), menus (tap targets), or play
+let _touchMode = '';
+function syncTouchMode() {
+  const sc = Game.scene, cine = sc instanceof Cutscene;
+  const ui = !cine && (UI.blocking() || sc instanceof TitleScene || sc instanceof SlotScene);
+  const near = !cine && !ui && sc && sc.near;
+  const hint = near ? (near.label || near.interact || '') : '';
+  const key = cine + '|' + ui + '|' + hint + '|' + (sc && sc.constructor.name);
+  if (key === _touchMode) return;
+  _touchMode = key;
+  document.body.classList.toggle('cine', cine); document.body.classList.toggle('ui', ui);
+  document.body.classList.toggle('menu', sc instanceof TitleScene || sc instanceof SlotScene);
+  const h = document.getElementById('aHint'); if (h) h.textContent = hint;
+}
+// on phones: go fullscreen and landscape after the first tap (needs a user gesture)
+async function goImmersive() {
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+  } catch (e) { /* not supported (e.g. iPhone): the portrait layout still works */ }
+}
 let lastT = performance.now(), crashed = null;
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
@@ -168,6 +189,7 @@ function frame(now) {
     else Game.scene.update(dt);
     Toasts.update(dt);
     if (S) HUD.update(dt);
+    syncTouchMode();
     resetCtx();
     Game.scene.draw();
     UI.draw();
@@ -195,6 +217,7 @@ async function boot() {
   Voice.init();
   resize();
   Game.setScene(new TitleScene());
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => { });
   window.__game = { Game, get S() { return S; }, UI, Input };
   requestAnimationFrame(frame);
 }
