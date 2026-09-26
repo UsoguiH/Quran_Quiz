@@ -1,0 +1,18 @@
+{
+  "name": "moonlit-merchant-3d",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A first-person 3D shopkeeper / dungeon-crawler inspired by Moonlighter.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
