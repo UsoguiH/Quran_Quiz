@@ -316,7 +316,7 @@ class DungeonScene {
     HUD.reset();
     this.startFloor(0);
     this.showBanner();
-    if (!S.flags.tipPendant) { S.flags.tipPendant = true; setTimeout(() => UI.open(new TipUI('pendant')), 400); }
+    if (!S.flags.tipPendant && !Tutorial.active()) { S.flags.tipPendant = true; setTimeout(() => UI.open(new TipUI('pendant')), 400); }
   }
   get world() { return this; }
   startFloor(f) {

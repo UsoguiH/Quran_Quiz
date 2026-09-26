@@ -189,11 +189,13 @@ function frame(now) {
       else if (Game.fadeDir === -1 && Game.fadeT >= 1) { Game.fadeDir = 0; }
     } else if (UI.blocking()) UI.update(dt);
     else Game.scene.update(dt);
+    if (!Game.fadeDir) Tutorial.update(dt);
     Toasts.update(dt);
     if (S) HUD.update(dt);
     syncTouchMode();
     resetCtx();
     Game.scene.draw();
+    Tutorial.draw();
     UI.draw();
     Toasts.draw();
     if (Game.fadeDir) { const a = Game.fadeDir === 1 ? Game.fadeT : 1 - Game.fadeT; ctx.globalAlpha = clamp(a, 0, 1); R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }

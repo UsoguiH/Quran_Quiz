@@ -111,6 +111,132 @@ function drawShopLights(t) {
   for (let i = 0; i < 5; i++) { const fx = 178 + i * 4, fh = 5 + ((Math.sin(t * 11 + i * 2) + 1) * 3 | 0); R(ctx, fx, 48 - fh, 3, fh, '#f0602a'); R(ctx, fx + 1, 48 - fh + 2, 1, fh - 2, '#ffc040'); }
 }
 
+// ---------------------------------------------------------------- shop life: the cat and ambient motion
+const CAT = { c: '#e8913a', d: '#b8601e', l: '#f8c070', w: '#fff0dc', e: '#2a1a14', n: '#f08a86' };
+function catSprite(pose, frame) {
+  return cached(`cat_${pose}_${frame}`, () => sprite(15, 11, g => {
+    if (pose === 'sleep') {
+      ell(g, 1, 4, 13, 7, CAT.c); ell(g, 2, 4, 10, 4, CAT.l); R(g, 2, 9, 11, 1, CAT.d);
+      ell(g, 1, 3, 6, 5, CAT.c); P(g, 1, 3, CAT.c); P(g, 2, 2, CAT.c); P(g, 5, 2, CAT.c); R(g, 2, 5, 2, 1, CAT.e); P(g, 1, 6, CAT.n);
+      R(g, 5 + (frame % 2), 5, 1, 1, CAT.d); R(g, 8, 5, 1, 2, CAT.d); R(g, 10, 6, 1, 2, CAT.d);
+      R(g, 3, 9, 9, 1, CAT.d); R(g, 11, 8, 3, 1, CAT.c);
+      return;
+    }
+    if (pose === 'sit') {
+      ell(g, 4, 3, 8, 8, CAT.c); ell(g, 5, 5, 4, 5, CAT.w); R(g, 5, 9, 2, 2, CAT.w); R(g, 9, 9, 2, 2, CAT.w);
+      ell(g, 2, 0, 7, 6, CAT.c); P(g, 2, 0, CAT.c); P(g, 3, 0, CAT.d); P(g, 7, 0, CAT.c); P(g, 8, 0, CAT.d);
+      const blink = frame === 3; R(g, 4, 2, 1, blink ? 1 : 2, CAT.e); R(g, 6, 2, 1, blink ? 1 : 2, CAT.e); P(g, 5, 4, CAT.n);
+      R(g, 9, 4, 1, 1, CAT.d); R(g, 10, 6, 1, 2, CAT.d);
+      const tw = [0, 1, 2, 1][frame % 4];
+      R(g, 11, 9, 3, 1, CAT.c); R(g, 13, 7 + (tw > 1 ? 0 : 1) - tw + 1, 1, 3 - (tw > 1 ? 1 : 0), CAT.c); P(g, 13, 6 - tw + 2, CAT.d);
+      return;
+    }
+    // walking, facing left
+    const lg = [0, 1, 0, -1][frame % 4];
+    ell(g, 3, 3, 10, 5, CAT.c); R(g, 5, 6, 6, 1, CAT.l);
+    R(g, 6, 3, 1, 2, CAT.d); R(g, 8, 3, 1, 2, CAT.d); R(g, 10, 3, 1, 2, CAT.d);
+    R(g, 4 + lg, 7, 1, 3, CAT.c); R(g, 6 - lg, 7, 1, 3, CAT.d); R(g, 10 + lg, 7, 1, 3, CAT.c); R(g, 12 - lg, 7, 1, 3, CAT.d);
+    P(g, 4 + lg, 9, CAT.w); P(g, 10 + lg, 9, CAT.w);
+    ell(g, 0, 1, 6, 5, CAT.c); P(g, 1, 0, CAT.c); P(g, 4, 0, CAT.c); P(g, 1, 1, CAT.d); R(g, 1, 3, 1, 1, CAT.e); P(g, 3, 3, CAT.e); P(g, 0, 4, CAT.n); P(g, 2, 5, CAT.w);
+    const tw = [0, 1, 0, -1][frame % 4];
+    R(g, 13, 3, 1, 2, CAT.c); P(g, 14, 2 + tw, CAT.c); P(g, 14, 1 + tw, CAT.d);
+  }));
+}
+const CAT_SPOTS = [[186, 70], [120, 196], [226, 112], [300, 124], [90, 110], [250, 196]];
+class ShopCat {
+  constructor() { this.x = 186; this.y = 70; this.state = 'sleep'; this.st = 0; this.dur = rand(6, 12); this.flip = false; this.anim = 0; this.tx = this.x; this.ty = this.y; this.hearts = 0; }
+  pet(sc) {
+    this.state = 'sit'; this.st = 0; this.dur = 4; this.hearts = 1.2; sfx('select');
+    for (let i = 0; i < 4; i++) sc.amb.hearts.push({ x: this.x + rand(-5, 5), y: this.y - 14, vy: -rand(14, 22), t: -i * 0.18, life: 1.2 });
+    if (!S.flags.catPet) { S.flags.catPet = 0; } S.flags.catPet++;
+  }
+  update(dt, sc) {
+    this.st += dt; this.anim += dt * (this.state === 'walk' ? 8 : 2); this.hearts = Math.max(0, this.hearts - dt);
+    if (this.state === 'walk') {
+      const dx = this.tx - this.x, dy = this.ty - this.y, d = Math.hypot(dx, dy);
+      if (d < 1.5) { this.state = Math.random() < 0.45 ? 'sleep' : 'sit'; this.st = 0; this.dur = this.state === 'sleep' ? rand(8, 16) : rand(3, 6); return; }
+      const m = Math.min(d, 22 * dt); this.x += dx / d * m; this.y += dy / d * m;
+      if (Math.abs(dx) > 0.5) this.flip = dx > 0;
+    } else if (this.st > this.dur) {
+      const [x, y] = choice(CAT_SPOTS.filter(([x, y]) => Math.abs(x - this.x) + Math.abs(y - this.y) > 10));
+      this.tx = x; this.ty = y; this.state = 'walk'; this.st = 0;
+    }
+  }
+  draw() {
+    shadow(this.x, this.y, 11, 0.25);
+    let img = catSprite(this.state, Math.floor(this.anim) % 4);
+    if (this.flip && this.state === 'walk') img = cached(`catF_${this.state}_${Math.floor(this.anim) % 4}`, () => flipH(catSprite(this.state, Math.floor(this.anim) % 4)));
+    drawSpr(img, this.x, this.y + 1);
+    if (this.state === 'sleep') { const k = (Game.time * 0.6) % 1; txt('z', this.x + 6 + k * 4, this.y - 10 - k * 8, { size: 6, color: '#efe3c5', outline: '#1b1420', alpha: 1 - k }); }
+  }
+}
+function makeShopAmbient() {
+  return {
+    motes: Array.from({ length: 22 }, () => ({ u: Math.random(), v: Math.random(), s: rand(0.015, 0.04), ph: rand(6.28) })),
+    sparks: [], hearts: [], coins: [], glints: [], sparkT: 0, glintT: 2, coinSfx: 0,
+  };
+}
+function updateShopAmbient(sc, dt) {
+  const a = sc.amb;
+  for (const m of a.motes) { m.u += m.s * dt; m.v += Math.sin(Game.time * 0.7 + m.ph) * 0.02 * dt; if (m.u > 1) { m.u = 0; m.v = Math.random(); } }
+  a.sparkT -= dt;
+  if (a.sparkT <= 0) { a.sparkT = rand(0.08, 0.25); a.sparks.push({ x: rand(178, 196), y: 46, vx: rand(-6, 6), vy: -rand(14, 30), life: rand(0.6, 1.1), t: 0 }); }
+  for (const p of a.sparks) { p.t += dt; p.x += p.vx * dt + Math.sin(p.t * 9) * 0.2; p.y += p.vy * dt; }
+  a.sparks = a.sparks.filter(p => p.t < p.life && p.y > 28);
+  for (const h of a.hearts) { h.t += dt; if (h.t > 0) { h.y += h.vy * dt; h.x += Math.sin(h.t * 6) * 0.3; } }
+  a.hearts = a.hearts.filter(h => h.t < h.life);
+  // sparkles on items waiting on the tables
+  a.glintT -= dt;
+  if (a.glintT <= 0) {
+    a.glintT = rand(0.6, 1.6);
+    const full = []; for (let i = 0; i < tableCount(); i++) if (S.shelves[i] && S.shelves[i].item) full.push(i);
+    if (full.length) { const [tx, ty] = TABLE_POS[choice(full)]; a.glints.push({ x: tx + rand(-5, 5), y: ty - rand(4, 12), t: 0 }); }
+  }
+  for (const g of a.glints) g.t += dt;
+  a.glints = a.glints.filter(g => g.t < 0.5);
+  // coins flying from the register to your purse
+  a.coinSfx -= dt;
+  for (const c of a.coins) {
+    c.t += dt;
+    if (c.t >= 1 && !c.done) { c.done = true; if (a.coinSfx <= 0) { sfx('coin'); a.coinSfx = 0.07; } HUD.goldPulse = 0.25; }
+  }
+  a.coins = a.coins.filter(c => !c.done);
+  sc.bellT = Math.max(0, (sc.bellT || 0) - dt * 0.8);
+}
+function drawShopAmbient(sc) {
+  const a = sc.amb;
+  // dust in the window light
+  for (const m of a.motes) {
+    const x0 = 86 + 26 * m.v, x1 = 128 + 42 * m.v, y = lerp(36, 150, m.u), x = lerp(x0, x1, m.u);
+    ctx.globalAlpha = 0.25 + 0.3 * Math.sin(Game.time * 2 + m.ph) ** 2; P(ctx, x, y, '#fff6d0');
+  }
+  ctx.globalAlpha = 1;
+  // fire sparks
+  for (const p of a.sparks) { const k = p.t / p.life; P(ctx, p.x, p.y, k < 0.4 ? '#fff0a0' : k < 0.75 ? '#ffb040' : '#c85020'); }
+  // candle on the counter
+  const fl = Math.sin(Game.time * 13) > 0.3 ? 1 : 0;
+  R(ctx, 243, 137, 3, 5, '#f4ecd6'); R(ctx, 245, 137, 1, 5, '#d8ccb0'); R(ctx, 242, 141, 5, 1, '#8a5a34');
+  P(ctx, 244, 135 - fl, '#ffc040'); P(ctx, 244, 136 - fl, '#ff8a2a'); P(ctx, 244, 134 - fl, '#fff6d0');
+  // door bell that swings when someone comes in or out
+  const ang = Math.sin(Game.time * 16) * sc.bellT * 0.7;
+  R(ctx, 208, 196, 7, 1, '#3a2010'); R(ctx, 214, 196, 1, 2, '#3a2010');
+  ctx.save(); ctx.translate(214.5, 198); ctx.rotate(ang);
+  R(ctx, -2, 0, 4, 3, '#b8863b'); R(ctx, -3, 3, 6, 1, '#8a5a2a'); P(ctx, -1, 0, '#f4d49a'); P(ctx, 0, 4, '#5a3a20');
+  ctx.restore();
+  // item glints
+  for (const g of a.glints) { const k = g.t / 0.5, r = Math.round(Math.sin(k * Math.PI) * 3); ctx.globalAlpha = 0.9; R(ctx, g.x - r, g.y, r * 2 + 1, 1, '#fff'); R(ctx, g.x, g.y - r, 1, r * 2 + 1, '#fff'); ctx.globalAlpha = 1; }
+  // hearts
+  for (const h of a.hearts) if (h.t > 0) { ctx.globalAlpha = clamp((h.life - h.t) / 0.4, 0, 1); tinyHeart(Math.round(h.x), Math.round(h.y), '#ff6a8a', '#ffc0cc'); ctx.globalAlpha = 1; }
+}
+function drawFlyingCoins(sc) {
+  for (const c of sc.amb.coins) {
+    if (c.t < 0) continue;
+    const k = easeOut(clamp(c.t, 0, 1)), ex = 12, ey = 41, cx = (c.x + ex) / 2 - 20, cy = Math.min(c.y, ey) - 50;
+    const x = (1 - k) * (1 - k) * c.x + 2 * (1 - k) * k * cx + k * k * ex, y = (1 - k) * (1 - k) * c.y + 2 * (1 - k) * k * cy + k * k * ey;
+    ctx.drawImage(coinIcon(), Math.round(x - 3), Math.round(y - 3));
+  }
+}
+
 class ShopScene {
   constructor() {
     this.parts = []; this.texts = []; this.rings = []; this.projs = []; this.pickups = []; this.enemies = [];
@@ -118,6 +244,7 @@ class ShopScene {
     this.player = new Player(SHOP_DOOR.x, 196); this.player.dir = 1;
     this.customers = []; this.open = false; this.timer = 0; this.spawnT = 2; this.sales = {}; this.thefts = []; this.served = 0; this.spawned = 0;
     this.closing = false; this.repStart = S.rep; this.t = 0;
+    this.cat = new ShopCat(); this.amb = makeShopAmbient(); this.bellT = 0; this.pip = null; this.pipDone = false;
     AudioSys.music('shop');
   }
   get world() { return this; }
@@ -140,6 +267,8 @@ class ShopScene {
     for (let i = 0; i < tableCount(); i++) { const [tx, ty] = TABLE_POS[i]; list.push({ x: tx, y: ty + 10, r: 16, label: 'Tables', fn: () => UI.open(new ShelfUI(i)) }); }
     list.push({ x: CHEST_POS.x, y: CHEST_POS.y + 10, r: 16, label: 'Storage chest', fn: () => UI.open(new ChestUI()) });
     list.push({ x: BED_POS.x + 12, y: BED_POS.y, r: 18, label: 'Bed', fn: () => this.useBed() });
+    list.push({ x: this.cat.x, y: this.cat.y, r: 13, label: 'Pet the cat', fn: () => this.cat.pet(this) });
+    if (this.pip && this.pip.state === 'wait') list.push({ x: this.pip.x, y: this.pip.y, r: 18, label: 'Play Cups', fn: () => this.pip.offer(this) });
     if (S.flags.finale) list.push({ x: 226, y: 66, r: 16, label: 'Aldric', fn: () => say([choice(['Your prices are too honest. I love it.', 'I sold a Golem Core for a sandwich once. Different times.', 'The door is quiet. Good. Let us keep it that way.', 'Sweep the floor, Keeper. Heroes still have customers.'])], { name: 'Aldric', portrait: aldricPortrait() }) });
     if (!this.open) {
       list.push({ x: REG_SPOT.x, y: REG_SPOT.y, r: 16, label: S.phase === 'day' && !S.shopOpenedToday ? 'Open shop' : 'Register', fn: () => this.tryOpen() });
@@ -161,7 +290,7 @@ class ShopScene {
     this.open = true; this.timer = 0; this.spawnT = 1.5; S.shopOpenedToday = true; sfx('bell');
     this.maxCustomers = 5 + Math.floor(S.rep / 8) + (S.invest.decor ? 3 : 0) + (S.invest.shop || 0) * 2;
     toast('The shop is open!', C.mint);
-    if (!S.flags.tipShop) { S.flags.tipShop = true; UI.open(new TipUI('shop')); }
+    if (!S.flags.tipShop && !Tutorial.active()) { S.flags.tipShop = true; UI.open(new TipUI('shop')); }
   }
   useBed() {
     if (this.open) { say(['Not while the shop is open!']); return; }
@@ -177,6 +306,7 @@ class ShopScene {
     const note = noteSeen(c.carry.id); note.sold += c.carry.n;
     FX.text(this, REGISTER.x, REGISTER.y - 20, '+' + fmt(total), C.gold, 9);
     FX.burst(this, REGISTER.x, REGISTER.y - 10, [C.gold, '#fff6d0'], 10, 50, { grav: 120, up: 40 });
+    for (let k = 0; k < Math.min(9, 3 + (total / 60 | 0)); k++) this.amb.coins.push({ x: REGISTER.x + rand(-4, 4), y: REGISTER.y - 12, t: -k * 0.07 });
     c.carry = null; c.leave(this);
     this.customers.filter(o => o.state === 'queue').forEach(o => { o.qi--; o.arrived = false; });
   }
@@ -192,7 +322,7 @@ class ShopScene {
     }
     const c = new Customer(look, thief);
     this.customers.push(c); this.spawned++;
-    sfx('bell');
+    sfx('bell'); this.bellT = 1;
   }
   close() {
     this.open = false; this.closing = false;
@@ -216,10 +346,16 @@ class ShopScene {
         this.spawnCustomer(); this.spawnT = rand(5, 9) * (1 - S.rep / 250);
       }
       // close once the day is over (or stock / customers ran out) and everyone has left
-      if ((this.timer >= 1 || !stock || this.spawned >= this.maxCustomers) && this.customers.length === 0) this.close();
+      if ((this.timer >= 1 || !stock || this.spawned >= this.maxCustomers) && this.customers.length === 0 && !this.pip) this.close();
     }
     for (const c of this.customers) c.update(dt, this);
+    if (this.customers.some(c => c.gone)) this.bellT = 1;
     this.customers = this.customers.filter(c => !c.gone);
+    this.cat.update(dt, this);
+    updateShopAmbient(this, dt);
+    // Pip the gambler drops by once a day, after the first sale
+    if (this.open && !this.pip && !this.pipDone && this.served >= 1 && this.timer > 0.12 && this.timer < 0.8 && Math.random() < dt * 0.25) { this.pip = new Gambler(); this.pipDone = true; sfx('bell'); this.bellT = 1; }
+    if (this.pip) { this.pip.update(dt, this); if (this.pip.gone) { this.pip = null; this.bellT = 1; } }
     updateFX(this, dt);
     // interactions
     this.near = null; let best = 1e9;
@@ -238,7 +374,7 @@ class ShopScene {
         drawSpr(tableSprite(), tx, ty + 6);
         if (sh && sh.item) {
           const ic = itemIcon(sh.item.id);
-          ctx.drawImage(ic, tx - ic.width / 2, ty - 13);
+          ctx.drawImage(ic, tx - ic.width / 2, ty - 13 - (Math.sin(this.t * 2.2 + i * 1.3) > 0.2 ? 1 : 0));
           if (sh.item.n > 1) txt(sh.item.n, tx + 9, ty - 1, { size: 6, color: '#fff', outline: '#1b1420' });
         }
       } });
@@ -247,7 +383,8 @@ class ShopScene {
     list.push({ y: CHEST_POS.y, draw: () => drawSpr(chestSprite(false, false), CHEST_POS.x, CHEST_POS.y + 2) });
     list.push({ y: BED_POS.y, draw: () => drawSpr(bedSprite(), BED_POS.x + 1, BED_POS.y + 2) });
     if (S.flags.finale) list.push({ y: 62, draw: () => { shadow(226, 62, 12); drawSpr(personSprite(ALDRIC_LOOK, 0, 0, 'idle'), 226, 63); } });
-    list.push(...this.customers, this.player);
+    list.push(...this.customers, this.player, this.cat);
+    if (this.pip) list.push(this.pip);
     list.sort((a, b) => a.y - b.y);
     for (const o of list) o.draw ? o.draw(0, 0) : null;
     // price tags above tables
@@ -257,10 +394,13 @@ class ShopScene {
       priceBubble(fmt(sh.price), tx, ty - 17);
     }
     drawShopLights(this.t);
+    drawShopAmbient(this);
     for (const c of this.customers) c.drawBubble();
+    if (this.pip) this.pip.drawBubble();
     drawFX(this, 0, 0);
     if (this.near) worldPrompt(this.near.x, this.near.y - 26, [['A', this.near.label]]);
     this.drawHUD();
+    drawFlyingCoins(this);
   }
   drawHUD() {
     drawHealthHUD(5, 5);
@@ -325,7 +465,7 @@ class Customer {
   }
   update(dt, sc) {
     this.st += dt;
-    if (this.bubble) { this.bubble.t -= dt; if (this.bubble.t <= 0) this.bubble = null; }
+    if (this.bubble) { this.bubble.t -= dt; this.bubble.age = (this.bubble.age || 0) + dt; if (this.bubble.t <= 0) this.bubble = null; }
     const p = sc.player;
     switch (this.state) {
       case 'enter': case 'goto':
@@ -348,6 +488,8 @@ class Customer {
           const note = noteSeen(t.item.id); note.r[re] = t.price;
           this.bubble = { kind: re, t: 1.6 }; this.state = 'react'; this.st = 0;
           this.reaction = re;
+          if (re === 'ecstatic') for (let i = 0; i < 3; i++) sc.amb.hearts.push({ x: this.x + rand(-6, 6), y: this.y - 30, vy: -rand(12, 20), t: -i * 0.15, life: 1.1 });
+          if (re === 'angry') FX.burst(sc, this.x, this.y - 28, ['#8a8a9a', '#c8c8d0'], 6, 22, { grav: -30 });
           if (re === 'content') S.rep = Math.min(100, S.rep + 1.5);
           if (re === 'ecstatic') S.rep = Math.min(100, S.rep + 1);
           if (re === 'expensive') { S.pop[t.item.id] = clamp((S.pop[t.item.id] || 0) - 0.25, -1, 1); S.rep = Math.max(0, S.rep - 1); }
@@ -416,18 +558,27 @@ class Customer {
     shadow(x, y, 12);
     const moving = this.path.length > 0;
     const pose = this.state === 'run' ? 'walk' : moving ? 'walk' : 'idle';
-    drawSpr(personSprite(this.look, this.dir, Math.floor(this.anim) % 4, pose), x, y + 1);
-    if (this.carry && this.state !== 'run') { const ic = itemIcon(this.carry.id); ctx.drawImage(ic, x - 6, y - 26, 10, 10); }
-    if (this.carry && this.state === 'run') { const ic = itemIcon(this.carry.id); ctx.drawImage(ic, x - 5, y - 30); }
+    // reactions: happy customers hop, angry ones stamp
+    let hop = 0, sx = 0;
+    if (this.state === 'react' && this.reaction === 'ecstatic' && this.st < 0.9) hop = Math.round(Math.abs(Math.sin(this.st * 11)) * 3);
+    if (this.state === 'react' && this.reaction === 'angry' && this.st < 0.6) sx = Math.round(Math.sin(this.st * 48));
+    drawSpr(personSprite(this.look, this.dir, Math.floor(this.anim) % 4, pose), x + sx, y + 1 - hop);
+    const ib = moving ? (Math.floor(this.anim) % 2) : 0;
+    if (this.carry) { const ic = itemIcon(this.carry.id); ctx.drawImage(ic, x - ic.width / 2, y - 40 - hop + ib); }
   }
   drawBubble() {
     if (!this.bubble) return;
-    const x = Math.round(this.x), y = Math.round(this.y) - 36;
+    const x = Math.round(this.x), y = Math.round(this.y) - (this.carry ? 52 : 38);
+    // bubbles pop in with a little overshoot
+    const a = this.bubble.age || 0, sc = a < 0.22 ? easeOut(a / 0.22) * 1.15 - Math.max(0, a - 0.14) * 1.9 : 1;
+    ctx.save(); ctx.translate(x, y + 8); ctx.scale(sc, sc); ctx.translate(-x, -(y + 8));
     roundBubble(x - 11, y - 10, 22, 18, '#f7efd8', x);
     const k = this.bubble.kind;
     if (k === '!') txt('!', x, y + 4, { size: 11, align: 'center', color: C.red, bold: true });
     else if (k === 'wait') txt('...', x, y + 2, { size: 8, align: 'center', color: C.paperDark });
     else if (k === 'thinking') { const n = 1 + Math.floor(Game.time * 3) % 3; txt('.'.repeat(n), x - 4, y + 2, { size: 8, color: C.paperDark }); }
-    else ctx.drawImage(faceIcon(k), x - 7, y - 8);
+    else ctx.drawImage(faceIcon(k), x - 7, y - 8 - (k === 'ecstatic' ? Math.round(Math.abs(Math.sin(Game.time * 8))) : 0));
+    ctx.restore();
   }
+
 }

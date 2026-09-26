@@ -414,7 +414,7 @@ function storyPrologue() {
   return new Cutscene(stage, steps, {
     startBlack: true,
     next: () => new TownScene('shop'),
-    onEnd: () => { S.flags.prologue = true; saveGame(); setTimeout(() => toast('Head north through the plaza to reach the Gates.', C.mint), 600); },
+    onEnd: () => { S.flags.prologue = true; saveGame(); },
   });
 }
 function storyDungeonIntro(sc) {

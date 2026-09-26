@@ -6,7 +6,7 @@
 // ============================================================================
 
 const HUD = {
-  hit: 0, dead: 0, shake: 0, slashes: [], drips: [], lastHp: null, ghost: 1,
+  hit: 0, dead: 0, shake: 0, goldPulse: 0, slashes: [], drips: [], lastHp: null, ghost: 1,
   onHit(amount) {
     this.hit = 1; this.shake = 0.3;
     const n = amount > 20 ? 3 : 2;
@@ -17,7 +17,7 @@ const HUD = {
   onDeath() { this.dead = 1; this.onHit(99); this.hit = 1.6; },
   reset() { this.dead = 0; this.hit = 0; this.slashes = []; this.drips = []; },
   update(dt) {
-    this.hit = Math.max(0, this.hit - dt * 1.8); this.shake = Math.max(0, this.shake - dt);
+    this.hit = Math.max(0, this.hit - dt * 1.8); this.shake = Math.max(0, this.shake - dt); this.goldPulse = Math.max(0, this.goldPulse - dt);
     for (const d of this.drips) { d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 140 * dt; d.life -= dt; }
     this.drips = this.drips.filter(d => d.life > 0);
     if (S) {
@@ -116,6 +116,7 @@ function drawHealthHUD(x = 4, y = 4) {
   ctx.globalAlpha = 1;
   // gold under the medallion
   const gs = fmt(S.gold);
-  ctx.drawImage(coinIcon(), x + 4, y + 33);
-  txt(gs, x + 13, y + 39.5, { size: 7, color: '#fff', outline: '#1b1420' });
+  const pul = HUD.goldPulse > 0 ? 1 : 0;
+  ctx.drawImage(coinIcon(), x + 4, y + 33 - pul);
+  txt(gs, x + 13, y + 39.5 - pul, { size: 7, color: pul ? '#ffe89a' : '#fff', outline: '#1b1420' });
 }

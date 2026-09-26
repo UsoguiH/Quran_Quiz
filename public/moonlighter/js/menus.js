@@ -155,6 +155,7 @@ class OptionsUI extends Overlay {
       { name: 'Language', val: () => 'English', left() { }, right() { } },
       { name: 'Screenshake', slider: () => OPTS.shake, left: step('shake', -0.1), right: step('shake', 0.1) },
       { name: 'Vibration', val: () => OPTS.vibration ? 'On' : 'Off', left() { OPTS.vibration = !OPTS.vibration; }, right() { OPTS.vibration = !OPTS.vibration; } },
+      { name: 'Tutorial', val: () => OPTS.tutorial !== false ? 'On' : 'Off', left() { OPTS.tutorial = OPTS.tutorial === false; }, right() { OPTS.tutorial = OPTS.tutorial === false; } },
       { name: 'Text speed', val: () => ['Slow', 'Normal', 'Fast'][OPTS.textSpeed], left() { OPTS.textSpeed = (OPTS.textSpeed + 2) % 3; }, right() { OPTS.textSpeed = (OPTS.textSpeed + 1) % 3; } },
     ];
     if (this.tab === 1) return [

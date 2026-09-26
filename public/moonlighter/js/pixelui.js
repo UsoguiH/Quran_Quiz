@@ -179,6 +179,7 @@ const TICON = {
   mDash: ['...cc..', '...cc..', 't..cc..', '...ccc.', 'tt.cccc', '...bbbb'],
   mShield: ['ggggg', 'gbcbg', 'gcccg', '.gcg.', '..g..'],
   mHand: PICON.hand,
+  mPendant: ['.c.c.', '..g..', '.ggg.', 'gtmtg', '.ggg.'],
 };
 const TPAL = { c: PK.cream, w: '#f4f6f8', s: '#9aa8b8', g: '#e8b84a', b: '#8a5a34', t: '#5ad0c0', d: '#6a4424', y: '#eab432',
   n: '#8a6a4a', p: '#e24a5a', h: '#ffb0b8', m: '#bff4e0' };
@@ -282,6 +283,6 @@ function skinTouchButtons() {
 }
 // small version drawn inside in-game prompts on phones; returns the canvas
 function miniAction(b) {
-  const m = { A: ['use', 'mHand'], B: ['dash', 'mDash'], ROLL: ['dash', 'mDash'], X: ['attack', 'mSword'], Y: ['guard', 'mShield'] }[b];
+  const m = { A: ['use', 'mHand'], B: ['dash', 'mDash'], ROLL: ['dash', 'mDash'], X: ['attack', 'mSword'], Y: ['guard', 'mShield'], PENDANT: ['slate', 'mPendant'] }[b];
   return m ? medallion(13, m[0], m[1]) : null;
 }

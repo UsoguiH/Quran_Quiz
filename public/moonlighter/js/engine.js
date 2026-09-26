@@ -159,7 +159,7 @@ const Store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-const OPTS = Object.assign({ voice: 'speech', voiceVol: 0.9, fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false },
+const OPTS = Object.assign({ voice: 'speech', voiceVol: 0.9, fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false, tutorial: true },
   Store.get('mk_opts', {}));
 function saveOpts() { Store.set('mk_opts', OPTS); }
 

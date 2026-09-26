@@ -303,85 +303,139 @@ function heroPortrait() {
 }
 
 // ---------------------------------------------------------------- people
-// o: {skin, hair, hairStyle, shirt, shirt2, pants, dress, hat, beard, kid, wide, hood, apron}
+// o: {skin, hair, hairStyle, shirt, pants, dress, hat, hatCol, beard, kid, wide, apron, scarf, mask}
+// Chibi townsfolk: big round head, shaded clothes, swinging arms. dir 0 down, 1 up, 2 left, 3 right.
 function personSprite(o, dir, frame, pose = 'walk') {
-  const key = 'p_' + o.id + '_' + dir + '_' + frame + '_' + pose;
+  const key = 'p2_' + o.id + '_' + dir + '_' + frame + '_' + pose;
   return cached(key, () => {
     if (dir === 3) return flipH(personSprite(o, 2, frame, pose));
-    const leg = pose === 'walk' ? [0, 1, 0, -1][frame % 4] : 0;
-    const bob = pose === 'walk' && frame % 2 === 1 ? 1 : 0;
-    const ky = o.kid ? 5 : 0; // kids are shorter
-    const skin = o.skin || '#f0c49a', skin2 = shade(skin, -0.18);
-    const hair = o.hair || '#6a4028', shirt = o.shirt || '#8aa860', shirt2 = shade(shirt, -0.25), pants = o.pants || '#5a4634';
-    const wd = o.wide ? 1 : 0;
-    return sprite(20, 24, g => {
-      const y0 = ky + bob;
-      // legs / dress
+    const walk = pose === 'walk', leg = walk ? [0, 1, 0, -1][frame % 4] : 0;
+    const bob = walk && frame % 2 === 1 ? 1 : 0;
+    const kid = !!o.kid, wd = o.wide ? 1 : 0;
+    const skin = o.skin || '#f0c49a', skinD = shade(skin, -0.16), skinL = shade(skin, 0.2);
+    const hair = o.hair || '#6a4028', hairD = shade(hair, -0.32), hairL = shade(hair, 0.3);
+    const shirt = o.shirt || '#8aa860', shirtD = shade(shirt, -0.3), shirtL = shade(shirt, 0.22);
+    const pants = o.pants || '#5a4634', pantsD = shade(pants, -0.3);
+    const shoe = '#3a2622', eye = '#2a1a24', blush = '#f08a86';
+    const side = dir === 2, back = dir === 1;
+    return sprite(20, 28, g => {
+      const hy = (kid ? 6 : 1) + bob;              // head box top
+      const by = hy + 11;                          // torso top
+      const th = kid ? 5 : 7;                      // torso height
+      const ly = by + th;                          // legs start
+      const G = 27;                                // ground line
+      const tw = (side ? 7 : 9) + wd * 2, tx = side ? 7 - wd : 6 - wd;
+      // ---- legs & shoes
       if (o.dress) {
-        R(g, 5 - wd, 14 + y0, 10 + wd * 2, 7 - ky * 0.4, o.dress); R(g, 5 - wd, 19 + y0 - ky * 0.4, 10 + wd * 2, 1, shade(o.dress, -0.25));
-        R(g, 7, 21 - (leg > 0 ? 1 : 0), 2, 2, '#3a2a22'); R(g, 11, 21 - (leg < 0 ? 1 : 0), 2, 2, '#3a2a22');
-      } else if (dir === 2) {
-        R(g, 7 + leg, 18 + (o.kid ? 1 : 0), 2, 4 - (o.kid ? 1 : 0), pants); R(g, 6 + leg, 21, 3, 2, '#3a2a22');
-        R(g, 10 - leg, 18 + (o.kid ? 1 : 0), 2, 4 - (o.kid ? 1 : 0), pants); R(g, 9 - leg, 21, 3, 2, '#3a2a22');
+        const top = by + 3;
+        for (let j = top; j < G - 2; j++) { const k = Math.min(3, ((j - top) / 2) | 0); R(g, tx - k, j, tw + k * 2, 1, j === G - 3 ? shade(o.dress, -0.3) : o.dress); }
+        R(g, tx + tw - 2, top, 2, G - 2 - top, shade(o.dress, -0.2));
+        R(g, 7 - (side ? leg : 0), G - 2 - (leg > 0 && !side ? 1 : 0), 3, 2, shoe); R(g, 10 + (side ? leg : 0), G - 2 - (leg < 0 && !side ? 1 : 0), 3, 2, shoe);
+      } else if (side) {
+        const l1 = 8 + leg * 2, l2 = 9 - leg * 2;
+        R(g, l2, ly, 2, G - 2 - ly, pantsD); R(g, l2 - 1, G - 2, 3, 2, shade(shoe, -0.2));
+        R(g, l1, ly, 2, G - 2 - ly, pants); R(g, l1 - 1, G - 2, 3, 2, shoe);
       } else {
-        R(g, 7, 18 - (leg > 0 ? 1 : 0) + (o.kid ? 1 : 0), 2, 4, pants); R(g, 7, 21 - (leg > 0 ? 1 : 0), 2, 2, '#3a2a22');
-        R(g, 11, 18 - (leg < 0 ? 1 : 0) + (o.kid ? 1 : 0), 2, 4, pants); R(g, 11, 21 - (leg < 0 ? 1 : 0), 2, 2, '#3a2a22');
+        const lift1 = leg > 0 ? 1 : 0, lift2 = leg < 0 ? 1 : 0;
+        R(g, 7, ly, 2, G - 2 - ly - lift1, pants); R(g, 6, G - 2 - lift1, 3, 2, shoe);
+        R(g, 11, ly, 2, G - 2 - ly - lift2, pants); R(g, 11, G - 2 - lift2, 3, 2, shoe);
+        R(g, 12, ly, 1, G - 2 - ly - lift2, pantsD);
       }
-      // torso
-      const tw = 8 + wd * 2, tx = 6 - wd;
-      const th = o.kid ? 4 : 6;
-      if (dir === 2) R(g, 6 - wd, 12 + y0, 7 + wd * 2, th, shirt); else R(g, tx, 12 + y0, tw, th, shirt);
-      R(g, dir === 2 ? 6 - wd : tx, 12 + y0 + th - 1, dir === 2 ? 7 + wd * 2 : tw, 1, shirt2);
-      if (o.apron) R(g, dir === 2 ? 6 : tx + 1, 13 + y0, dir === 2 ? 3 : tw - 2, th, o.apron);
-      if (o.scarf) R(g, dir === 2 ? 6 : tx, 12 + y0, dir === 2 ? 7 : tw, 2, o.scarf);
-      // arms
-      if (dir !== 2) {
-        R(g, tx - 2, 12 + y0 + (leg > 0 ? 1 : 0), 2, th - 1, shirt); R(g, tx - 2, 11 + th + y0 + (leg > 0 ? 1 : 0), 2, 1, skin);
-        R(g, tx + tw, 12 + y0 + (leg < 0 ? 1 : 0), 2, th - 1, shirt); R(g, tx + tw, 11 + th + y0 + (leg < 0 ? 1 : 0), 2, 1, skin);
+      // ---- arm behind the body (side view)
+      const armLen = th - 1;
+      if (side && pose !== 'grab') { const ax = 11 + leg; R(g, ax, by + 1, 2, armLen, shirtD); R(g, ax, by + armLen, 2, 2, skinD); }
+      // ---- torso
+      if (!(o.dress && kid)) {
+        R(g, tx + 1, by, tw - 2, 1, shirt); R(g, tx, by + 1, tw, th - 1, shirt);
+        R(g, tx + tw - 1, by + 1, 1, th - 1, shirtD); R(g, tx, by + th - 1, tw, 1, shirtD);
+        R(g, tx + 1, by + 1, 1, th - 2, shirtL);
+      }
+      if (o.dress) { R(g, tx, by + 1, tw, 3, o.dress); R(g, tx + tw - 1, by + 1, 1, 3, shade(o.dress, -0.2)); R(g, tx, by + 3, tw, 1, shade(o.dress, 0.25)); }
+      else if (!kid) { R(g, tx, by + th - 2, tw, 1, '#5a3a24'); if (!side && !back) P(g, tx + (tw >> 1), by + th - 2, '#e8c060'); }
+      if (!side && !back && !o.dress) { P(g, 9, by, skin); P(g, 10, by, skin); P(g, 9, by + 1, shirtD); P(g, 10, by + 1, shirtD); }
+      if (o.apron && !back) { const axx = side ? tx : tx + 1, aw = side ? 3 : tw - 2; R(g, axx, by + 2, aw, th + 2, o.apron); R(g, axx, by + 2, aw, 1, shade(o.apron, 0.2)); if (!side) { P(g, tx + 1, by, o.apron); P(g, tx + tw - 2, by, o.apron); } }
+      if (o.scarf) { R(g, tx, by, tw, 2, o.scarf); R(g, tx, by + 1, tw, 1, shade(o.scarf, -0.25)); if (!back) R(g, side ? tx + tw - 2 : tx + 2, by + 2, 2, 3, o.scarf); }
+      // ---- arms
+      if (side) {
+        if (pose === 'grab') { R(g, 2, by + 2, 7, 2, shirt); R(g, 2, by + 3, 7, 1, shirtD); R(g, 0, by + 2, 2, 2, skin); }
+        else { const ax = 9 - leg; R(g, ax, by + 1, 2, armLen, shirt); R(g, ax + 1, by + 1, 1, armLen, shirtD); R(g, ax, by + armLen, 2, 2, skin); }
       } else {
-        const a = pose === 'grab' ? -2 : -leg;
-        if (pose === 'grab') { R(g, 2, 13 + y0, 6, 2, shirt); R(g, 1, 13 + y0, 1, 2, skin); }
-        else { R(g, 8 + a, 13 + y0, 2, th - 2, shirt); R(g, 8 + a, 11 + th + y0, 2, 1, skin); }
+        const sw1 = leg < 0 ? 1 : 0, sw2 = leg > 0 ? 1 : 0;
+        R(g, tx - 2, by + 1 + sw1, 2, armLen - 1, shirt); R(g, tx - 2, by + 1 + sw1, 1, armLen - 1, shirtD); R(g, tx - 2, by + armLen + sw1, 2, 2, back ? skinD : skin);
+        R(g, tx + tw, by + 1 + sw2, 2, armLen - 1, shirt); R(g, tx + tw + 1, by + 1 + sw2, 1, armLen - 1, shirtD); R(g, tx + tw, by + armLen + sw2, 2, 2, back ? skinD : skin);
       }
-      // head
-      const hy = 4 + y0;
-      if (dir === 1) {
-        R(g, 5, hy + 2, 10, 6, skin);
-      } else if (dir === 2) {
-        R(g, 4, hy + 3, 8, 5, skin); P(g, 3, hy + 5, skin); R(g, 4, hy + 7, 8, 1, skin2);
-        R(g, 5, hy + 5, 1, 2, '#2a1c1c');
+      // ---- head
+      if (side) {
+        ell(g, 4, hy, 11, 11, skinD); ell(g, 4, hy, 11, 10, skin); P(g, 3, hy + 6, skin); P(g, 3, hy + 7, skinD);
+        R(g, 11, hy + 5, 1, 2, skinD);
       } else {
-        R(g, 5, hy + 3, 10, 5, skin); R(g, 5, hy + 7, 10, 1, skin2);
-        R(g, 7, hy + 5, 1, 2, '#2a1c1c'); R(g, 12, hy + 5, 1, 2, '#2a1c1c');
+        ell(g, 4, hy, 12, 11, skinD); ell(g, 4, hy, 12, 10, skin);
+        if (!back) { P(g, 3, hy + 6, skinD); P(g, 16, hy + 6, skinD); }
       }
-      // hair
-      const hs = o.hairStyle || 'short';
-      if (hs !== 'bald') {
-        if (dir === 1) { R(g, 5, hy, 10, 7, hair); if (hs === 'long') R(g, 4, hy + 2, 12, 9, hair); if (hs === 'bun') ell(g, 7, hy - 3, 6, 5, hair); }
-        else if (dir === 2) {
-          R(g, 4, hy, 9, 3, hair); R(g, 9, hy + 1, 4, 5, hair); P(g, 3, hy + 2, hair);
-          if (hs === 'long') R(g, 9, hy + 1, 5, 9, hair);
-          if (hs === 'bun') ell(g, 10, hy - 3, 5, 5, hair);
-        } else {
-          R(g, 5, hy, 10, 3, hair); P(g, 4, hy + 2, hair); P(g, 15, hy + 2, hair);
-          if (hs === 'long') { R(g, 4, hy + 2, 2, 8, hair); R(g, 14, hy + 2, 2, 8, hair); }
-          if (hs === 'bun') ell(g, 7, hy - 3, 6, 5, hair);
+      const face = () => {
+        if (back) return;
+        if (side) { R(g, 5, hy + 5, 1, 2, eye); P(g, 5, hy + 8, blush); if (!o.beard) P(g, 4, hy + 9, skinD); }
+        else {
+          R(g, 7, hy + 5, 1, 2, eye); R(g, 12, hy + 5, 1, 2, eye);
+          P(g, 6, hy + 8, blush); P(g, 13, hy + 8, blush);
+          if (!o.beard) { P(g, 9, hy + 9, skinD); P(g, 10, hy + 9, skinD); }
         }
-      } else if (dir !== 1) R(g, 5, hy + 1, 10, 2, skin);
-      if (o.beard && dir !== 1) {
-        if (dir === 2) R(g, 3, hy + 6, 7, 4, o.beard); else { R(g, 5, hy + 6, 10, 4, o.beard); R(g, 7, hy + 10, 6, 2, o.beard); }
+      };
+      // ---- hair
+      const hs = o.hairStyle || 'short';
+      const hood = o.hat === 'hood';
+      if (!hood) {
+        if (hs === 'bald') {
+          if (back) R(g, 4, hy + 5, 12, 3, hair); else if (side) R(g, 11, hy + 4, 4, 4, hair); else { R(g, 3, hy + 4, 2, 4, hair); R(g, 15, hy + 4, 2, 4, hair); }
+          R(g, side ? 7 : 7, hy + 1, 4, 1, skinL);
+        } else if (back) {
+          ell(g, 3, hy - 1, 14, 12, hair); R(g, 5, hy, 6, 1, hairL); R(g, 4, hy + 8, 12, 2, hairD);
+          if (hs === 'long') { R(g, 3, hy + 6, 14, 9, hair); R(g, 4, hy + 14, 12, 1, hairD); R(g, 9, hy + 7, 1, 7, hairD); }
+        } else if (side) {
+          ell(g, 5, hy - 1, 12, 9, hair); R(g, 11, hy + 3, 5, 5, hair); R(g, 4, hy + 1, 4, 2, hair); P(g, 4, hy + 3, hair);
+          R(g, 7, hy, 5, 1, hairL); R(g, 14, hy + 4, 2, 4, hairD);
+          if (hs === 'long') { R(g, 11, hy + 3, 5, 11, hair); R(g, 14, hy + 5, 2, 9, hairD); }
+        } else {
+          ell(g, 3, hy - 1, 14, 8, hair); R(g, 3, hy + 2, 2, 5, hair); R(g, 15, hy + 2, 2, 5, hair);
+          R(g, 5, hy + 3, 10, 1, hair); P(g, 6, hy + 4, hair); P(g, 9, hy + 4, hair); P(g, 10, hy + 4, hair); P(g, 13, hy + 4, hair);
+          R(g, 6, hy, 5, 1, hairL); P(g, 5, hy + 1, hairL); R(g, 3, hy + 6, 1, 1, hairD); R(g, 16, hy + 6, 1, 1, hairD);
+          if (hs === 'long') { R(g, 2, hy + 3, 3, 11, hair); R(g, 15, hy + 3, 3, 11, hair); R(g, 2, hy + 13, 3, 1, hairD); R(g, 15, hy + 13, 3, 1, hairD); R(g, 4, hy + 5, 1, 8, hairD); R(g, 15, hy + 5, 1, 8, hairD); }
+        }
+        if (hs === 'bun') { const bx = side ? 11 : 7; ell(g, bx, hy - 4, 6, 5, hair); R(g, bx + 1, hy - 3, 2, 1, hairL); R(g, bx, hy, 6, 1, hairD); }
+        face();
       }
-      // hats
-      if (o.hat === 'witch') { R(g, 2, hy, 16, 2, o.hatCol); R(g, 5, hy - 4, 10, 4, o.hatCol); R(g, 7, hy - 7, 6, 3, o.hatCol); R(g, 9, hy - 9, 3, 2, o.hatCol); R(g, 5, hy - 1, 10, 1, '#e0c060'); }
-      if (o.hat === 'cap') { R(g, 4, hy - 1, 12, 3, o.hatCol); if (dir === 0) R(g, 4, hy + 2, 12, 1, shade(o.hatCol, -0.3)); if (dir === 2) R(g, 1, hy + 1, 4, 1, shade(o.hatCol, -0.3)); }
-      if (o.hat === 'hood') {
-        const hc = o.hatCol;
-        if (dir === 1) R(g, 4, hy - 1, 12, 10, hc);
-        else if (dir === 2) { R(g, 3, hy - 1, 11, 4, hc); R(g, 9, hy, 5, 9, hc); }
-        else { R(g, 4, hy - 1, 12, 4, hc); R(g, 4, hy, 2, 8, hc); R(g, 14, hy, 2, 8, hc); }
-        if (o.mask && dir !== 1) { if (dir === 2) R(g, 3, hy + 6, 7, 2, o.mask); else R(g, 5, hy + 6, 10, 2, o.mask); }
+      // ---- beard
+      if (o.beard && !back) {
+        const bd = o.beard, bdD = shade(bd, -0.25);
+        if (side) { R(g, 3, hy + 8, 7, 3, bd); R(g, 4, hy + 11, 4, 2, bd); R(g, 4, hy + 12, 3, 1, bdD); }
+        else { R(g, 5, hy + 8, 10, 3, bd); R(g, 6, hy + 11, 8, 2, bd); R(g, 8, hy + 13, 4, 1, bdD); P(g, 9, hy + 9, bdD); P(g, 10, hy + 9, bdD); }
       }
-      if (o.hat === 'bandana') { R(g, 4, hy, 12, 2, o.hatCol); }
+      // ---- hats
+      const hc = o.hatCol, hcD = hc ? shade(hc, -0.3) : null, hcL = hc ? shade(hc, 0.25) : null;
+      if (o.hat === 'witch') {
+        ell(g, 0, hy - 1, 20, 5, hcD); ell(g, 0, hy - 2, 20, 5, hc);
+        R(g, 5, hy - 5, 10, 4, hc); R(g, 6, hy - 8, 8, 3, hc); R(g, 8, hy - 10, 5, 2, hc); R(g, 10, hy - 12, 4, 2, hc); R(g, 13, hy - 13, 2, 2, hc);
+        R(g, 5, hy - 2, 10, 1, '#e0c060'); R(g, 6, hy - 7, 2, 4, hcL);
+      }
+      if (o.hat === 'cap') {
+        R(g, 4, hy - 4, 12, 5, hc); R(g, 5, hy - 4, 10, 1, hcL); R(g, 4, hy - 1, 12, 1, '#c84a4a');
+        if (side) R(g, 1, hy + 1, 16, 1, hcD); else R(g, 2, hy + 1, 16, 1, hcD);
+      }
+      if (o.hat === 'feather') {
+        ell(g, 3, hy - 3, 14, 6, hc); R(g, 4, hy - 3, 10, 1, hcL); R(g, 3, hy + 1, 14, 1, hcD);
+        R(g, side ? 13 : 14, hy - 8, 2, 6, '#f4f0e0'); R(g, side ? 14 : 15, hy - 10, 2, 4, '#f4f0e0'); P(g, side ? 13 : 14, hy - 5, '#c8c0a8');
+      }
+      if (o.hat === 'bandana') {
+        R(g, 3, hy + 1, 14, 3, hc); R(g, 3, hy + 3, 14, 1, hcD); P(g, 6, hy + 2, hcL); P(g, 11, hy + 2, hcL);
+        if (!side && !back) { R(g, 16, hy + 3, 2, 2, hc); P(g, 18, hy + 5, hcD); } else if (side) { R(g, 15, hy + 3, 3, 2, hc); R(g, 17, hy + 5, 2, 2, hcD); }
+      }
+      if (hood) {
+        if (back) { ell(g, 2, hy - 2, 16, 15, hc); R(g, 6, hy + 10, 8, 3, hcD); }
+        else if (side) { ell(g, 3, hy - 2, 15, 15, hc); ell(g, 3, hy + 2, 8, 9, skin); R(g, 14, hy + 2, 3, 9, hcD); }
+        else { ell(g, 2, hy - 2, 16, 15, hc); ell(g, 5, hy + 2, 10, 9, skinD); ell(g, 5, hy + 3, 10, 8, skin); R(g, 3, hy + 9, 2, 5, hcD); R(g, 15, hy + 9, 2, 5, hcD); }
+        face();
+        if (o.mask && !back) { if (side) R(g, 3, hy + 7, 7, 3, o.mask); else R(g, 5, hy + 7, 10, 3, o.mask); }
+      }
     });
   });
 }

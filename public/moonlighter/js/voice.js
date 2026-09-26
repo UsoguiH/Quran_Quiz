@@ -15,6 +15,7 @@ const VOICE_PROFILES = {
   Brom: { pitch: 0.3, rate: 0.9, blip: 95, prefer: ['Fred', 'Male', 'Daniel', 'David'] },
   Mirabel: { pitch: 1.4, rate: 1.05, blip: 330, prefer: ['Google UK English Female', 'Samantha', 'Victoria', 'Karen', 'Female', 'Zira', 'Susan'] },
   Villager: { pitch: 1.1, rate: 1.02, blip: 240, prefer: ['Google US English', 'Samantha', 'Female', 'Zira'] },
+  Pip: { pitch: 1.35, rate: 1.12, blip: 280, prefer: ['Google US English', 'Alex', 'Male', 'David'] },
 };
 const Voice = {
   list: [], mode: 'babble', prof: VOICE_PROFILES.Narrator, speaking: false, primed: false,
