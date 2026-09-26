@@ -192,17 +192,20 @@ class Dialogue extends Overlay {
   // lines: array of strings; o: {name, portrait(canvas), onDone}
   constructor(lines, o = {}) {
     super(); this.lines = Array.isArray(lines) ? lines : [lines]; this.o = o; this.i = 0; this.chars = 0;
+    this.who = o.name || 'Narrator';
+    Voice.speak(this.lines[0], this.who);
   }
+  onClose() { Voice.stop(); }
   update(dt) {
     super.update(dt);
     const line = this.lines[this.i];
     const speed = [30, 55, 110][OPTS.textSpeed] || 55;
     const before = this.chars | 0;
     this.chars = Math.min(line.length, this.chars + dt * speed);
-    if ((this.chars | 0) !== before && (this.chars | 0) % 3 === 0) sfx('text');
+    for (let k = before; k < (this.chars | 0); k++) Voice.blip(line[k], k);
     if (Input.pressed('A') || Input.pressed('X') || Input.pressed('B')) {
       if (this.chars < line.length) this.chars = line.length;
-      else if (this.i < this.lines.length - 1) { this.i++; this.chars = 0; sfx('select'); }
+      else if (this.i < this.lines.length - 1) { this.i++; this.chars = 0; sfx('select'); Voice.speak(this.lines[this.i], this.who); }
       else { this.close(); if (this.o.onDone) this.o.onDone(); }
     }
   }

@@ -152,10 +152,10 @@ void main(){
 
 // per-scene look
 function fxParams() {
-  const sc = Game.scene;
+  const sc = Game.scene instanceof Cutscene ? Game.scene.stage : Game.scene;
   const p = { sat: 1.05, contrast: 1.04, vig: 0.3, bloom: 0.35, grain: 0.025, aberr: 0, lowhp: 0, dead: 0, rays: 0, warm: 0, tint: [1, 1, 1] };
   if (sc instanceof TownScene) {
-    if (S.phase === 'night') Object.assign(p, { sat: 0.95, vig: 0.5, bloom: 0.85, tint: [0.9, 0.95, 1.12] });
+    if (sc.night) Object.assign(p, { sat: 0.95, vig: 0.5, bloom: 0.85, tint: [0.9, 0.95, 1.12] });
     else Object.assign(p, { sat: 1.08, contrast: 1.05, vig: 0.3, bloom: 0.2, rays: 0.8, warm: 0.5, tint: [1.03, 1.0, 0.94] });
   } else if (sc instanceof ShopScene) Object.assign(p, { sat: 1.02, vig: 0.45, bloom: 0.35, rays: 0.5, warm: 0.35, tint: [1.03, 0.99, 0.93] });
   else if (sc instanceof DungeonScene) {

@@ -140,6 +140,7 @@ class ShopScene {
     for (let i = 0; i < tableCount(); i++) { const [tx, ty] = TABLE_POS[i]; list.push({ x: tx, y: ty + 10, r: 16, label: 'Tables', fn: () => UI.open(new ShelfUI(i)) }); }
     list.push({ x: CHEST_POS.x, y: CHEST_POS.y + 10, r: 16, label: 'Storage chest', fn: () => UI.open(new ChestUI()) });
     list.push({ x: BED_POS.x + 12, y: BED_POS.y, r: 18, label: 'Bed', fn: () => this.useBed() });
+    if (S.flags.finale) list.push({ x: 226, y: 66, r: 16, label: 'Aldric', fn: () => say([choice(['Your prices are too honest. I love it.', 'I sold a Golem Core for a sandwich once. Different times.', 'The door is quiet. Good. Let us keep it that way.', 'Sweep the floor, Keeper. Heroes still have customers.'])], { name: 'Aldric', portrait: aldricPortrait() }) });
     if (!this.open) {
       list.push({ x: REG_SPOT.x, y: REG_SPOT.y, r: 16, label: S.phase === 'day' && !S.shopOpenedToday ? 'Open shop' : 'Register', fn: () => this.tryOpen() });
       list.push({ x: SHOP_DOOR.x, y: 200, r: 14, label: 'Exit', fn: () => Game.goTown('shop') });
@@ -245,6 +246,7 @@ class ShopScene {
     list.push({ y: REGISTER.y, draw: () => drawSpr(registerSprite(), REGISTER.x, REGISTER.y - 4) });
     list.push({ y: CHEST_POS.y, draw: () => drawSpr(chestSprite(false, false), CHEST_POS.x, CHEST_POS.y + 2) });
     list.push({ y: BED_POS.y, draw: () => drawSpr(bedSprite(), BED_POS.x + 1, BED_POS.y + 2) });
+    if (S.flags.finale) list.push({ y: 62, draw: () => { shadow(226, 62, 12); drawSpr(personSprite(ALDRIC_LOOK, 0, 0, 'idle'), 226, 63); } });
     list.push(...this.customers, this.player);
     list.sort((a, b) => a.y - b.y);
     for (const o of list) o.draw ? o.draw(0, 0) : null;

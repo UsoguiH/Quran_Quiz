@@ -217,7 +217,8 @@ function renderTownGround() {
 }
 
 class TownScene {
-  constructor(spawn = 'shop') {
+  constructor(spawn = 'shop', o = {}) {
+    this.night = o.night ?? (S.phase === 'night');
     this.parts = []; this.texts = []; this.rings = []; this.projs = []; this.pickups = []; this.enemies = [];
     this.player = new Player(0, 0);
     this.cam = { x: 0, y: 0 };
@@ -226,7 +227,7 @@ class TownScene {
     this.nightCv = mkCanvas(W, H);
     this.t = 0;
     this.shakeA = 0;
-    this.music = S.phase === 'night' ? 'night' : 'town';
+    this.music = this.night ? 'night' : 'town';
     AudioSys.music(this.music);
   }
   get world() { return this; }
@@ -238,7 +239,7 @@ class TownScene {
   }
   build() {
     const objs = [], solids = [], inter = [], lights = [], casts = [];
-    const lit = S.phase === 'night';
+    const lit = this.night;
     const addB = (kind, cx, baseY, depth, o = {}) => {
       const img = buildingSprite(kind, lit);
       casts.push([img, cx, baseY]);
@@ -370,7 +371,8 @@ class TownScene {
     ask(q, () => Game.goDungeon(i));
   }
   fifthDoor() {
-    if (S.bosses.every(Boolean)) say(['The fifth door trembles. Four keys glow in your pack...', 'Whatever lies beyond will have to wait for another night. For now, you are the greatest merchant-hero this town has ever known.', 'Thank you for playing ' + GAME_TITLE + '!']);
+    if (S.flags.finale) say(['The fifth door is sealed for good. The air here smells of rain now, not of the Hollow.'], { name: 'Keeper', portrait: keeperPortrait() });
+    else if (S.bosses.every(Boolean)) Game.fade(() => Game.setScene(storyFinale()));
     else say(['An ancient door, larger than the others. It does not budge.', 'Perhaps the guardians of the four dungeons hold the answer.']);
   }
   snapCam() { this.cam.x = clamp(this.player.x - W / 2, 0, TW - W); this.cam.y = clamp(this.player.y - H / 2 - 10, 0, TH - H); }
@@ -394,14 +396,15 @@ class TownScene {
   draw() {
     const ox = Math.round(this.cam.x), oy = Math.round(this.cam.y);
     ctx.drawImage(this.ground, ox, oy, W, H, 0, 0, W, H);
-    const list = [...this.objs, ...this.npcs, this.player];
+    const list = [...this.objs, ...this.npcs, this.player, ...(this.extra || [])];
     list.sort((a, b) => a.y - b.y);
     for (const o of list) {
       if (o.y < oy - 40 || o.y > oy + H + 160) continue;
       o.draw(ox, oy);
     }
     drawFX(this, ox, oy);
-    if (S.phase === 'night') this.drawNight(ox, oy);
+    if (this.night) this.drawNight(ox, oy);
+    if (this.cinematic) return;
     if (this.near) worldPrompt(this.near.x - ox, this.near.y - oy - 22, [['A', this.near.label]]);
     drawTownHUD();
   }

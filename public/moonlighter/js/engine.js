@@ -120,7 +120,7 @@ const Store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-const OPTS = Object.assign({ fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false },
+const OPTS = Object.assign({ voice: 'speech', voiceVol: 0.9, fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false },
   Store.get('mk_opts', {}));
 function saveOpts() { Store.set('mk_opts', OPTS); }
 
@@ -276,6 +276,7 @@ const AudioSys = (() => {
   let ac = null, master, sfxG, musG, noiseBuf;
   let musicState = { name: null, step: 0, next: 0, timer: null, track: null };
   function unlock() {
+    if (typeof Voice !== 'undefined') Voice.prime();
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     try {
       ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -432,6 +433,7 @@ const AudioSys = (() => {
     musicState.next = ac.currentTime + 0.1;
     if (!musicState.timer) musicState.timer = setInterval(schedule, 40);
   }
-  return { unlock, sfx, music, applyVol, get ready() { return !!ac; } };
+  function blip(f, v = 1) { tone('triangle', f, f * 0.93, 0.055, 0.1 * v); tone('square', f * 2, f * 2, 0.025, 0.018 * v); }
+  return { unlock, sfx, music, applyVol, blip, get ready() { return !!ac; } };
 })();
 const sfx = n => AudioSys.sfx(n);

@@ -45,15 +45,7 @@ function loadSlot(i) {
 function newGame(i) {
   S = freshState(i);
   saveGame();
-  Game.fade(() => {
-    Game.setScene(new TownScene('shop'));
-    setTimeout(() => say([
-      'Ah, there you are. Your grandfather\'s old shop is yours now... and so are its debts, I\'m afraid.',
-      'Every night the Gates in the north open to strange dungeons. Brave merchants go in, bring back treasure, and sell it by day.',
-      'Put what you find on your tables, set a fair price, and watch the faces of your customers.',
-      'The Golem Dungeon is the only gate open for now. Head north through the plaza when you are ready. Good luck, shopkeeper.',
-    ], { name: 'Elder Oren', portrait: elderPortrait() }), 500);
-  });
+  Game.fade(() => Game.setScene(storyPrologue()));
 }
 
 // ---------------------------------------------------------------- stats & items
@@ -144,7 +136,12 @@ const Game = {
   goTown(spawn) { sfx('door'); this.fade(() => this.setScene(new TownScene(spawn))); },
   goDungeon(i) {
     sfx('door');
-    this.fade(() => { S.hp = playerStats().maxHp; this.setScene(new DungeonScene(i)); });
+    this.fade(() => {
+      S.hp = playerStats().maxHp;
+      const d = new DungeonScene(i);
+      this.setScene(d);
+      if (!S.flags['intro' + i]) { S.flags['intro' + i] = true; this.setScene(storyDungeonIntro(d)); }
+    });
   },
   sleep() {
     this.fade(() => {
@@ -195,6 +192,7 @@ async function boot() {
   _mcache.clear();
   skinTouchButtons();
   PostFX.init();
+  Voice.init();
   resize();
   Game.setScene(new TitleScene());
   window.__game = { Game, get S() { return S; }, UI, Input };

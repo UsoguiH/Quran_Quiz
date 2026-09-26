@@ -146,6 +146,8 @@ class OptionsUI extends Overlay {
     ];
     if (this.tab === 2) return [
       { name: 'Music', slider: () => OPTS.music, left: step('music', -0.1, () => AudioSys.applyVol()), right: step('music', 0.1, () => AudioSys.applyVol()) },
+      { name: 'Voices', val: () => ({ speech: 'Spoken', babble: 'Babble', off: 'Off' })[OPTS.voice || 'speech'], left() { const m = ['speech', 'babble', 'off']; OPTS.voice = m[(m.indexOf(OPTS.voice || 'speech') + 2) % 3]; Voice.speak('Hello there.', 'Keeper'); }, right() { const m = ['speech', 'babble', 'off']; OPTS.voice = m[(m.indexOf(OPTS.voice || 'speech') + 1) % 3]; Voice.speak('Hello there.', 'Keeper'); } },
+      { name: 'Voice volume', slider: () => OPTS.voiceVol ?? 0.9, left: step('voiceVol', -0.1), right: step('voiceVol', 0.1) },
       { name: 'Sound effects', slider: () => OPTS.sfx, left: step('sfx', -0.1, () => { AudioSys.applyVol(); sfx('coin'); }), right: step('sfx', 0.1, () => { AudioSys.applyVol(); sfx('coin'); }) },
     ];
     return [];

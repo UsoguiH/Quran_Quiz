@@ -18,7 +18,7 @@ function castSprShadow(img, x, y, a = 0.26) {
   const sil = cached('sil_' + (img.__sid || (img.__sid = Math.random())), () => whiteOf(img, '#000'));
   ctx.save(); ctx.globalAlpha = a; ctx.transform(1, 0, -0.62, -0.34, x, y); ctx.drawImage(sil, -img.width / 2, -img.height); ctx.restore();
 }
-function sunOut() { return Game.scene instanceof TownScene && S.phase === 'day'; }
+function sunOut() { const sc = Game.scene instanceof Cutscene ? Game.scene.stage : Game.scene; return sc instanceof TownScene && !sc.night; }
 function shadow(x, y, w = 12, a = 0.3) { ctx.globalAlpha = a; ell(ctx, Math.round(x - w / 2), Math.round(y - 2), w, 4, '#000'); ctx.globalAlpha = 1; }
 
 // ---------------------------------------------------------------- effects

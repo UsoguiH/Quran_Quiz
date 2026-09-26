@@ -502,6 +502,7 @@ class DungeonScene {
         else toast('All four guardians have fallen!', C.gold);
       }
       AudioSys.music('dungeon');
+      if (first && Game.scene === this) Game.setScene(storyGuardianFalls(this));
     }, 1600);
   }
   // ------------------------------------------------------------ draw
@@ -522,7 +523,7 @@ class DungeonScene {
     // shadows of boss attacks under everything
     if (this.boss && !this.boss.dead) this.boss.drawShadows(ox, oy);
     for (const pr of this.props) if (pr instanceof Pool || pr instanceof Stairs) pr.draw(ox, oy);
-    const list = [...this.props.filter(pr => !(pr instanceof Pool || pr instanceof Stairs)), ...this.pickups, ...this.enemies, this.player];
+    const list = [...this.props.filter(pr => !(pr instanceof Pool || pr instanceof Stairs)), ...this.pickups, ...this.enemies, this.player, ...(this.extra || [])];
     list.sort((a, b) => a.y - b.y);
     for (const e of list) e.draw(ox, oy);
     for (const pr of this.projs) pr.draw(ox, oy);
@@ -531,6 +532,7 @@ class DungeonScene {
     drawFlames(this, ox, oy);
     for (const d of this.rain) { ctx.globalAlpha = 0.45; R(ctx, d.x, d.y, 1, 2, '#7ad8c0'); R(ctx, d.x - 1, d.y + 2, 1, 2, '#7ad8c0'); ctx.globalAlpha = 1; }
     // interaction prompt
+    if (this.cinematic) return;
     if (this.near && this.player.state !== 'dead') worldPrompt(this.near.x - ox, this.near.y - oy - 26, [['A', this.near.interact]]);
     this.drawHUD();
   }
