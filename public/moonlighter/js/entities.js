@@ -92,7 +92,7 @@ function moveBody(e, dx, dy, world, canPit = true, slide = false) {
 
 // ---------------------------------------------------------------- weapons
 const WK = {
-  sword: { combo: 3, dur: [0.24, 0.24, 0.34], mul: [1, 1, 1.5], reach: 18, arc: 2.0, lunge: 60, kb: 70, big: false },
+  sword: { combo: 3, dur: [0.25, 0.25, 0.34], mul: [1, 1, 1.5], reach: 28, arc: 2.4, lunge: 50, kb: 80, big: false },
   big: { combo: 2, dur: [0.46, 0.56], mul: [1, 1.5], reach: 25, arc: 2.8, lunge: 40, kb: 150, big: true },
   spear: { combo: 3, dur: [0.28, 0.28, 0.38], mul: [1, 1, 1.5], reach: 31, arc: 0.7, lunge: 40, kb: 90 },
   gloves: { combo: 4, dur: [0.14, 0.14, 0.14, 0.32], mul: [1, 1, 1, 2.2], reach: 15, arc: 1.5, lunge: 40, kb: 40 },
@@ -188,19 +188,21 @@ class Player {
       this.dir = stickyDir(this.dir, ax.x, ax.y);
       const running = Input.runHeld() && !this.exhausted;
       if (running) { this.stam -= 16 * dt; this.stamCd = 0.45; if (this.stam <= 0) { this.stam = 0; this.exhausted = true; } }
-      const sp = st.speed * (running ? 1.55 : 1);
+      const sp = st.speed * (running ? 1.45 : 1);
       // quick acceleration: snappy but without the jerk of instant starts and turns
-      const k = 1 - Math.exp(-dt * 24);
+      const k = 1 - Math.exp(-dt * 16);
       this.vx += (ax.x * sp - this.vx) * k; this.vy += (ax.y * sp - this.vy) * k;
       const hit = moveBody(this, this.vx * dt, this.vy * dt, world, true, true);
       if (hit.hitX && Math.abs(ax.x) < 0.3) this.vx = 0; if (hit.hitY && Math.abs(ax.y) < 0.3) this.vy = 0;
       if (this.state !== (running ? 'run' : 'walk')) this.anim = 0;
-      this.anim += dt * (running ? 14 : 8); this.state = running ? 'run' : 'walk';
+      // legs keep pace with the actual speed (no sliding feet on a light stick push)
+      const pace = clamp(Math.hypot(this.vx, this.vy) / st.speed, 0.45, 1.5);
+      this.anim += dt * (running ? 12 : 7.5) * pace; this.state = running ? 'run' : 'walk';
       this.stepT -= dt;
       if (this.stepT <= 0) { this.stepT = running ? 0.18 : 0.3; if (mode !== 'dungeon') sfx('step'); if (running) FX.dust(sc, this.x - ax.x * 4, this.y, 2); }
     } else {
       // tiny glide to a stop
-      const k = 1 - Math.exp(-dt * 28); this.vx -= this.vx * k; this.vy -= this.vy * k;
+      const k = 1 - Math.exp(-dt * 22); this.vx -= this.vx * k; this.vy -= this.vy * k;
       if (Math.abs(this.vx) + Math.abs(this.vy) > 3) moveBody(this, this.vx * dt, this.vy * dt, world, true, true); else this.vx = this.vy = 0;
       if (this.state !== 'idle') this.anim = 0; this.state = 'idle'; this.anim += dt * 2.2;
     }
@@ -415,12 +417,14 @@ class Player {
     ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang + Math.PI / 4); ctx.drawImage(ic, -3, -ic.height + 3); ctx.restore();
     // slash trail
     if (p < 0.8) {
+      // crescent that shows the real reach of the swing
       const reach = (kind === 'spear' ? 26 : k.reach) + 2;
-      ctx.globalAlpha = 0.55 * (1 - p); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = kind === 'big' ? 4 : 3;
-      ctx.beginPath();
-      const a1 = from, a2 = ang;
-      ctx.arc(hx, hy, reach * 0.8, Math.min(a1, a2), Math.max(a1, a2));
-      ctx.stroke(); ctx.globalAlpha = 1;
+      const a1 = Math.min(from, ang), a2 = Math.max(from, ang), fade = 1 - p / 0.8;
+      ctx.globalAlpha = 0.4 * fade; ctx.fillStyle = '#dff4ff';
+      ctx.beginPath(); ctx.arc(hx, hy, reach * 0.95, a1, a2); ctx.arc(hx, hy, reach * 0.5, a2, a1, true); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = kind === 'big' ? 3 : 2;
+      ctx.beginPath(); ctx.arc(hx, hy, reach * 0.92, a1, a2); ctx.stroke();
+      ctx.globalAlpha = 1;
     }
     if (this.state === 'special' && this.spin && this.st > this.specDur * 0.9) this.spin = false;
   }

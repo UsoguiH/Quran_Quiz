@@ -176,7 +176,7 @@ const Input = (() => {
     KeyZ: ['LT'], KeyC: ['RT'],
   };
   const down = {}, prev = {}, src = { key: {}, pad: {}, touch: {} }, latch = new Set(); // latch: presses shorter than a frame still count
-  let stick = { x: 0, y: 0 }, stickRaw = 0, padStick = { x: 0, y: 0 }, analogMag = 0;
+  let stick = { x: 0, y: 0 }, stickRaw = 0, rimT = 0, padStick = { x: 0, y: 0 }, analogMag = 0;
   let lastDevice = 'key';
   const rep = { dir: null, t: 0 };
   let anyPressedFlag = false;
@@ -371,13 +371,14 @@ const Input = (() => {
     if (d !== rep.dir) { rep.dir = d; rep.t = 0.32; rep.fire = d; }
     else if (d) { rep.t -= dt; if (rep.t <= 0) { rep.t = 0.09; rep.fire = d; } }
     const had = anyPressedFlag; anyPressedFlag = false; rep.any = had;
+    rimT = stickRaw >= 0.97 ? rimT + dt : 0;
   }
   function axis() {
     let x = 0, y = 0;
     if (src.key.LEFT || src.pad.LEFT) x -= 1; if (src.key.RIGHT || src.pad.RIGHT) x += 1;
     if (src.key.UP || src.pad.UP) y -= 1; if (src.key.DOWN || src.pad.DOWN) y += 1;
     x += padStick.x + stick.x; y += padStick.y + stick.y;
-    analogMag = Math.max(Math.hypot(padStick.x, padStick.y), stickRaw);
+    analogMag = Math.max(Math.hypot(padStick.x, padStick.y), stickRaw >= 0.97 && rimT > 0.3 ? 1 : 0);
     const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
     if (l < 0.18) { x = 0; y = 0; }
     return { x, y };

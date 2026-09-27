@@ -53,7 +53,7 @@ function playerStats() {
   let hp = 100, def = 0, spd = 0;
   for (const k of ['helm', 'chest', 'boots']) { const t = S.gear[k]; if (t >= 0) { hp += ARMOR_LINES[k].hp[t]; def += ARMOR_LINES[k].def[t]; spd += ARMOR_LINES[k].spd[t]; } }
   return {
-    maxHp: hp, def, spd, speed: 74 * (1 + spd / 100),
+    maxHp: hp, def, spd, speed: 62 * (1 + spd / 100),
     dmg: line => { const L = WEAPON_LINES[line]; return L && S.gear[line] >= 0 ? L.dmg[S.gear[line]] : 10; },
   };
 }
