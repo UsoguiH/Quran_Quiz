@@ -112,8 +112,7 @@ void main(){
     if (!ok) return;
     glcv.width = cv.width; glcv.height = cv.height;
     glcv.style.width = cv.style.width; glcv.style.height = cv.style.height;
-    const r = cv.getBoundingClientRect(), pr = document.getElementById('wrap').getBoundingClientRect();
-    glcv.style.left = (r.left - pr.left) + 'px'; glcv.style.top = (r.top - pr.top) + 'px';
+    glcv.style.left = cv.offsetLeft + 'px'; glcv.style.top = cv.offsetTop + 'px';
     gl.viewport(0, 0, glcv.width, glcv.height);
     sync();
   }

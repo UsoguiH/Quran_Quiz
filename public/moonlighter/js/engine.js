@@ -14,14 +14,30 @@ const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 let VIEW = { s: 1, left: 0, top: 0 };
 
+// Phones held upright (and embedded previews that can't rotate): the whole game is
+// turned sideways to fill the screen; turn the phone to play. VP is the stage size.
+const VP = {
+  rot: false, w: innerWidth, h: innerHeight,
+  // screen (client) coords -> stage coords
+  toStage(x, y) { return this.rot ? { x: y, y: innerWidth - x } : { x, y }; },
+};
+function updateVP() {
+  const touch = document.body.classList.contains('touch');
+  VP.rot = touch && innerHeight > innerWidth && (typeof OPTS === 'undefined' || OPTS.sideways !== false);
+  VP.w = VP.rot ? innerHeight : innerWidth; VP.h = VP.rot ? innerWidth : innerHeight;
+  const st = document.getElementById('stage');
+  if (st) Object.assign(st.style, { width: VP.w + 'px', height: VP.h + 'px', transform: VP.rot ? `translate(${innerWidth}px, 0) rotate(90deg)` : 'none' });
+  document.body.classList.toggle('sideways', VP.rot);
+}
 function resize() {
+  updateVP();
   let dpr = Math.min(window.devicePixelRatio || 1, 3);
   const touch = document.body.classList.contains('touch');
-  const portrait = innerHeight > innerWidth;
+  const portrait = VP.h > VP.w;
   document.body.classList.toggle('portrait', portrait);
-  let availH = innerHeight;
-  if (touch && portrait) availH = innerHeight * 0.58;
-  const s = Math.min(innerWidth / W, availH / H);
+  let availH = VP.h;
+  if (touch && portrait) availH = VP.h * 0.58;
+  const s = Math.min(VP.w / W, availH / H);
   VIEW.s = s;
   cv.style.width = Math.floor(W * s) + 'px';
   cv.style.height = Math.floor(H * s) + 'px';
@@ -159,7 +175,7 @@ const Store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-const OPTS = Object.assign({ voice: 'speech', voiceVol: 0.9, fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false, tutorial: true },
+const OPTS = Object.assign({ voice: 'speech', voiceVol: 0.9, fx: true, shake: 0.5, vibration: true, textSpeed: 1, music: 0.5, sfx: 0.7, lang: 'English', showTouch: 'auto', fullscreen: false, tutorial: true, sideways: true },
   Store.get('mk_opts', {}));
 function saveOpts() { Store.set('mk_opts', OPTS); }
 
@@ -203,12 +219,12 @@ const Input = (() => {
   function grabStick(e, fl) {
     stickId = e.pointerId; floating = fl;
     try { (floating ? zone : stickEl).setPointerCapture(e.pointerId); } catch (err) { /* synthetic or stale pointer */ }
-    const r = stickEl.getBoundingClientRect(); stickR = r.width / 2;
+    stickR = stickEl.offsetWidth / 2;
     if (floating) {
       // the stick jumps under the thumb
-      stickC = { x: e.clientX, y: e.clientY };
-      stickEl.style.left = (e.clientX - stickR) + 'px'; stickEl.style.top = (e.clientY - stickR) + 'px';
-    } else stickC = { x: r.left + stickR, y: r.top + stickR };
+      stickC = VP.toStage(e.clientX, e.clientY);
+      stickEl.style.left = (stickC.x - stickR) + 'px'; stickEl.style.top = (stickC.y - stickR) + 'px';
+    } else stickC = { x: stickEl.offsetLeft + stickR, y: stickEl.offsetTop + stickR };
     stickEl.classList.add('active');
     moveStick(e); anyPressedFlag = true; AudioSys.unlock();
   }
@@ -226,7 +242,8 @@ const Input = (() => {
   function moveStick(e) {
     // short thumb travel: full tilt at 55% of the ring, so small drags are enough
     const travel = stickR * 0.55;
-    let dx = (e.clientX - stickC.x) / travel, dy = (e.clientY - stickC.y) / travel;
+    const q = VP.toStage(e.clientX, e.clientY);
+    let dx = (q.x - stickC.x) / travel, dy = (q.y - stickC.y) / travel;
     const l = Math.hypot(dx, dy);
     if (l > 1) {
       // drag the base along when the thumb slides past the rim (dynamic joystick)
@@ -261,7 +278,8 @@ const Input = (() => {
   }
   // taps / clicks on the game canvas, in logical coordinates
   const ptr = { x: 0, y: 0, down: false, id: null };
-  const toLogical = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
+  // canvas position is measured in stage coords, so taps work when the stage is turned sideways
+  const toLogical = e => { const q = VP.toStage(e.clientX, e.clientY); return { x: (q.x - cv.offsetLeft) / cv.offsetWidth * W, y: (q.y - cv.offsetTop) / cv.offsetHeight * H }; };
   window.addEventListener('pointermove', e => { if (ptr.down && e.pointerId === ptr.id) Object.assign(ptr, toLogical(e)); });
   for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, e => { if (e.pointerId === ptr.id) ptr.down = false; });
   cv.addEventListener('pointerdown', e => {
@@ -271,10 +289,10 @@ const Input = (() => {
     if (e.pointerType === 'touch') lastDevice = 'touch';
   });
   function layoutTouch() {
-    const portrait = innerHeight > innerWidth, cl = document.body.classList;
+    const portrait = VP.h > VP.w, cl = document.body.classList;
     const mode = cl.contains('ui') ? 'ui' : cl.contains('peace') ? 'peace' : 'fight';
     const btns = {}; touchEl.querySelectorAll('.tbtn').forEach(b => btns[b.dataset.b] = b);
-    const u = Math.min(innerWidth, innerHeight);
+    const u = Math.min(VP.w, VP.h);
     const k = clamp(u / 150, 2, 3.2); // css px per art pixel of the button skins
     // medallion skins are (d+6) x (d+7) art pixels including their drop shadow
     const place = (el, x, y, w, h = w) => { if (el) Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
@@ -284,36 +302,36 @@ const Input = (() => {
     const big = 32 * k, sat = 24 * k;
     if (portrait) {
       // controls sit under the game view
-      const top = (VIEW.bottom || innerHeight * 0.58 + 28) + 10;
+      const top = (VIEW.bottom || VP.h * 0.58 + 28) + 10;
       const row = ['START', 'SELECT', 'LB', 'RB', 'PENDANT'].concat(fsShown ? ['FS'] : []);
       const rowY = top + (sm + 7) * k / 2;
-      row.forEach((n, i) => med(btns[n], innerWidth * (i + 0.5) / row.length, rowY, sm));
-      const areaT = rowY + (sm + 7) * k / 2 + 8, midY = (areaT + innerHeight - 12) / 2;
-      sr = Math.min(innerWidth * 0.42, (innerHeight - areaT) * 0.8);
-      sx = innerWidth * 0.26; sy = midY;
-      bx = innerWidth - big / 2 - 20; by = midY + sat * 0.45;
+      row.forEach((n, i) => med(btns[n], VP.w * (i + 0.5) / row.length, rowY, sm));
+      const areaT = rowY + (sm + 7) * k / 2 + 8, midY = (areaT + VP.h - 12) / 2;
+      sr = Math.min(VP.w * 0.42, (VP.h - areaT) * 0.8);
+      sx = VP.w * 0.26; sy = midY;
+      bx = VP.w - big / 2 - 20; by = midY + sat * 0.45;
     } else {
-      sr = u * 0.42; sx = sr * 0.62 + 14; sy = innerHeight - sr * 0.62 - 14;
-      bx = innerWidth - big / 2 - 22; by = innerHeight - big / 2 - 14;
-      const side = (innerWidth - W * VIEW.s) / 2; // letterbox bars beside the game view
+      sr = u * 0.42; sx = sr * 0.62 + 14; sy = VP.h - sr * 0.62 - 14;
+      bx = VP.w - big / 2 - 22; by = VP.h - big / 2 - 14;
+      const side = (VP.w - W * VIEW.s) / 2; // letterbox bars beside the game view
       const step = (sm + 9) * k;
       if (side >= (sm + 8) * k) {
         // wide phones: small buttons live in the empty side bars, clear of the HUD
-        ['SELECT', 'RB', 'LB'].forEach((n, i) => med(btns[n], innerWidth - side / 2, 10 + step / 2 + i * step, sm));
+        ['SELECT', 'RB', 'LB'].forEach((n, i) => med(btns[n], VP.w - side / 2, 10 + step / 2 + i * step, sm));
         ['START', 'PENDANT', 'FS'].forEach((n, i) => med(btns[n], side / 2, 10 + step / 2 + i * step, sm));
       } else {
         // 16:9 screens: a compact row between the stick and the action buttons, pause + fullscreen up top
         const kk = k * 0.8, row = ['SELECT', 'LB', 'RB', 'PENDANT'], st = (sm + 8) * kk;
         const cx = (sx + sr / 2 + bx - big / 2 - sat - 8) / 2;
-        row.forEach((n, i) => med(btns[n], cx + (i - (row.length - 1) / 2) * st, innerHeight - (sm + 7) * kk / 2 - 4, sm, kk));
-        med(btns.START, innerWidth / 2 - st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
-        med(btns.FS, innerWidth / 2 + st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
+        row.forEach((n, i) => med(btns[n], cx + (i - (row.length - 1) / 2) * st, VP.h - (sm + 7) * kk / 2 - 4, sm, kk));
+        med(btns.START, VP.w / 2 - st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
+        med(btns.FS, VP.w / 2 + st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
       }
     }
     place(stickEl, sx, sy, sr); stickHome = { x: sx, y: sy };
     // the floating-stick zone covers the lower-left of the screen
-    if (portrait) { const zt = (VIEW.bottom || innerHeight * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight - zt) + 'px' }); }
-    else Object.assign(zone.style, { left: '0px', top: (innerHeight * 0.22) + 'px', width: (innerWidth * 0.5) + 'px', height: (innerHeight * 0.78) + 'px' });
+    if (portrait) { const zt = (VIEW.bottom || VP.h * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h - zt) + 'px' }); }
+    else Object.assign(zone.style, { left: '0px', top: (VP.h * 0.22) + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h * 0.78) + 'px' });
     // action buttons: one big thumb button in the corner, the others fanned around it
     const Rr = (big + sat) / 2 + 6;
     const at = deg => [bx + Math.cos(deg * Math.PI / 180) * Rr, by + Math.sin(deg * Math.PI / 180) * Rr];
@@ -328,10 +346,10 @@ const Input = (() => {
     }
     const hint = document.getElementById('aHint');
     if (hint) {
-      const r = Math.min(innerWidth - 6, aPos[0] + sat * 0.6), hb = aPos[1] - (mode === 'fight' ? sat : big) / 2 - 4;
+      const r = Math.min(VP.w - 6, aPos[0] + sat * 0.6), hb = aPos[1] - (mode === 'fight' ? sat : big) / 2 - 4;
       Object.assign(hint.style, { left: (r - 300) + 'px', width: '300px', top: (hb - 30) + 'px', height: '30px' });
     }
-    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, innerWidth - 16 - 40 * kk / 2, 12 + 18 * kk / 2, 40 * kk, 18 * kk); }
+    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, VP.w - 16 - 40 * kk / 2, 12 + 18 * kk / 2, 40 * kk, 18 * kk); }
     if (cl.contains('cine')) med(btns.FS, 16 + (sm + 6) * k * 0.4, 12 + (sm + 7) * k * 0.4, sm, k * 0.8);
   }
 
