@@ -188,7 +188,7 @@ class Player {
       this.dir = stickyDir(this.dir, ax.x, ax.y);
       const running = Input.runHeld() && !this.exhausted;
       if (running) { this.stam -= 16 * dt; this.stamCd = 0.45; if (this.stam <= 0) { this.stam = 0; this.exhausted = true; } }
-      const sp = st.speed * (running ? 1.45 : 1);
+      const sp = st.speed * (running ? 1.5 : 1);
       // quick acceleration: snappy but without the jerk of instant starts and turns
       const k = 1 - Math.exp(-dt * 16);
       this.vx += (ax.x * sp - this.vx) * k; this.vy += (ax.y * sp - this.vy) * k;

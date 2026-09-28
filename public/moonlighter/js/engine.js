@@ -9,6 +9,9 @@ const W = 384, H = 216;           // logical resolution (16:9, 16px tiles)
 const TILE = 16;
 const FONT = '"Pixelify Sans", "Silkscreen", monospace';
 const FONT_TITLE = '"Silkscreen", "Pixelify Sans", monospace';
+// cinematic lettering (cutscenes): an elegant serif and Roman capitals
+const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
+const DISPLAY = '"Cinzel", "Cormorant Garamond", Georgia, serif';
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -130,18 +133,18 @@ function fmt(n) { return Math.floor(n).toLocaleString('en-US'); }
 
 // ---------------------------------------------------------------- text
 const _mcache = new Map();
-function setFont(size = 8, bold = false, fam = FONT) { ctx.font = `${bold ? 700 : 400} ${size}px ${fam}`; }
-function textW(s, size = 8, bold = false, fam = FONT) {
-  const k = size + '|' + bold + '|' + fam + '|' + s;
+function setFont(size = 8, bold = false, fam = FONT, italic = false) { ctx.font = `${italic ? 'italic ' : ''}${bold ? 700 : 400} ${size}px ${fam}`; }
+function textW(s, size = 8, bold = false, fam = FONT, italic = false) {
+  const k = size + '|' + bold + '|' + fam + '|' + italic + '|' + s;
   let v = _mcache.get(k);
-  if (v === undefined) { setFont(size, bold, fam); v = ctx.measureText(s).width; if (_mcache.size > 4000) _mcache.clear(); _mcache.set(k, v); }
+  if (v === undefined) { setFont(size, bold, fam, italic); v = ctx.measureText(s).width; if (_mcache.size > 4000) _mcache.clear(); _mcache.set(k, v); }
   return v;
 }
 // draw text; o = {size, color, align, bold, shadow, outline, fam, alpha}
 function txt(s, x, y, o = {}) {
   s = String(s);
   const size = o.size || 8;
-  setFont(size, o.bold, o.fam || FONT);
+  setFont(size, o.bold, o.fam || FONT, o.italic);
   ctx.textAlign = o.align || 'left';
   if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
   if (o.outline) {
@@ -155,14 +158,14 @@ function txt(s, x, y, o = {}) {
   ctx.textAlign = 'left';
 }
 // word wrap -> lines
-function wrapText(s, maxW, size = 8) {
+function wrapText(s, maxW, size = 8, fam = FONT, italic = false) {
   const out = [];
   for (const para of String(s).split('\n')) {
     const words = para.split(' ');
     let line = '';
     for (const w of words) {
       const t = line ? line + ' ' + w : w;
-      if (textW(t, size) > maxW && line) { out.push(line); line = w; } else line = t;
+      if (textW(t, size, false, fam, italic) > maxW && line) { out.push(line); line = w; } else line = t;
     }
     out.push(line);
   }

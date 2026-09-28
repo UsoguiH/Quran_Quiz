@@ -53,7 +53,7 @@ function playerStats() {
   let hp = 100, def = 0, spd = 0;
   for (const k of ['helm', 'chest', 'boots']) { const t = S.gear[k]; if (t >= 0) { hp += ARMOR_LINES[k].hp[t]; def += ARMOR_LINES[k].def[t]; spd += ARMOR_LINES[k].spd[t]; } }
   return {
-    maxHp: hp, def, spd, speed: 62 * (1 + spd / 100),
+    maxHp: hp, def, spd, speed: 72 * (1 + spd / 100),
     dmg: line => { const L = WEAPON_LINES[line]; return L && S.gear[line] >= 0 ? L.dmg[S.gear[line]] : 10; },
   };
 }
@@ -197,7 +197,7 @@ function frame(now) {
     Game.scene.draw();
     Tutorial.draw();
     UI.draw();
-    Toasts.draw();
+    if (!(Game.scene instanceof Cutscene)) Toasts.draw();
     if (Game.fadeDir) { const a = Game.fadeDir === 1 ? Game.fadeT : 1 - Game.fadeT; ctx.globalAlpha = clamp(a, 0, 1); R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
     Game.fxHit = Math.max(0, (Game.fxHit || 0) - dt * 3);
     PostFX.render(fxParams(), dt);
@@ -211,7 +211,7 @@ async function boot() {
   R(ctx, 0, 0, W, H, '#000');
   try {
     await Promise.race([
-      Promise.all([document.fonts.load('8px "Pixelify Sans"'), document.fonts.load('700 8px "Pixelify Sans"'), document.fonts.load('700 8px "Silkscreen"'), document.fonts.load('8px "Silkscreen"')]),
+      Promise.all([document.fonts.load('8px "Pixelify Sans"'), document.fonts.load('700 8px "Pixelify Sans"'), document.fonts.load('700 8px "Silkscreen"'), document.fonts.load('8px "Silkscreen"'), document.fonts.load('600 8px "Cinzel"'), document.fonts.load('italic 500 8px "Cormorant Garamond"'), document.fonts.load('600 8px "Cormorant Garamond"')]),
       new Promise(r => setTimeout(r, 2500)),
     ]);
   } catch (e) { /* offline: fall back to monospace */ }

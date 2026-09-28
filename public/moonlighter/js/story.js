@@ -88,7 +88,7 @@ class Actor {
 
 // ---------------------------------------------------------------- cutscene engine (cinematic)
 const WHO_ACTOR = { Keeper: 'hero', 'Elder Oren': 'elder', Aldric: 'aldric' };
-const WHO_COL = { Keeper: '#ff7a6a', 'Elder Oren': '#8ad8a8', Aldric: '#f0c878', Guardian: '#c88ae8', Narrator: '#efe3c5' };
+const WHO_COL = { Keeper: '#ec9a86', 'Elder Oren': '#b4dcb4', Aldric: '#ecd49a', Guardian: '#c8a4ec', Narrator: '#d9b86a', Pip: '#f0b070' };
 class Cutscene {
   constructor(stage, steps, o = {}) {
     this.stage = stage; this.steps = steps; this.o = o;
@@ -97,6 +97,7 @@ class Cutscene {
     this.bars = 0; this.fade = o.startBlack ? 1 : 0; this.flash = 0; this.flashCol = '#ffffff'; this.flash2 = 0;
     this.rain = []; this.raining = false; this.box = null; this.card = null; this.credits = null; this.skipT = 0; this.overlay = null; this.shakeT = 0;
     this.fog = false; this.fogA = 0; this.motes = Array.from({ length: 36 }, () => ({ x: rand(W), y: rand(H), v: rand(3, 9), ph: rand(6) }));
+    this.petals = Array.from({ length: 34 }, () => newPetal(true)); this.petalsOn = o.petals !== false; this.petalA = 0;
     const p = stage.player && stage.player.x > -500 ? stage.player : { x: W / 2, y: H / 2 };
     this.cam = { x: p.x, y: p.y - 12, z: 1 }; this.camT = { ...this.cam }; this.camRate = 2; this.follow = null;
     this.next();
@@ -127,6 +128,7 @@ class Cutscene {
     if (s.shake) this.shakeT = s.shake;
     if (s.rain !== undefined) this.raining = s.rain;
     if (s.fog !== undefined) this.fog = s.fog;
+    if (s.petals !== undefined) this.petalsOn = s.petals;
     if (s.spawn) this.add(new Actor(s.spawn, s.kind || 'person', s.x, s.y, s));
     if (s.face) this.actors[s.face].dir = s.dir;
     if (s.emote) { const a = this.actors[s.emote] || (s.emote === 'hero' ? null : null); if (a) a.emote = { e: s.e, t: 0 }; else if (s.emote === 'hero' && this.stage.player) this.stageEmote = { e: s.e, t: 0 }; }
@@ -144,7 +146,7 @@ class Cutscene {
       }
       Voice.speak(text, who);
     }
-    if (s.title) { this.card = { title: s.title, sub: s.sub || '', t: 0, dur: s.t || 3.6 }; sfx('boom'); }
+    if (s.title) { this.card = { title: s.title, sub: s.sub || '', kicker: s.kicker || '', t: 0, dur: s.t || 4.2, strokes: inkStrokes() }; sfx('boom'); }
     if (s.credits) this.credits = { lines: s.credits, y: H + 10, t: 0, flies: Array.from({ length: 34 }, () => ({ x: rand(W), y: rand(H), ph: rand(6) })) };
     if (s.run) s.run(this);
     if (s.move) {
@@ -201,6 +203,8 @@ class Cutscene {
     for (const r of this.rain) { r.y += r.v * dt; r.x -= r.v * 0.3 * dt; if (r.y > H) { if (this.raining) { r.y = -8; r.x = rand(W + 80); } else r.dead = true; } }
     this.rain = this.rain.filter(r => !r.dead);
     for (const m of this.motes) { m.y -= m.v * dt; m.x += Math.sin(this.t * 0.6 + m.ph) * 4 * dt; if (m.y < -4) { m.y = H + 4; m.x = rand(W); } }
+    this.petalA = approach(this.petalA, this.petalsOn && !this.raining ? 1 : 0, dt * 0.6);
+    for (const pt of this.petals) { pt.x += (pt.vx + Math.sin(this.t * pt.sw + pt.ph) * 6) * dt; pt.y += pt.vy * dt; pt.rot += pt.spin * dt; if (pt.y > H + 8 || pt.x < -10) Object.assign(pt, newPetal(false)); }
     if (this.cur && this.cur.every) this.cur.every(this, dt);
     if (Input.pressed('SKIP')) { this.skip(); return; }
     if (Input.down('B') || Input.down('START')) { this.skipT += dt; if (this.skipT > 0.9) { this.skip(); return; } } else this.skipT = 0;
@@ -217,7 +221,8 @@ class Cutscene {
   }
   // ------------------------------------------------------------ drawing
   drawStage() {
-    const st = this.stage, c = this.cam, z = Math.max(1, c.z);
+    // a slow, constant dolly breath keeps every shot alive
+    const st = this.stage, c = this.cam, z = Math.max(1, c.z) * (1 + 0.014 * (1 + Math.sin(this.t * 0.21)));
     const sway = { x: Math.sin(this.t * 0.7) * 0.9 + Math.sin(this.t * 1.9) * 0.3, y: Math.cos(this.t * 0.55) * 0.7 };
     let fsx, fsy;
     if (st instanceof TownScene) {
@@ -236,6 +241,17 @@ class Cutscene {
   }
   draw() {
     this.drawStage();
+    const warmDay = this.stage instanceof TownScene && !this.stage.night;
+    // light shafts on warm days, slowly breathing
+    if (warmDay && !this.card) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 4; k++) {
+        const x0 = 40 + k * 90 + Math.sin(this.t * 0.25 + k) * 12, a = 0.05 + 0.03 * Math.sin(this.t * 0.6 + k * 1.7);
+        const g = ctx.createLinearGradient(x0, 0, x0 - 60, H); g.addColorStop(0, `rgba(255,226,160,${a})`); g.addColorStop(1, 'rgba(255,226,160,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0 + 22 + k * 4, 0); ctx.lineTo(x0 - 50, H); ctx.lineTo(x0 - 90, H); ctx.fill();
+      }
+      ctx.restore();
+    }
     // atmosphere: drifting fog banks and dust motes in the light
     if (this.fogA > 0) {
       for (let k = 0; k < 7; k++) {
@@ -248,94 +264,202 @@ class Cutscene {
     ctx.globalAlpha = 1;
     for (const r of this.rain) { ctx.globalAlpha = 0.45; R(ctx, r.x, r.y, 1, 3, '#9ac8e8'); R(ctx, r.x - 1, r.y + 3, 1, 3, '#9ac8e8'); }
     ctx.globalAlpha = 1;
-    // 2.35:1 letterbox
-    const bh = Math.round(29 * ease(this.bars));
-    if (bh) { R(ctx, 0, 0, W, bh, '#000'); R(ctx, 0, H - bh, W, bh, '#000'); }
-    if (this.fade > 0) { ctx.globalAlpha = clamp(this.fade, 0, 1); R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
-    if (this.box) this.drawSubtitle();
+    if (this.petalA > 0) drawPetals(this.petals, this.petalA);
+    // painterly vignette (also when shaders are off)
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.62);
+    vg.addColorStop(0, 'rgba(8,4,6,0)'); vg.addColorStop(1, 'rgba(8,4,6,0.55)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // 2.35:1 letterbox with gold hairlines
+    const bh = Math.round(26 * ease(this.bars));
+    if (bh) {
+      R(ctx, 0, 0, W, bh, '#040203'); R(ctx, 0, H - bh, W, bh, '#040203');
+      ctx.globalAlpha = 0.45 * this.bars; ctx.fillStyle = CINE.gold; ctx.fillRect(0, bh - 0.5, W, 0.5); ctx.fillRect(0, H - bh, W, 0.5); ctx.globalAlpha = 1;
+    }
+    // fades close like an iris of ink rather than a flat dimmer
+    if (this.fade > 0) inkIris(this.fade);
+    if (this.box) this.drawSubtitle(bh);
     if (this.card) this.drawCard();
     if (this.credits) this.drawCredits();
     if (this.flash > 0) { ctx.globalAlpha = this.flash; R(ctx, 0, 0, W, H, this.flashCol); ctx.globalAlpha = 1; }
     // skip hint (keyboard / pad); phones get a SKIP button
-    if (Input.device() !== 'touch') {
-      const a = 0.4 + (this.skipT > 0 ? 0.5 : 0);
-      const bw = Input.device() === 'key' ? keyCap(KEY_LABEL.B).width - 4 : 13;
-      const x0 = W - 8 - textW('skip', 6) - bw - textW('Hold', 6) - 8;
-      ctx.globalAlpha = a; txt('Hold', x0, 12, { size: 6, color: '#efe3c5' }); ctx.globalAlpha = 1;
-      btnGlyph(x0 + textW('Hold', 6) + 4, 14, 'B');
-      ctx.globalAlpha = a; txt('skip', x0 + textW('Hold', 6) + bw + 8, 12, { size: 6, color: '#efe3c5' }); ctx.globalAlpha = 1;
-      if (this.skipT > 0) R(ctx, x0, 17, (W - 8 - x0) * clamp(this.skipT / 0.9, 0, 1), 1, C.mint);
+    if (Input.device() !== 'touch' && !this.credits) {
+      const a = 0.45 + (this.skipT > 0 ? 0.5 : 0), bw = Input.device() === 'key' ? keyCap(KEY_LABEL.B).width - 4 : 13;
+      const x1 = W - 10, tw = textW('hold to skip', 7, false, SERIF, true);
+      txt('hold to skip', x1, 15, { size: 7, align: 'right', color: CINE.cream, fam: SERIF, italic: true, alpha: a });
+      btnGlyph(x1 - tw - bw - 4, 17, 'B');
+      if (this.skipT > 0) { ctx.globalAlpha = 0.9; ctx.fillStyle = CINE.gold; ctx.fillRect(x1 - tw, 18, tw * clamp(this.skipT / 0.9, 0, 1), 0.6); ctx.globalAlpha = 1; }
     }
   }
-  drawSubtitle() {
-    const b = this.box, a = clamp(b.t / 0.3, 0, 1);
+  drawSubtitle(bh) {
+    const b = this.box, a = clamp(b.t / 0.35, 0, 1);
+    const shown = b.chars | 0;
     if (b.narr) {
-      // narration: centred, each word fades in as it is spoken
-      const full = wrapText(b.text, 300, 9);
-      const shownN = b.chars | 0;
-      let n = 0;
-      const y0 = H * 0.6 - (full.length - 1) * 6;
-      full.forEach((l, k) => {
-        const lw = textW(l, 9); let x = W / 2 - lw / 2;
-        for (const word of l.split(' ')) {
-          const vis = clamp((shownN - n) / 6, 0, 1);
-          if (vis > 0) txt(word, x, y0 + k * 13, { size: 9, color: '#efe3c5', outline: '#07050a', alpha: vis * a });
-          x += textW(word + ' ', 9); n += word.length + 1;
-        }
-      });
+      // narration: an italic serif line in the middle of the frame, words bleeding in like ink
+      const size = 11.5, lines = balancedWrap(b.text, 300, size, SERIF, true);
+      const y0 = H * 0.56 - (lines.length - 1) * 7.5;
+      const band = ctx.createLinearGradient(0, y0 - 30, 0, y0 + lines.length * 15 + 16);
+      band.addColorStop(0, 'rgba(6,3,5,0)'); band.addColorStop(0.5, `rgba(6,3,5,${0.45 * a})`); band.addColorStop(1, 'rgba(6,3,5,0)');
+      ctx.fillStyle = band; ctx.fillRect(0, y0 - 30, W, lines.length * 15 + 46);
+      inkWords(lines, W / 2, y0, 15, size, SERIF, true, CINE.cream, shown, a);
+      const lw = Math.min(90, 20 + this.t * 60) * a;
+      ctx.globalAlpha = 0.55 * a; ctx.fillStyle = CINE.gold; ctx.fillRect(W / 2 - lw / 2, y0 + (lines.length - 1) * 15 + 8, lw, 0.5); ctx.globalAlpha = 1;
+      diamond(W / 2, y0 + (lines.length - 1) * 15 + 8.25, 1.6, CINE.gold, 0.8 * a);
       return;
     }
-    // film subtitles in the lower letterbox, speaker name above, small portrait medallion
-    const col = WHO_COL[b.who] || '#efe3c5';
-    const lines = wrapText(b.text, 290, 8).slice(0, 2);
-    const baseY = H - 29;
-    ctx.globalAlpha = a;
-    if (b.portrait) {
-      const cx = 24, cy = baseY + 2, r = 15;
-      ell(ctx, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2, '#000'); ell(ctx, cx - r, cy - r, r * 2, r * 2, HP_COL.gold); ell(ctx, cx - r + 1, cy - r + 1, r * 2 - 2, r * 2 - 2, b.who === 'Guardian' ? '#1a1420' : '#2a2030');
-      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2); ctx.clip();
-      const p = b.portrait, s = Math.min((r * 2 + 6) / p.height, (r * 2 + 6) / p.width);
-      ctx.drawImage(p, cx - p.width * s / 2, cy - r - 2, p.width * s, p.height * s);
-      ctx.restore();
-    }
-    pText(ctx, b.who.toUpperCase(), W / 2 - pTextW(b.who.toUpperCase()) / 2, baseY + 3, col);
+    // dialogue: film subtitles above the lower bar, the speaker's name in gold capitals between hairlines
+    const size = 10, lines = balancedWrap(b.text, 310, size, SERIF, false).slice(0, 3);
+    const lastY = H - Math.max(bh, 12) - 9, y0 = lastY - (lines.length - 1) * 12;
+    const top = y0 - 26;
+    const g = ctx.createLinearGradient(0, top, 0, H - bh);
+    g.addColorStop(0, 'rgba(4,2,3,0)'); g.addColorStop(0.45, `rgba(4,2,3,${0.5 * a})`); g.addColorStop(1, `rgba(4,2,3,${0.72 * a})`);
+    ctx.fillStyle = g; ctx.fillRect(0, top, W, H - bh - top);
+    const name = b.who.toUpperCase(), ny = y0 - 13;
+    const nw = spacedW(name, 6.5, DISPLAY, 1.4);
+    spaced(name, W / 2, ny, 6.5, DISPLAY, WHO_COL[b.who] || CINE.gold, 1.4, a);
+    const lw = 26 * a;
+    ctx.globalAlpha = 0.7 * a; ctx.fillStyle = CINE.gold;
+    ctx.fillRect(W / 2 - nw / 2 - 6 - lw, ny - 2.5, lw, 0.5); ctx.fillRect(W / 2 + nw / 2 + 6, ny - 2.5, lw, 0.5); ctx.globalAlpha = 1;
+    diamond(W / 2 - nw / 2 - 6 - lw, ny - 2.25, 1.3, CINE.gold, a); diamond(W / 2 + nw / 2 + 6 + lw, ny - 2.25, 1.3, CINE.gold, a);
+    inkWords(lines, W / 2, y0, 12, size, SERIF, false, CINE.cream, shown, a);
     const talking = Voice.busy() || b.chars < b.text.length;
-    if (talking) for (let k = 0; k < 3; k++) R(ctx, W / 2 + pTextW(b.who.toUpperCase()) / 2 + 3 + k * 3, baseY + 5 - (Math.floor(this.t * 8 + k) % 3 === 0 ? 1 : 0), 2, 1, col);
-    lines.forEach((l, k) => txt(l, W / 2, baseY + 17 + k * 10, { size: 8, align: 'center', color: '#f4efe0' }));
-    ctx.globalAlpha = 1;
-    if (!talking && b.hold > 0.2 && Math.sin(this.t * 6) > -0.3) R(ctx, W - 14, H - 9, 4, 4, col);
+    if (!talking && b.hold > 0.2) diamond(W / 2 + textW(lines[lines.length - 1], size, false, SERIF) / 2 + 7, lastY - 3, 1.8, CINE.gold, 0.5 + 0.5 * Math.sin(this.t * 5));
   }
   drawCard() {
-    const c = this.card, T = c.t, out = clamp((c.dur - T) / 0.8, 0, 1);
-    R(ctx, 0, 0, W, H, '#050308');
-    for (const m of this.motes) { ctx.globalAlpha = 0.3 * (Math.sin(this.t * 2 + m.ph) + 1) / 2 * out; P(ctx, m.x, m.y, '#fff4d0'); }
-    ctx.globalAlpha = 1;
-    // letters rise and fade in one by one
-    const size = c.title.length > 12 ? 12 : 16, sp = size * 0.95;
-    const tw = c.title.length * sp, x0 = W / 2 - tw / 2 + sp / 2;
+    const c = this.card, T = c.t, out = clamp((c.dur - T) / 0.9, 0, 1), inn = clamp(T / 0.6, 0, 1);
+    // dark painted ground
+    const bg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.7);
+    bg.addColorStop(0, '#22151a'); bg.addColorStop(1, '#070405');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // ink strokes brushed across the canvas
+    ctx.save(); ctx.lineCap = 'round';
+    for (const st of c.strokes) {
+      const k = ease(clamp((T - st.d) / 0.9, 0, 1));
+      if (k <= 0) continue;
+      ctx.strokeStyle = st.col; ctx.globalAlpha = st.a * out; ctx.lineWidth = st.w;
+      ctx.setLineDash([st.len, st.len]); ctx.lineDashOffset = st.len * (1 - k);
+      ctx.beginPath(); ctx.moveTo(st.x0, st.y0); ctx.quadraticCurveTo(st.cx, st.cy, st.x1, st.y1); ctx.stroke();
+    }
+    ctx.restore(); ctx.setLineDash([]);
+    drawPetals(this.petals, 0.9 * out);
+    // slow push-in on the lettering
+    const zoom = 1 + T * 0.012;
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2);
+    if (c.kicker) spaced(c.kicker.toUpperCase(), W / 2, H / 2 - 26, 6, DISPLAY, CINE.gold, 2.2, clamp((T - 0.2) / 0.8, 0, 1) * out);
+    // title letters settle in one by one, gilded
+    const size = c.title.length > 14 ? 17 : 22, spc = size * 0.14;
+    const tw = spacedW(c.title, size, DISPLAY, spc);
+    let x = W / 2 - tw / 2;
+    setFont(size, true, DISPLAY);
+    const gold = ctx.createLinearGradient(0, H / 2 - size, 0, H / 2 + 2);
+    gold.addColorStop(0, '#fff3cf'); gold.addColorStop(0.55, '#e3c27a'); gold.addColorStop(1, '#9a6f2c');
     [...c.title].forEach((ch, i) => {
-      const k = clamp((T - 0.3 - i * 0.07) / 0.5, 0, 1) * out;
-      if (k <= 0) return;
-      txt(ch, x0 + i * sp, H / 2 - 4 + (1 - k) * 6, { size, align: 'center', color: '#efe3c5', fam: FONT_TITLE, bold: true, alpha: k });
+      const k = clamp((T - 0.35 - i * 0.06) / 0.7, 0, 1) * out, w = textW(ch, size, true, DISPLAY);
+      if (k > 0) {
+        ctx.globalAlpha = k * 0.5; ctx.fillStyle = '#000'; ctx.fillText(ch, x + 0.6, H / 2 + 1.2 + (1 - k) * 4);
+        ctx.globalAlpha = k; ctx.fillStyle = gold; ctx.fillText(ch, x, H / 2 + (1 - k) * 4);
+      }
+      x += w + spc;
     });
-    const lk = clamp((T - 0.6) / 1.2, 0, 1) * out;
-    ctx.globalAlpha = lk; R(ctx, W / 2 - 70 * ease(lk), H / 2 + 4, 140 * ease(lk), 1, C.teal);
-    ctx.globalCompositeOperation = 'lighter'; const sx = W / 2 - 70 + 140 * ((T * 0.6) % 1); R(ctx, sx - 6, H / 2 + 3, 12, 3, 'rgba(160,255,220,0.5)'); ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = clamp((T - 1.1) / 0.8, 0, 1) * out;
-    txt(c.sub, W / 2, H / 2 + 18, { size: 8, align: 'center', color: C.mint });
     ctx.globalAlpha = 1;
+    // hairlines and a diamond
+    const lk = ease(clamp((T - 0.8) / 1.2, 0, 1)) * out, lw = 110 * lk;
+    ctx.globalAlpha = 0.8 * lk; ctx.fillStyle = CINE.gold;
+    ctx.fillRect(W / 2 - 8 - lw, H / 2 + 9, lw, 0.5); ctx.fillRect(W / 2 + 8, H / 2 + 9, lw, 0.5); ctx.globalAlpha = 1;
+    diamond(W / 2, H / 2 + 9.25, 2.2, CINE.gold, lk);
+    if (c.sub) txt(c.sub, W / 2, H / 2 + 24, { size: 10, align: 'center', color: CINE.cream, fam: SERIF, italic: true, alpha: clamp((T - 1.3) / 0.9, 0, 1) * out });
+    ctx.restore();
+    // fade up from black, down to black
+    const blk = 1 - Math.min(inn, 1) * out;
+    if (blk > 0) { ctx.globalAlpha = blk; R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
   }
   drawCredits() {
     const c = this.credits;
-    R(ctx, 0, 0, W, H, '#050308');
-    for (const f of c.flies) { const k = (Math.sin(c.t * 2 + f.ph) + 1) / 2; f.y -= 0.1; if (f.y < 0) f.y = H; ctx.globalAlpha = k; P(ctx, f.x + Math.sin(c.t + f.ph) * 6, f.y, '#e8f070'); }
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0b0608'); bg.addColorStop(1, '#170d12');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    drawPetals(this.petals, 0.8);
+    for (const f of c.flies) { const k = (Math.sin(c.t * 2 + f.ph) + 1) / 2; f.y -= 0.1; if (f.y < 0) f.y = H; ctx.globalAlpha = k * 0.7; P(ctx, f.x + Math.sin(c.t + f.ph) * 6, f.y, '#f0d890'); }
     ctx.globalAlpha = 1;
     c.lines.forEach((l, k) => {
       const y = c.y + k * 18; if (y < -10 || y > H + 10) return;
       const big = k === 0, a = clamp(Math.min(y / 40, (H - y) / 40), 0, 1);
-      txt(l, W / 2, y, { size: big ? 14 : 8, align: 'center', color: big ? '#efe3c5' : '#c8d8c8', fam: big ? FONT_TITLE : FONT, bold: big, alpha: a });
+      if (big) spaced(l.toUpperCase(), W / 2, y, 15, DISPLAY, '#ecd49a', 2.4, a);
+      else txt(l, W / 2, y, { size: 10, align: 'center', color: CINE.cream, fam: SERIF, italic: !l.includes(':'), alpha: a });
     });
   }
+}
+// ---------------------------------------------------------------- cinematic lettering & paint
+const CINE = { gold: '#d9b86a', cream: '#f3ead6' };
+// wrap into the fewest lines, then even them out so no word is left alone on the last line
+function balancedWrap(s, maxW, size, fam, italic) {
+  const base = wrapText(s, maxW, size, fam, italic);
+  if (base.length < 2) return base;
+  let lo = maxW * 0.4, hi = maxW;
+  for (let i = 0; i < 12; i++) { const mid = (lo + hi) / 2; if (wrapText(s, mid, size, fam, italic).length > base.length) lo = mid; else hi = mid; }
+  return wrapText(s, hi + 1, size, fam, italic);
+}
+function spacedW(s, size, fam, spc) { let w = 0; for (const ch of s) w += textW(ch, size, true, fam) + spc; return w - spc; }
+function spaced(s, cx, y, size, fam, col, spc, alpha = 1) {
+  let x = cx - spacedW(s, size, fam, spc) / 2;
+  setFont(size, true, fam); ctx.globalAlpha = alpha;
+  for (const ch of s) { ctx.fillStyle = '#000'; ctx.fillText(ch, x + 0.5, y + 0.6); ctx.fillStyle = col; ctx.fillText(ch, x, y); x += textW(ch, size, true, fam) + spc; }
+  ctx.globalAlpha = 1;
+}
+function diamond(x, y, r, col, alpha = 1) {
+  ctx.globalAlpha = alpha; ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.fill(); ctx.globalAlpha = 1;
+}
+// centred lines whose words fade in (with a small rise) as they are spoken
+function inkWords(lines, cx, y0, lh, size, fam, italic, col, shown, alpha) {
+  let n = 0;
+  lines.forEach((l, k) => {
+    let x = cx - textW(l, size, false, fam, italic) / 2;
+    for (const word of l.split(' ')) {
+      const vis = clamp((shown - n + 2) / 5, 0, 1);
+      if (vis > 0) {
+        const yy = y0 + k * lh + (1 - vis) * 2;
+        txt(word, x + 0.5, yy + 0.7, { size, fam, italic, color: '#000', alpha: vis * alpha * 0.8 });
+        txt(word, x, yy, { size, fam, italic, color: col, alpha: vis * alpha });
+      }
+      x += textW(word + ' ', size, false, fam, italic); n += word.length + 1;
+    }
+  });
+}
+function newPetal(anywhere) {
+  const near = Math.random() < 0.25;
+  return {
+    x: anywhere ? rand(W) : rand(W * 0.2, W + 40), y: anywhere ? rand(H) : rand(-30, -4),
+    vx: -rand(6, 16) * (near ? 1.6 : 1), vy: rand(9, 20) * (near ? 1.7 : 1), rot: rand(6.28), spin: rand(-2.5, 2.5),
+    sw: rand(0.6, 1.4), ph: rand(6.28), s: near ? rand(2.2, 3.2) : rand(1, 1.8), a: near ? 0.55 : 0.8,
+    col: choice(['#b8324a', '#c8485a', '#8e2436', '#f0e2c0', '#d9b86a']),
+  };
+}
+function drawPetals(list, alpha) {
+  for (const pt of list) {
+    const flip = Math.abs(Math.cos(pt.rot * 0.7));
+    ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(pt.rot);
+    ctx.globalAlpha = alpha * pt.a; ctx.fillStyle = pt.col;
+    ctx.beginPath(); ctx.ellipse(0, 0, pt.s, pt.s * 0.5 * (0.35 + flip * 0.65), 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+function inkStrokes() {
+  const cols = ['#5a1420', '#2a0c12', '#6e2230', '#3a1a10'];
+  return Array.from({ length: 7 }, (_, i) => {
+    const y0 = rand(40, H - 40), y1 = y0 + rand(-40, 40), x0 = rand(-40, 60), x1 = rand(W - 60, W + 40);
+    const cx = (x0 + x1) / 2 + rand(-40, 40), cy = (y0 + y1) / 2 + rand(-50, 50);
+    return { x0, y0, x1, y1, cx, cy, w: rand(8, 26), a: rand(0.25, 0.5), col: choice(cols), d: 0.1 + i * 0.12, len: Math.hypot(x1 - x0, y1 - y0) * 1.25 };
+  });
+}
+// a soft iris of darkness closing on the centre
+function inkIris(f) {
+  f = clamp(f, 0, 1);
+  if (f >= 0.999) { R(ctx, 0, 0, W, H, '#000'); return; }
+  const r = (1 - f) * W * 0.75;
+  const g = ctx.createRadialGradient(W / 2, H / 2, r * 0.55, W / 2, H / 2, r + 40);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${Math.min(1, 0.35 + f)})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = f * 0.85; R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1;
 }
 function isCine() { return Game.scene instanceof Cutscene; }
 
@@ -370,7 +494,7 @@ function storyPrologue() {
     { narrate: 'That was ten years ago. He never came back.' },
     { wait: 1 },
     { fade: 1, t: 1.8 },
-    { ambient: null, rain: false, fog: false, title: GAME_TITLE, sub: 'a story of doors and debts', t: 4.2 },
+    { ambient: null, rain: false, fog: false, kicker: 'A tale of the five doors', title: GAME_TITLE, sub: 'a story of doors and debts', t: 5 },
     { music: 'town', run: cs => {
       pulse = 0; stage.night = false; cs.overlay = null;
       cs.add(new Actor('elder', 'person', 228, 606, { look: NPC_LOOKS.elder, dir: 0 }));
@@ -402,7 +526,7 @@ function storyPrologue() {
     { shot: [205, 540], z: 1.0, rate: 0.3 },
     { wait: 1.8 },
     { fade: 1, t: 1.4 },
-    { title: 'Chapter I', sub: CHAPTERS[0], t: 3.6 },
+    { kicker: 'Chapter I', title: CHAPTERS[0], sub: 'where the candles still burn', t: 4.6 },
   ];
   function fifthDoorPulse(cs) {
     if (!pulse) return;
@@ -451,7 +575,7 @@ function storyGuardianFalls(sc) {
     { run: cs => { cs.actor('key').alpha = 0; FX.burst(sc, p.x, p.y - 12, [col, '#ffffff', C.gold], 26, 80); FX.ring(sc, p.x, p.y - 8, col, 4, 34, 0.6); }, sfx: 'open', flash: col, shot: 'hero', z: 2.1, rate: 5 },
     { emote: 'hero', e: '!', wait: 1.2 },
     { fade: 1, t: 1 },
-    i < 3 ? { title: 'Chapter ' + ['II', 'III', 'IV'][i], sub: CHAPTERS[i + 1] + ' is now open', t: 3.4 } : { title: 'Finale', sub: 'Return to the Fifth Door', t: 3.6 },
+    i < 3 ? { kicker: 'Chapter ' + ['II', 'III', 'IV'][i], title: CHAPTERS[i + 1], sub: 'the way below is open', t: 4.4 } : { kicker: 'Finale', title: 'The Fifth Door', sub: 'the last lock is light', t: 4.8 },
     { run: cs => cs.setCam(192, 120, 1.0, true) },
     { fade: 0, t: 0.8 },
   ];

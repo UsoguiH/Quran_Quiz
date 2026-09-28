@@ -174,6 +174,6 @@ function fxParams() {
     p.dead = HUD.dead;
   }
   p.aberr = Game.fxHit || 0;
-  if (Game.scene instanceof Cutscene) { p.vig = Math.min(0.85, p.vig + 0.22); p.grain = 0.05; p.contrast *= 1.07; p.sat *= 0.94; p.dof = 1; p.lowhp = 0; }
+  if (Game.scene instanceof Cutscene) { p.vig = Math.min(0.85, p.vig + 0.22); p.grain = 0.05; p.contrast *= 1.07; p.sat *= 0.94; p.dof = 0.35; p.warm = Math.max(p.warm, 0.35); p.lowhp = 0; }
   return p;
 }
