@@ -9,9 +9,9 @@ const W = 384, H = 216;           // logical resolution (16:9, 16px tiles)
 const TILE = 16;
 const FONT = '"Pixelify Sans", "Silkscreen", monospace';
 const FONT_TITLE = '"Silkscreen", "Pixelify Sans", monospace';
-// cinematic lettering (cutscenes): an elegant serif and Roman capitals
-const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
-const DISPLAY = '"Cinzel", "Cormorant Garamond", Georgia, serif';
+// cinematic lettering (cutscenes): the game's own pixel fonts
+const SERIF = FONT;
+const DISPLAY = FONT_TITLE;
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -133,7 +133,7 @@ function fmt(n) { return Math.floor(n).toLocaleString('en-US'); }
 
 // ---------------------------------------------------------------- text
 const _mcache = new Map();
-function setFont(size = 8, bold = false, fam = FONT, italic = false) { ctx.font = `${italic ? 'italic ' : ''}${bold ? 700 : 400} ${size}px ${fam}`; }
+function setFont(size = 8, bold = false, fam = FONT, italic = false) { if (/Pixelify|Silkscreen/.test(fam)) italic = false; ctx.font = `${italic ? 'italic ' : ''}${bold ? 700 : 400} ${size}px ${fam}`; }
 function textW(s, size = 8, bold = false, fam = FONT, italic = false) {
   const k = size + '|' + bold + '|' + fam + '|' + italic + '|' + s;
   let v = _mcache.get(k);
@@ -485,6 +485,8 @@ const AudioSys = (() => {
     slam: () => { noise(0.5, 0.55, 500, 40, 0, 0.7, 'lowpass'); tone('sine', 70, 35, 0.4, 0.45); },
     heal: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone('sine', f, f, 0.2, 0.15, i * 0.05)),
     error: () => { tone('square', 160, 140, 0.15, 0.15); tone('square', 120, 110, 0.15, 0.12, 0.08); },
+    heart: () => { tone('sine', 72, 38, 0.14, 0.55); tone('sine', 66, 36, 0.12, 0.42, 0.24); },
+    chime: () => { tone('sine', 1568, 1568, 1.6, 0.06); tone('sine', 2349, 2349, 1.8, 0.035, 0.12); tone('sine', 1175, 1175, 2, 0.05, 0.25); },
     cash: () => { noise(0.08, 0.3, 4000, 3000, 0, 2); tone('square', 1318, 1318, 0.1, 0.12, 0.05); tone('square', 1760, 1760, 0.3, 0.12, 0.12); },
     alarm: () => { for (let i = 0; i < 4; i++) tone('square', i % 2 ? 660 : 880, i % 2 ? 660 : 880, 0.1, 0.1, i * 0.11); },
     death: () => [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, f * 0.98, 0.35, 0.22, i * 0.22)),
@@ -564,6 +566,14 @@ const AudioSys = (() => {
     { inst: 'pad', vol: 0.06, seq: 'C5 - - - - - - - - - - - - - - - A4 - - - - - - - - - - - - - - - E5 - - - - - - - - - - - - - - - B4 - - - - - - - - - - - - - - -' },
     { inst: 'bell', vol: 0.12, seq: 'E5 . . . . . . . A5 . . . G5 . . . . . . . . . . . E5 . . . . . . . G5 . . . . . . . C6 . . . B5 . . . . . . . . . . . D5 . . . . . . .' },
     { inst: 'bass', vol: 0.18, seq: 'A1 - - - . . . . A1 - - - . . . . F1 - - - . . . . F1 - - - . . . . C2 - - - . . . . C2 - - - . . . . G1 - - - . . . . G1 - - - . . . .' },
+  ]);
+  // the letter: a music box in D minor over soft pads
+  const held = arr => arr.map(n => n + ' -'.repeat(15)).join(' ');
+  defTrack('lament', 54, [
+    { inst: 'bell', vol: 0.13, seq: 'D5 . . . F5 . . . A5 . . . G5 . F5 . E5 . . . . . . . C5 . . . D5 . E5 . F5 . . . E5 . D5 . C#5 . . . A4 . . . D5 . . . . . . . . . . . . . . . A5 . . . G5 . F5 . E5 . . . F5 . G5 . A5 . . . D6 . . . C6 . A5 . . . . . A#5 . . . A5 . G5 . F5 . . . E5 . . . D5 . . . . . . . . . . . . . . .' },
+    { inst: 'pad', vol: 0.07, seq: held(['D4', 'C4', 'A#3', 'D4', 'F4', 'D4', 'A#3', 'A3']) },
+    { inst: 'pad', vol: 0.055, seq: held(['F4', 'E4', 'D4', 'F4', 'A4', 'F4', 'D4', 'C#4']) },
+    { inst: 'bass', vol: 0.15, seq: held(['D2', 'A1', 'G1', 'D2', 'F2', 'A#1', 'G1', 'A1']) },
   ]);
   defTrack('death', 60, [
     { inst: 'lead', vol: 0.18, seq: 'A4 - - - - - G4 - E4 - - - - - - - F4 - - - E4 - D4 - E4 - - - - - - - . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .' },

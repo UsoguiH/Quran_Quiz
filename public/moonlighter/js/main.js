@@ -30,7 +30,7 @@ function mergeDefaults(s, d) {
   }
   return s;
 }
-function saveGame() { if (!S) return; S.savedAt = Date.now(); Store.set('mk_save_' + S.slot, S); }
+function saveGame() { if (!S || Game.theater) return; S.savedAt = Date.now(); Store.set('mk_save_' + S.slot, S); }
 function slotSummary(i) {
   const s = Store.get('mk_save_' + i, null);
   return s ? { day: s.day, phase: s.phase, gold: s.gold, bosses: (s.bosses || []).filter(Boolean).length } : null;
@@ -132,7 +132,7 @@ const Game = {
   scene: null, time: 0, fadeT: 0, fadeDir: 0, fadeCb: null,
   setScene(sc) { this.scene = sc; Input.clearAll(); },
   fade(cb) { if (this.fadeDir) return; this.fadeDir = 1; this.fadeT = 0; this.fadeCb = cb; },
-  goShop() { sfx('door'); this.fade(() => this.setScene(new ShopScene())); },
+  goShop() { sfx('door'); this.fade(() => this.setScene(S.bosses[0] && !S.flags.letter ? storyLastLetter() : new ShopScene())); },
   goTown(spawn) { sfx('door'); this.fade(() => this.setScene(new TownScene(spawn))); },
   goDungeon(i) {
     sfx('door');
@@ -211,7 +211,7 @@ async function boot() {
   R(ctx, 0, 0, W, H, '#000');
   try {
     await Promise.race([
-      Promise.all([document.fonts.load('8px "Pixelify Sans"'), document.fonts.load('700 8px "Pixelify Sans"'), document.fonts.load('700 8px "Silkscreen"'), document.fonts.load('8px "Silkscreen"'), document.fonts.load('600 8px "Cinzel"'), document.fonts.load('italic 500 8px "Cormorant Garamond"'), document.fonts.load('600 8px "Cormorant Garamond"')]),
+      Promise.all([document.fonts.load('8px "Pixelify Sans"'), document.fonts.load('700 8px "Pixelify Sans"'), document.fonts.load('700 8px "Silkscreen"'), document.fonts.load('8px "Silkscreen"')]),
       new Promise(r => setTimeout(r, 2500)),
     ]);
   } catch (e) { /* offline: fall back to monospace */ }

@@ -43,8 +43,10 @@ class Actor {
     if (this.emote) { this.emote.t += dt; if (this.emote.t > 1.6) this.emote = null; }
   }
   draw(ox, oy) {
-    const x = Math.round(this.x - ox), y = Math.round(this.y - oy);
+    let x = Math.round(this.x - ox), y = Math.round(this.y - oy);
     if (this.alpha <= 0 && !this.emote) return;
+    const ex = x, ey = y, sc = this.scale && this.scale !== 1;
+    if (sc) { ctx.save(); ctx.translate(x, y); ctx.scale(this.scale, this.scale); x = 0; y = 0; }
     ctx.globalAlpha = Math.max(0, this.alpha);
     if (this.kind === 'hero') {
       shadow(x, y, 12);
@@ -74,6 +76,7 @@ class Actor {
       R(ctx, x - 3, y - (f ? 1 : 0), 3, 1, '#1b1420'); R(ctx, x + 1, y - (f ? 1 : 0), 3, 1, '#1b1420'); P(ctx, x, y + (f ? 0 : 1), '#1b1420');
     }
     ctx.globalAlpha = 1;
+    if (sc) { ctx.restore(); x = ex; y = ey; }
     if (this.emote) {
       const e = this.emote, k = clamp(e.t / 0.15, 0, 1), up = Math.round((1 - k) * 4);
       const by = y - (this.emoteH || (this.kind === 'hero' ? 38 : 32)) + up;
@@ -88,7 +91,8 @@ class Actor {
 
 // ---------------------------------------------------------------- cutscene engine (cinematic)
 const WHO_ACTOR = { Keeper: 'hero', 'Elder Oren': 'elder', Aldric: 'aldric' };
-const WHO_COL = { Keeper: '#ec9a86', 'Elder Oren': '#b4dcb4', Aldric: '#ecd49a', Guardian: '#c8a4ec', Narrator: '#d9b86a', Pip: '#f0b070' };
+const WHO_COL = { Keeper: '#ec9a86', 'Elder Oren': '#b4dcb4', Aldric: '#ecd49a', Guardian: '#c8a4ec', Narrator: '#d9b86a', Pip: '#f0b070', 'Little Keeper': '#f4c8b8' };
+const WHO_ACTOR_EXTRA = { 'Little Keeper': 'child' };
 class Cutscene {
   constructor(stage, steps, o = {}) {
     this.stage = stage; this.steps = steps; this.o = o;
@@ -98,10 +102,13 @@ class Cutscene {
     this.rain = []; this.raining = false; this.box = null; this.card = null; this.credits = null; this.skipT = 0; this.overlay = null; this.shakeT = 0;
     this.fog = false; this.fogA = 0; this.motes = Array.from({ length: 36 }, () => ({ x: rand(W), y: rand(H), v: rand(3, 9), ph: rand(6) }));
     this.petals = Array.from({ length: 34 }, () => newPetal(true)); this.petalsOn = o.petals !== false; this.petalA = 0;
+    this.gp = []; this.grade = null; this.gk = { night: 0, memory: 0 }; this.ins = null; this.insT = 0; this.xf = { fsx: W / 2, fsy: H / 2, z: 1 };
     const p = stage.player && stage.player.x > -500 ? stage.player : { x: W / 2, y: H / 2 };
     this.cam = { x: p.x, y: p.y - 12, z: 1 }; this.camT = { ...this.cam }; this.camRate = 2; this.follow = null;
     this.next();
   }
+  // world point -> screen point (for lights and effects drawn over the stage)
+  w2s(x, y) { const f = this.xf, ox = f.town ? this.stage.cam.x : 0, oy = f.town ? this.stage.cam.y : 0; return [(x - ox - f.fsx) * f.z + W / 2, (y - oy - f.fsy) * f.z + H / 2]; }
   add(a) { this.actors[a.id] = a; if (!this.stage.extra.includes(a)) this.stage.extra.push(a); return a; }
   actor(id) { return this.actors[id]; }
   focusOf(id) {
@@ -129,6 +136,8 @@ class Cutscene {
     if (s.rain !== undefined) this.raining = s.rain;
     if (s.fog !== undefined) this.fog = s.fog;
     if (s.petals !== undefined) this.petalsOn = s.petals;
+    if (s.grade !== undefined) this.grade = s.grade;
+    if (s.insert !== undefined) { this.ins = s.insert; this.insT = 0; }
     if (s.spawn) this.add(new Actor(s.spawn, s.kind || 'person', s.x, s.y, s));
     if (s.face) this.actors[s.face].dir = s.dir;
     if (s.emote) { const a = this.actors[s.emote] || (s.emote === 'hero' ? null : null); if (a) a.emote = { e: s.e, t: 0 }; else if (s.emote === 'hero' && this.stage.player) this.stageEmote = { e: s.e, t: 0 }; }
@@ -137,16 +146,16 @@ class Cutscene {
     if (s.follow) { this.follow = s.follow; this.camT.z = s.z ?? this.camT.z; this.camRate = s.rate ?? 2; }
     if (s.say || s.narrate) {
       const text = s.say || s.narrate, who = s.who || 'Narrator';
-      this.box = { text, who, narr: !!s.narrate, chars: 0, hold: 0, t: 0, portrait: s.narrate ? null : portraitFor(who, s.g) };
+      this.box = { text, who, narr: !!s.narrate, letter: !!s.letter, chars: 0, hold: 0, t: 0, portrait: s.narrate ? null : portraitFor(who, s.g) };
       // shot / reverse-shot: frame whoever is talking, unless the step asks for a wide
       if (s.say && !s.wide && s.shot === undefined) {
-        const id = WHO_ACTOR[who];
+        const id = WHO_ACTOR[who] || WHO_ACTOR_EXTRA[who];
         const f = id && this.focusOf(id);
         if (f) { this.follow = id; this.camT.z = s.z || 1.75; this.camRate = 1.8; }
       }
       Voice.speak(text, who);
     }
-    if (s.title) { this.card = { title: s.title, sub: s.sub || '', kicker: s.kicker || '', t: 0, dur: s.t || 4.2, strokes: inkStrokes() }; sfx('boom'); }
+    if (s.title) { this.card = { title: s.title, sub: s.sub || '', kicker: s.kicker || '', t: 0, dur: s.t || 7, g: new Gommage(s.title, s.title.length > 14 ? 18 : 24), spawnP: 0, spawnD: 0, gone: false }; sfx('boom'); }
     if (s.credits) this.credits = { lines: s.credits, y: H + 10, t: 0, flies: Array.from({ length: 34 }, () => ({ x: rand(W), y: rand(H), ph: rand(6) })) };
     if (s.run) s.run(this);
     if (s.move) {
@@ -203,7 +212,12 @@ class Cutscene {
     for (const r of this.rain) { r.y += r.v * dt; r.x -= r.v * 0.3 * dt; if (r.y > H) { if (this.raining) { r.y = -8; r.x = rand(W + 80); } else r.dead = true; } }
     this.rain = this.rain.filter(r => !r.dead);
     for (const m of this.motes) { m.y -= m.v * dt; m.x += Math.sin(this.t * 0.6 + m.ph) * 4 * dt; if (m.y < -4) { m.y = H + 4; m.x = rand(W); } }
-    this.petalA = approach(this.petalA, this.petalsOn && !this.raining ? 1 : 0, dt * 0.6);
+    this.petalA = approach(this.petalA, this.petalsOn && !this.raining && !this.grade ? 1 : 0, dt * 0.6);
+    for (const k in this.gk) this.gk[k] = approach(this.gk[k], this.grade === k ? 1 : 0, dt * (k === 'memory' ? 1.4 : 0.8));
+    if (this.ins) this.insT += dt;
+    if (this.card) this.cardParticles(dt);
+    updateGP(this.gp, dt);
+    if (this.o.tick) this.o.tick(dt, this);
     for (const pt of this.petals) { pt.x += (pt.vx + Math.sin(this.t * pt.sw + pt.ph) * 6) * dt; pt.y += pt.vy * dt; pt.rot += pt.spin * dt; if (pt.y > H + 8 || pt.x < -10) Object.assign(pt, newPetal(false)); }
     if (this.cur && this.cur.every) this.cur.every(this, dt);
     if (Input.pressed('SKIP')) { this.skip(); return; }
@@ -215,6 +229,12 @@ class Cutscene {
     if (this.ended) return; this.ended = true;
     Voice.stop(); AudioSys.ambient(null);
     this.stage.cinematic = false; this.stage.extra = [];
+    if (Game.theater) {
+      // watched from the title screen: nothing is saved, back to the menu
+      S = Game.theater.prev; Game.theater = null;
+      const t = new TitleScene(); t.awake = true; t.sel = 1; Game.setScene(t);
+      return;
+    }
     const next = this.o.next ? this.o.next() : this.stage;
     Game.setScene(next);
     if (this.o.onEnd) this.o.onEnd();
@@ -234,6 +254,7 @@ class Cutscene {
     const shk = this.shakeT > 0 ? this.shakeT * 3 : 0;
     ctx.save();
     ctx.translate(W / 2 + rand(-shk, shk), H / 2 + rand(-shk, shk)); ctx.scale(z, z); ctx.translate(-fsx, -fsy);
+    this.xf = { fsx, fsy, z, town: st instanceof TownScene };
     st.draw();
     if (this.overlay) this.overlay(this);
     if (this.stageEmote && st.player) { const pl = st.player, ox = st.cam ? st.cam.x : 0, oy = st.cam ? st.cam.y : CAM_Y; const a = new Actor('_', 'marker', pl.x, pl.y); a.emote = this.stageEmote; a.emoteH = 38; a.draw(ox, oy); }
@@ -241,7 +262,9 @@ class Cutscene {
   }
   draw() {
     this.drawStage();
-    const warmDay = this.stage instanceof TownScene && !this.stage.night;
+    if (this.gk.night > 0) this.drawNightGrade(this.gk.night);
+    if (this.gk.memory > 0) this.drawMemoryGrade(this.gk.memory);
+    const warmDay = this.stage instanceof TownScene && !this.stage.night && !this.grade;
     // light shafts on warm days, slowly breathing
     if (warmDay && !this.card) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -276,7 +299,9 @@ class Cutscene {
       ctx.globalAlpha = 0.45 * this.bars; ctx.fillStyle = CINE.gold; ctx.fillRect(0, bh - 0.5, W, 0.5); ctx.fillRect(0, H - bh, W, 0.5); ctx.globalAlpha = 1;
     }
     // fades close like an iris of ink rather than a flat dimmer
+    if (this.ins) this.ins(this, this.insT);
     if (this.fade > 0) inkIris(this.fade);
+    if (this.gp.length && !this.card) drawGP(this.gp);
     if (this.box) this.drawSubtitle(bh);
     if (this.card) this.drawCard();
     if (this.credits) this.drawCredits();
@@ -295,8 +320,9 @@ class Cutscene {
     const shown = b.chars | 0;
     if (b.narr) {
       // narration: an italic serif line in the middle of the frame, words bleeding in like ink
-      const size = 11.5, lines = balancedWrap(b.text, 300, size, SERIF, true);
-      const y0 = H * 0.56 - (lines.length - 1) * 7.5;
+      const size = 10, lines = balancedWrap(b.text, 300, size, SERIF, true);
+      const y0 = (b.letter ? H * 0.7 : H * 0.56) - (lines.length - 1) * 7.5;
+      if (b.letter) spaced("FROM ALDRIC'S LETTER", W / 2, y0 - 16, 6, DISPLAY, CINE.gold, 1, 0.8 * a);
       const band = ctx.createLinearGradient(0, y0 - 30, 0, y0 + lines.length * 15 + 16);
       band.addColorStop(0, 'rgba(6,3,5,0)'); band.addColorStop(0.5, `rgba(6,3,5,${0.45 * a})`); band.addColorStop(1, 'rgba(6,3,5,0)');
       ctx.fillStyle = band; ctx.fillRect(0, y0 - 30, W, lines.length * 15 + 46);
@@ -307,15 +333,15 @@ class Cutscene {
       return;
     }
     // dialogue: film subtitles above the lower bar, the speaker's name in gold capitals between hairlines
-    const size = 10, lines = balancedWrap(b.text, 310, size, SERIF, false).slice(0, 3);
+    const size = 9, lines = balancedWrap(b.text, 310, size, SERIF, false).slice(0, 3);
     const lastY = H - Math.max(bh, 12) - 9, y0 = lastY - (lines.length - 1) * 12;
     const top = y0 - 26;
     const g = ctx.createLinearGradient(0, top, 0, H - bh);
     g.addColorStop(0, 'rgba(4,2,3,0)'); g.addColorStop(0.45, `rgba(4,2,3,${0.5 * a})`); g.addColorStop(1, `rgba(4,2,3,${0.72 * a})`);
     ctx.fillStyle = g; ctx.fillRect(0, top, W, H - bh - top);
     const name = b.who.toUpperCase(), ny = y0 - 13;
-    const nw = spacedW(name, 6.5, DISPLAY, 1.4);
-    spaced(name, W / 2, ny, 6.5, DISPLAY, WHO_COL[b.who] || CINE.gold, 1.4, a);
+    const nw = spacedW(name, 7, DISPLAY, 1);
+    spaced(name, W / 2, ny, 7, DISPLAY, WHO_COL[b.who] || CINE.gold, 1, a);
     const lw = 26 * a;
     ctx.globalAlpha = 0.7 * a; ctx.fillStyle = CINE.gold;
     ctx.fillRect(W / 2 - nw / 2 - 6 - lw, ny - 2.5, lw, 0.5); ctx.fillRect(W / 2 + nw / 2 + 6, ny - 2.5, lw, 0.5); ctx.globalAlpha = 1;
@@ -324,53 +350,70 @@ class Cutscene {
     const talking = Voice.busy() || b.chars < b.text.length;
     if (!talking && b.hold > 0.2) diamond(W / 2 + textW(lines[lines.length - 1], size, false, SERIF) / 2 + 7, lastY - 3, 1.8, CINE.gold, 0.5 + 0.5 * Math.sin(this.t * 5));
   }
-  drawCard() {
-    const c = this.card, T = c.t, out = clamp((c.dur - T) / 0.9, 0, 1), inn = clamp(T / 0.6, 0, 1);
-    // dark painted ground
-    const bg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.7);
-    bg.addColorStop(0, '#22151a'); bg.addColorStop(1, '#070405');
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    // ink strokes brushed across the canvas
-    ctx.save(); ctx.lineCap = 'round';
-    for (const st of c.strokes) {
-      const k = ease(clamp((T - st.d) / 0.9, 0, 1));
-      if (k <= 0) continue;
-      ctx.strokeStyle = st.col; ctx.globalAlpha = st.a * out; ctx.lineWidth = st.w;
-      ctx.setLineDash([st.len, st.len]); ctx.lineDashOffset = st.len * (1 - k);
-      ctx.beginPath(); ctx.moveTo(st.x0, st.y0); ctx.quadraticCurveTo(st.cx, st.cy, st.x1, st.y1); ctx.stroke();
+  // chapter card: the title appears in pale gold, then withers away into petals and dust
+  gommageT(c) { return { start: Math.min(2.2, c.dur * 0.3), len: Math.max(2.6, c.dur - Math.min(2.2, c.dur * 0.3) - 1.6) }; }
+  cardParticles(dt) {
+    const c = this.card, T = c.t, g = c.g, { start, len } = this.gommageT(c);
+    const p = clamp((T - start) / len, 0, 1);
+    if (p > 0 && p < 1) {
+      c.spawnP -= dt; c.spawnD -= dt;
+      while (c.spawnP <= 0) { c.spawnP += 0.03; const q = g.spawnPoint(p); if (q) this.gp.push(newGPetal(q[0], q[1])); }
+      while (c.spawnD <= 0) { c.spawnD += 0.08; const q = g.spawnPoint(p); if (q) this.gp.push(newGDust(q[0], q[1])); }
+      if (!c.gone) { c.gone = true; sfx('whoosh'); }
     }
-    ctx.restore(); ctx.setLineDash([]);
-    drawPetals(this.petals, 0.9 * out);
-    // slow push-in on the lettering
-    const zoom = 1 + T * 0.012;
-    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2);
-    if (c.kicker) spaced(c.kicker.toUpperCase(), W / 2, H / 2 - 26, 6, DISPLAY, CINE.gold, 2.2, clamp((T - 0.2) / 0.8, 0, 1) * out);
-    // title letters settle in one by one, gilded
-    const size = c.title.length > 14 ? 17 : 22, spc = size * 0.14;
-    const tw = spacedW(c.title, size, DISPLAY, spc);
-    let x = W / 2 - tw / 2;
-    setFont(size, true, DISPLAY);
-    const gold = ctx.createLinearGradient(0, H / 2 - size, 0, H / 2 + 2);
-    gold.addColorStop(0, '#fff3cf'); gold.addColorStop(0.55, '#e3c27a'); gold.addColorStop(1, '#9a6f2c');
-    [...c.title].forEach((ch, i) => {
-      const k = clamp((T - 0.35 - i * 0.06) / 0.7, 0, 1) * out, w = textW(ch, size, true, DISPLAY);
-      if (k > 0) {
-        ctx.globalAlpha = k * 0.5; ctx.fillStyle = '#000'; ctx.fillText(ch, x + 0.6, H / 2 + 1.2 + (1 - k) * 4);
-        ctx.globalAlpha = k; ctx.fillStyle = gold; ctx.fillText(ch, x, H / 2 + (1 - k) * 4);
-      }
-      x += w + spc;
-    });
-    ctx.globalAlpha = 1;
-    // hairlines and a diamond
-    const lk = ease(clamp((T - 0.8) / 1.2, 0, 1)) * out, lw = 110 * lk;
-    ctx.globalAlpha = 0.8 * lk; ctx.fillStyle = CINE.gold;
-    ctx.fillRect(W / 2 - 8 - lw, H / 2 + 9, lw, 0.5); ctx.fillRect(W / 2 + 8, H / 2 + 9, lw, 0.5); ctx.globalAlpha = 1;
-    diamond(W / 2, H / 2 + 9.25, 2.2, CINE.gold, lk);
-    if (c.sub) txt(c.sub, W / 2, H / 2 + 24, { size: 10, align: 'center', color: CINE.cream, fam: SERIF, italic: true, alpha: clamp((T - 1.3) / 0.9, 0, 1) * out });
+  }
+  drawCard() {
+    const c = this.card, T = c.t, g = c.g, { start, len } = this.gommageT(c);
+    const p = clamp((T - start) / len, 0, 1);
+    const bg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.65);
+    bg.addColorStop(0, '#141112'); bg.addColorStop(1, '#040304');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const inA = clamp(T / 1.2, 0, 1), sideA = inA * (1 - clamp(p / 0.35, 0, 1));
+    if (c.kicker) spaced(c.kicker.toUpperCase(), W / 2, H / 2 - 24, 7, DISPLAY, '#b9a27a', 2, sideA * 0.9);
+    // the title raster, eaten away by noise as p grows
+    const cy = H / 2 + 2;
+    const img = g.render(p);
+    const dw = g.w, dh = g.h, dx = W / 2 - dw / 2, dy = cy - dh * 0.72;
+    ctx.save(); ctx.globalAlpha = ease(inA);
+    ctx.drawImage(img, dx, dy + (1 - ease(inA)) * 3, dw, dh);
+    // soft bloom around the letters
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 * ease(inA) * (1 - p);
+    ctx.filter = 'blur(3px)'; ctx.drawImage(img, dx, dy, dw, dh); ctx.filter = 'none';
     ctx.restore();
-    // fade up from black, down to black
-    const blk = 1 - Math.min(inn, 1) * out;
-    if (blk > 0) { ctx.globalAlpha = blk; R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
+    if (c.sub) txt(c.sub, W / 2, H / 2 + 26, { size: 9, align: 'center', color: '#cbbd9e', fam: SERIF, alpha: clamp((T - 0.7) / 0.9, 0, 1) * (1 - clamp(p / 0.3, 0, 1)) });
+    drawGP(this.gp);
+    const out = clamp((c.dur - T) / 0.8, 0, 1);
+    if (out < 1) { ctx.globalAlpha = 1 - out; R(ctx, 0, 0, W, H, '#000'); ctx.globalAlpha = 1; }
+  }
+  // cold moonlight with the candle as the only warmth
+  drawNightGrade(k) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.9 * k; ctx.fillStyle = '#3c4670'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k;
+    const lights = this.nightLights ? this.nightLights(this) : [];
+    for (const [x, y, r, col] of lights) { const gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+    ctx.restore();
+  }
+  // a faded photograph: sepia, glowing edges, flicker and scratches
+  drawMemoryGrade(k) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'saturation'; ctx.globalAlpha = 0.9 * k; ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.7 * k; ctx.fillStyle = '#e8c89a'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = k;
+    const gr = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.6);
+    gr.addColorStop(0, 'rgba(255,236,200,0)'); gr.addColorStop(1, `rgba(255,236,200,${0.55 + Math.sin(this.t * 9) * 0.03})`);
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    const r = mulberry32(Math.floor(this.t * 12));
+    ctx.globalAlpha = 0.18 * k;
+    for (let i = 0; i < 2; i++) if (r() < 0.5) R(ctx, r() * W, 0, 0.6, H, '#fff4e0');
+    for (let i = 0; i < 40; i++) P(ctx, r() * W, r() * H, r() < 0.5 ? '#fff4e0' : '#3a2a1a');
+    ctx.globalAlpha = 1;
+  }
+  // scatter the whole frame into petals (a memory ending)
+  petalBurst(n = 140) {
+    for (let i = 0; i < n; i++) { const q = newGPetal(rand(W), rand(H * 0.15, H * 0.9)); q.age = -rand(0, 0.9); q.life = rand(3, 5); this.gp.push(q); }
+    for (let i = 0; i < 50; i++) { const q = newGDust(rand(W), rand(H * 0.2, H * 0.9)); q.age = -rand(0, 1); this.gp.push(q); }
   }
   drawCredits() {
     const c = this.credits;
@@ -382,8 +425,8 @@ class Cutscene {
     c.lines.forEach((l, k) => {
       const y = c.y + k * 18; if (y < -10 || y > H + 10) return;
       const big = k === 0, a = clamp(Math.min(y / 40, (H - y) / 40), 0, 1);
-      if (big) spaced(l.toUpperCase(), W / 2, y, 15, DISPLAY, '#ecd49a', 2.4, a);
-      else txt(l, W / 2, y, { size: 10, align: 'center', color: CINE.cream, fam: SERIF, italic: !l.includes(':'), alpha: a });
+      if (big) spaced(l.toUpperCase(), W / 2, y, 14, DISPLAY, '#ecd49a', 2, a);
+      else txt(l, W / 2, y, { size: 9, align: 'center', color: CINE.cream, fam: SERIF, italic: !l.includes(':'), alpha: a });
     });
   }
 }
@@ -443,13 +486,104 @@ function drawPetals(list, alpha) {
   }
   ctx.globalAlpha = 1;
 }
-function inkStrokes() {
-  const cols = ['#5a1420', '#2a0c12', '#6e2230', '#3a1a10'];
-  return Array.from({ length: 7 }, (_, i) => {
-    const y0 = rand(40, H - 40), y1 = y0 + rand(-40, 40), x0 = rand(-40, 60), x1 = rand(W - 60, W + 40);
-    const cx = (x0 + x1) / 2 + rand(-40, 40), cy = (y0 + y1) / 2 + rand(-50, 50);
-    return { x0, y0, x1, y1, cx, cy, w: rand(8, 26), a: rand(0.25, 0.5), col: choice(cols), d: 0.1 + i * 0.12, len: Math.hypot(x1 - x0, y1 - y0) * 1.25 };
-  });
+// ---------------------------------------------------------------- the gommage (letters withering into petals)
+function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; }
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+class Gommage {
+  constructor(text, size) {
+    const k = this.k = clamp(Math.round(cv.width / W), 2, 4);
+    const measure = sz => { let w = 0; for (const ch of text) w += textW(ch, sz, true, DISPLAY) + sz * 0.08; return w; };
+    // pixel capitals are wide: shrink long titles to fit the frame
+    if (measure(size) > W - 44) size = Math.floor(size * (W - 44) / measure(size));
+    setFont(size, true, DISPLAY);
+    let tw = measure(size); const spc = size * 0.08;
+    this.w = Math.ceil(tw + 8); this.h = Math.ceil(size * 1.5);
+    const c = this.cv = mkCanvas(this.w * k, this.h * k), g = c.getContext('2d');
+    g.font = `700 ${size * k}px ${DISPLAY}`; g.fillStyle = '#fff'; g.textBaseline = 'alphabetic';
+    let x = 4 * k; for (const ch of text) { g.fillText(ch, x, size * 1.08 * k); x += (textW(ch, size, true, DISPLAY) + spc) * k; }
+    const id = g.getImageData(0, 0, c.width, c.height), d = id.data, cw = c.width;
+    // noise per lit pixel, then ranked so progress p erases exactly a fraction p of the ink
+    const idx = [], nz = [];
+    const f = size * k * 0.28;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 8) {
+      const px = (i >> 2) % cw, py = ((i >> 2) / cw) | 0;
+      idx.push(i >> 2); nz.push(vnoise(px / f, py / f) * 0.6 + vnoise(px / f * 2.3 + 7, py / f * 2.3 + 3) * 0.3 + vnoise(px / f * 5 + 11, py / f * 5) * 0.1);
+    }
+    const order = idx.map((_, j) => j).sort((a, b) => nz[a] - nz[b]);
+    this.rank = new Float32Array(idx.length); order.forEach((j, r) => { this.rank[j] = r / order.length; });
+    this.idx = Int32Array.from(idx); this.alpha = new Uint8Array(idx.length); for (let j = 0; j < idx.length; j++) this.alpha[j] = d[idx[j] * 4 + 3];
+    this.cw = cw; this.img = g.createImageData(c.width, c.height); this.g = g; this.lastP = -1;
+  }
+  render(p) {
+    if (Math.abs(p - this.lastP) < 0.002) return this.cv;
+    this.lastP = p;
+    const d = this.img.data, desat = clamp(p / 0.45, 0, 1), s = desat * desat * (3 - 2 * desat);
+    const r0 = 236 + (94 - 236) * s, g0 = 207 + (94 - 207) * s, b0 = 163 + (94 - 163) * s;
+    for (let j = 0; j < this.idx.length; j++) {
+      const o = this.idx[j] * 4, n = this.rank[j];
+      if (p > 0 && n <= p) { d[o + 3] = 0; continue; }
+      const e = p > 0 && n - p < 0.025 ? 1 - (n - p) / 0.025 : 0;
+      d[o] = r0 + (255 - r0) * e; d[o + 1] = g0 + (236 - g0) * e; d[o + 2] = b0 + (205 - b0) * e; d[o + 3] = this.alpha[j];
+    }
+    this.g.putImageData(this.img, 0, 0);
+    return this.cv;
+  }
+  // a point on the edge that is dissolving right now (logical coords, relative to the card centre)
+  spawnPoint(p) {
+    const n = this.idx.length; if (!n) return null;
+    let best = -1;
+    for (let t = 0; t < 24; t++) { const j = (Math.random() * n) | 0, r = this.rank[j]; if (r > p - 0.04 && r <= p + 0.01) { best = j; break; } if (best < 0 && r > p) best = j; }
+    if (best < 0) return null;
+    const i = this.idx[best], x = (i % this.cw) / this.k, y = ((i / this.cw) | 0) / this.k;
+    return [W / 2 - this.w / 2 + x, H / 2 + 2 - this.h * 0.72 + y];
+  }
+}
+// petals and dust carried off by the wind (red and white petals, as in a rose garden in autumn)
+function newGPetal(x, y) {
+  const white = Math.random() < 0.34;
+  return { kind: 'petal', x, y, age: 0, life: rand(4.5, 6.5), vx: -rand(8, 22), vy: -rand(2, 10), sw: rand(0.8, 1.8), ph: rand(6.28), amp: rand(10, 26),
+    rx: rand(6.28), rz: rand(6.28), srx: rand(1.5, 4), srz: rand(-2, 2), s: rand(1.6, 2.8), white };
+}
+function newGDust(x, y) { return { kind: 'dust', x, y, age: 0, life: rand(3, 4.5), vx: -rand(6, 16), vy: -rand(3, 9), sw: rand(1, 2), ph: rand(6.28), amp: rand(8, 20), s: rand(0.35, 0.8) }; }
+function updateGP(list, dt) {
+  for (const q of list) {
+    q.age += dt; if (q.age < 0) continue;
+    const lk = clamp(q.age / q.life, 0, 1);
+    q.x += (q.vx + Math.cos(q.age * q.sw + q.ph) * q.amp * lk) * dt;
+    q.y += (q.vy + Math.sin(q.age * q.sw * 1.3 + q.ph) * q.amp * 0.6 * lk) * dt;
+    if (q.kind === 'petal') { q.rx += q.srx * dt; q.rz += q.srz * dt; }
+  }
+  for (let i = list.length - 1; i >= 0; i--) if (list[i].age > list[i].life) list.splice(i, 1);
+  if (list.length > 420) list.splice(0, list.length - 420);
+}
+function glowSprite(col) {
+  return cached('glow_' + col, () => { const c = mkCanvas(32, 32), g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return c; });
+}
+function drawGP(list) {
+  const redG = glowSprite('rgba(255,40,40,0.9)'), whiteG = glowSprite('rgba(255,250,240,1)'), dustG = glowSprite('rgba(200,200,200,0.8)');
+  for (const q of list) {
+    if (q.age < 0) continue;
+    const lk = q.age / q.life, fade = 1 - clamp((lk - 0.8) / 0.2, 0, 1), grow = clamp(lk / 0.05, 0, 1);
+    if (q.kind === 'dust') {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 * fade; ctx.drawImage(dustG, q.x - 2.5, q.y - 2.5, 5, 5);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = fade; ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.arc(q.x, q.y, q.s * grow, 0, 6.283); ctx.fill();
+      continue;
+    }
+    const face = Math.abs(Math.cos(q.rx)), s = q.s * grow, shade = 0.4 + 0.6 * face;
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (q.white ? 0.45 : 0.35) * fade;
+    ctx.drawImage(q.white ? whiteG : redG, q.x - s * 3, q.y - s * 3, s * 6, s * 6);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = fade;
+    const c = q.white ? Math.round(238 * shade) : 0;
+    ctx.fillStyle = q.white ? `rgb(${c},${c},${Math.round(c * 0.97)})` : `rgb(${Math.round(175 * shade + 20)},${Math.round(6 * shade)},${Math.round(10 * shade)})`;
+    ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rz); ctx.scale(1, Math.max(0.18, face));
+    ctx.beginPath(); ctx.moveTo(0, -s); ctx.quadraticCurveTo(s * 0.95, -s * 0.15, 0, s * 0.8); ctx.quadraticCurveTo(-s * 0.95, -s * 0.15, 0, -s); ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 // a soft iris of darkness closing on the centre
 function inkIris(f) {
@@ -494,7 +628,7 @@ function storyPrologue() {
     { narrate: 'That was ten years ago. He never came back.' },
     { wait: 1 },
     { fade: 1, t: 1.8 },
-    { ambient: null, rain: false, fog: false, kicker: 'A tale of the five doors', title: GAME_TITLE, sub: 'a story of doors and debts', t: 5 },
+    { ambient: null, rain: false, fog: false, kicker: 'A tale of the five doors', title: GAME_TITLE, sub: 'a story of doors and debts', t: 7.5 },
     { music: 'town', run: cs => {
       pulse = 0; stage.night = false; cs.overlay = null;
       cs.add(new Actor('elder', 'person', 228, 606, { look: NPC_LOOKS.elder, dir: 0 }));
@@ -526,7 +660,7 @@ function storyPrologue() {
     { shot: [205, 540], z: 1.0, rate: 0.3 },
     { wait: 1.8 },
     { fade: 1, t: 1.4 },
-    { kicker: 'Chapter I', title: CHAPTERS[0], sub: 'where the candles still burn', t: 4.6 },
+    { kicker: 'Chapter I', title: CHAPTERS[0], sub: 'where the candles still burn', t: 7 },
   ];
   function fifthDoorPulse(cs) {
     if (!pulse) return;
@@ -575,7 +709,7 @@ function storyGuardianFalls(sc) {
     { run: cs => { cs.actor('key').alpha = 0; FX.burst(sc, p.x, p.y - 12, [col, '#ffffff', C.gold], 26, 80); FX.ring(sc, p.x, p.y - 8, col, 4, 34, 0.6); }, sfx: 'open', flash: col, shot: 'hero', z: 2.1, rate: 5 },
     { emote: 'hero', e: '!', wait: 1.2 },
     { fade: 1, t: 1 },
-    i < 3 ? { kicker: 'Chapter ' + ['II', 'III', 'IV'][i], title: CHAPTERS[i + 1], sub: 'the way below is open', t: 4.4 } : { kicker: 'Finale', title: 'The Fifth Door', sub: 'the last lock is light', t: 4.8 },
+    i < 3 ? { kicker: 'Chapter ' + ['II', 'III', 'IV'][i], title: CHAPTERS[i + 1], sub: 'the way below is open', t: 6.5 } : { kicker: 'Finale', title: 'The Fifth Door', sub: 'the last lock is light', t: 7 },
     { run: cs => cs.setCam(192, 120, 1.0, true) },
     { fade: 0, t: 0.8 },
   ];
@@ -622,6 +756,7 @@ function storyFinale() {
     { run: () => { open = 2; }, sfx: 'teleport', flash: '#e8fff4', shot: [480, 80], z: 2.2, rate: 0.35 },
     { fade: 1, t: 2.4 },
     { fog: false, narrate: 'That night, the fifth door closed forever. The Hollow thinned into a morning mist.' },
+    { narrate: 'And the grey left the Keeper\'s hand, the way frost leaves a window in spring.' },
     { narrate: 'And in Vellmoor, the lamps of the Moonkeeper shop burned until dawn... for two keepers now.' },
     { music: 'title', credits: [GAME_TITLE, 'A tribute to the shopkeeper-adventurers', '', 'Story, code and pixel art', 'made with Claude Code', '', 'Fonts: Pixelify Sans and Silkscreen', '(SIL Open Font License)', '', 'Thank you for playing!'] },
   ];
@@ -647,4 +782,205 @@ function storyFinale() {
     next: () => new TownScene('gates'),
     onEnd: () => { S.flags.finale = true; saveGame(); toast('Aldric now helps out in your shop. Thank you for playing!', C.mint); },
   });
+}
+
+// ---------------------------------------------------------------- interlude: the last letter
+// After the first guardian falls, the Keeper finds Aldric's letter hidden in the shop chest.
+// A memory, a confession, and the thing the Keeper has been hiding under the gloves.
+const CHILD_LOOK = { id: 'child', kid: true, skin: '#f0c49a', hair: '#2a2020', hairStyle: 'short', shirt: '#3a3446', pants: '#2a2630', scarf: '#c83a3a' };
+function storyLastLetter() {
+  const stage = new ShopScene();
+  stage.player.x = -999; stage.player.y = -999;
+  stage.cat.x = 150; stage.cat.y = 176; stage.cat.state = 'sleep';
+  const chest = { x: CHEST_POS.x, y: CHEST_POS.y + 14 };
+  let heartT = 0, heartOn = false;
+  const steps = [
+    { music: 'none', ambient: 'rain', grade: 'night', petals: false, run: cs => {
+      cs.add(new Actor('hero', 'hero', 192, 206, { dir: 1 }));
+      cs.setCam(192, 118, 1.05, true);
+      cs.nightLights = cs2 => { const h = cs2.actor('hero'), c = cs2.w2s(244, 136), p = h ? cs2.w2s(h.x, h.y - 12) : [0, 0];
+        const fl = 1 + Math.sin(cs2.t * 11) * 0.05 + Math.sin(cs2.t * 23) * 0.03;
+        return [[c[0], c[1], 70 * fl * cs2.xf.z, 'rgba(255,170,80,0.5)'], [p[0], p[1], 34 * cs2.xf.z, 'rgba(255,190,120,0.18)'], [cs2.w2s(99, 30)[0], cs2.w2s(99, 30)[1], 60 * cs2.xf.z, 'rgba(120,150,255,0.25)']]; };
+    } },
+    { fade: 0, t: 3 },
+    { wait: 1.2 },
+    { follow: 'hero', z: 1.35, rate: 0.6 },
+    { move: 'hero', to: [192, 160], speed: 20 },
+    { move: 'hero', to: [chest.x - 2, chest.y + 2], speed: 18 },
+    { face: 'hero', dir: 1 },
+    { wait: 0.9 },
+    { sfx: 'open', shot: [chest.x - 34, chest.y - 4], z: 2.1, rate: 0.7 },
+    { wait: 0.8 },
+    { emote: 'hero', e: '!', wait: 1 },
+    { say: 'A false bottom... Grandfather, you old fox.', who: 'Keeper' },
+    { say: 'A letter. My name on it, in your handwriting.', who: 'Keeper' },
+    { wait: 0.6 },
+    { music: 'lament', shot: [chest.x - 40, chest.y - 8], z: 2.5, rate: 0.25 },
+    { narrate: 'If you are reading this, little lantern, then the shop found its way back to you.', who: 'Aldric', letter: true },
+    // the memory
+    { sfx: 'chime', flash: '#fff4e0', grade: 'memory', run: cs => {
+      cs.actor('hero').alpha = 0;
+      cs.add(new Actor('child', 'person', 248, 184, { look: CHILD_LOOK, dir: 1 }));
+      cs.add(new Actor('aldric', 'person', 246, 139, { look: ALDRIC_LOOK, dir: 0 }));
+      cs.setCam(250, 176, 2.0, true);
+    } },
+    { shot: [250, 178], z: 1.8, rate: 0.2 },
+    { narrate: 'Do you remember the winter your mother fell ill? You asked me why I always wore gloves at the counter.', who: 'Aldric', letter: true },
+    { say: 'Grandpa, why do you always wear gloves?', who: 'Little Keeper' },
+    { say: 'Because my hands get cold, little lantern. Now hold still. This mask was mine when I was your age.', who: 'Aldric' },
+    { move: 'child', to: [248, 168], speed: 14 },
+    { sfx: 'chime', flash: '#fff4e0', run: cs => { const c = cs.actor('child'); c.kind = 'hero'; c.scale = 0.72; c.dir = 1; } },
+    { wait: 0.8 },
+    { say: 'As long as you wear it, the Hollow will never find you. Promise me you\'ll keep it on.', who: 'Aldric' },
+    { emote: 'child', e: 'heart', wait: 1.2 },
+    { narrate: 'I lied to you that day. The gloves were never for the cold.', who: 'Aldric', letter: true },
+    // the memory crumbles into petals
+    { sfx: 'whoosh', run: cs => { cs.petalBurst(170); } },
+    { until: (cs, dt) => { for (const id of ['child', 'aldric']) { const a = cs.actor(id); a.alpha = Math.max(0, a.alpha - dt * 0.7); } return cs.actor('child').alpha <= 0; } },
+    { grade: 'night', run: cs => { cs.actor('hero').alpha = 1; cs.setCam(chest.x - 40, chest.y - 6, 2.2, true); } },
+    { wait: 0.8 },
+    { narrate: 'The Hollow does not kill. It forgets. First the colour... then the warmth... then you are petals on the wind, and no one remembers your name.', who: 'Aldric', letter: true },
+    { narrate: 'I am going through the fifth door, so that it forgets me instead of you.', who: 'Aldric', letter: true },
+    { narrate: 'Keep the mask on. Keep the lamps lit. And if one day you hear me knocking... do not open the door.', who: 'Aldric', letter: true },
+    { narrate: 'Your grandfather, who loved you more than the whole world.', who: 'Aldric', letter: true },
+    // silence
+    { music: 'none', wait: 2.2 },
+    { face: 'hero', dir: 0, shot: 'hero', z: 2.8, rate: 0.35 },
+    { wait: 1.4 },
+    { say: '...You were too late, grandfather.', who: 'Keeper' },
+    // the hand
+    { insert: drawHandInsert, sfx: 'rumble', run: () => { heartOn = true; } },
+    { wait: 2.6 },
+    { say: 'It found me on the coast, three winters ago.', who: 'Keeper' },
+    { wait: 1.6 },
+    { say: 'I kept the mask on, just like I promised. I just never told anyone about the gloves.', who: 'Keeper' },
+    { music: 'lament', wait: 3.2 },
+    { insert: null, run: () => { heartOn = false; } },
+    // the cat comes to sit with the Keeper
+    { shot: [chest.x - 20, chest.y + 2], z: 2.1, rate: 0.4, run: () => { stage.cat.state = 'walk'; } },
+    { until: (cs, dt) => { const c = stage.cat, h = cs.actor('hero'), tx = h.x - 12, ty = h.y + 3, dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy);
+      if (d < 1.5) { c.state = 'sit'; c.flip = true; return true; } const m = Math.min(d, 26 * dt); c.x += dx / d * m; c.y += dy / d * m; c.flip = dx > 0; c.anim += dt * 8; return false; } },
+    { run: () => { for (let i = 0; i < 4; i++) stage.amb.hearts.push({ x: stage.cat.x + rand(-4, 4), y: stage.cat.y - 14, vy: -rand(10, 16), t: -i * 0.25, life: 1.4 }); }, wait: 1.4 },
+    { face: 'hero', dir: 2, wait: 0.8 },
+    { say: 'I know. I know... I\'ll hurry.', who: 'Keeper' },
+    { shot: [192, 120], z: 1.05, rate: 0.18 },
+    { wait: 2.6 },
+    { fade: 1, t: 2.6 },
+    { grade: null, ambient: null, kicker: 'Interlude', title: 'The Last Letter', sub: 'what the Hollow forgets', t: 8 },
+  ];
+  return new Cutscene(stage, steps, {
+    startBlack: true, petals: false,
+    tick: (dt, cs) => {
+      updateShopAmbient(stage, dt);
+      if (stage.cat.state !== 'walk') stage.cat.anim += dt * 2;
+      if (heartOn) { heartT -= dt; if (heartT <= 0) { heartT = 1.15; sfx('heart'); } }
+    },
+    next: () => new ShopScene(),
+    onEnd: () => { S.flags.letter = true; saveGame(); },
+  });
+}
+// close-up: the glove comes off, and the hand underneath is turning to petals
+function drawHandInsert(cs, T) {
+  const st = cs._hand || (cs._hand = {
+    cracks: Array.from({ length: 16 }, () => { let x = rand(160, 226), y = rand(58, 170); const pts = [[x, y]]; for (let i = 0; i < 5; i++) { x += rand(-5, 5); y += rand(-7, 3); pts.push([x, y]); } return pts; }),
+    spawn: 0,
+  });
+  const inA = clamp(T / 1.4, 0, 1);
+  // dark room, candle light from the right
+  R(ctx, 0, 0, W, H, '#0a0706');
+  const glow = ctx.createRadialGradient(310, 160, 0, 310, 160, 260); glow.addColorStop(0, `rgba(120,60,24,${0.55 * inA})`); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  const zoom = 1 + T * 0.01;
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2);
+  ctx.globalAlpha = inA;
+  const grey = clamp((T - 2.2) / 9, 0, 1), erode = clamp((T - 4.2) / 10, 0, 1);
+  const yF = 52 + ease(grey) * 118;
+  // fingers: [base x, base y, length, width, angle]
+  const F = [[172, 112, 36, 11, -0.3], [185, 104, 43, 11.5, -0.1], [199, 104, 41, 11, 0.07], [212, 110, 33, 10, 0.25]];
+  const hand = new Path2D();
+  const tips = [];
+  const cap = (bx, by, len, w, ang) => {
+    const p = new Path2D(); p.roundRect(-w / 2, -len, w, len + 6, w / 2);
+    hand.addPath(p, new DOMMatrix().translate(bx, by).rotate(ang * 57.2958));
+    tips.push([bx + Math.sin(ang) * len, by - Math.cos(ang) * len, bx, by]);
+  };
+  F.forEach(([bx, by, len, w, ang], i) => cap(bx, by, len * (1 - erode * (0.28 + i * 0.04)), w, ang));
+  cap(222, 142, 30 * (1 - erode * 0.2), 12, 1.05);
+  const palm = new Path2D(); palm.ellipse(194, 138, 32, 30, 0, 0, Math.PI * 2); hand.addPath(palm);
+  const wrist = new Path2D(); wrist.roundRect(174, 150, 42, 40, 10); hand.addPath(wrist);
+  // sleeve
+  ctx.fillStyle = '#141018'; ctx.beginPath(); ctx.roundRect(160, 176, 70, 60, 8); ctx.fill();
+  ctx.fillStyle = '#2a1a24'; ctx.fillRect(160, 176, 70, 5);
+  // skin with warm light from the right and shadow on the left
+  ctx.fillStyle = '#d6a488'; ctx.fill(hand);
+  ctx.save(); ctx.clip(hand);
+  const sh = ctx.createLinearGradient(150, 0, 240, 0); sh.addColorStop(0, 'rgba(40,18,12,0.55)'); sh.addColorStop(0.55, 'rgba(40,18,12,0)'); sh.addColorStop(1, 'rgba(255,190,120,0.25)');
+  ctx.fillStyle = sh; ctx.fillRect(140, 40, 110, 160);
+  // the grey spreading down from the fingertips
+  const gg = ctx.createLinearGradient(0, 40, 0, yF + 16); gg.addColorStop(0, 'rgba(126,130,138,0.97)'); gg.addColorStop(Math.max(0.01, (yF - 40) / (yF + 16 - 40)), 'rgba(126,130,138,0.9)'); gg.addColorStop(1, 'rgba(126,130,138,0)');
+  ctx.fillStyle = gg; ctx.fillRect(140, 40, 110, yF - 24);
+  ctx.save(); ctx.beginPath(); ctx.rect(140, 40, 110, yF - 40); ctx.clip();
+  ctx.strokeStyle = 'rgba(40,40,52,0.8)'; ctx.lineWidth = 0.5;
+  for (const pts of st.cracks) { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+  ctx.restore();
+  ctx.restore();
+  // warm rim light on the side facing the candle, and a soft shadow under the hand
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(0.8, 0); ctx.strokeStyle = 'rgba(255,170,100,0.35)'; ctx.lineWidth = 1; ctx.stroke(hand); ctx.restore();
+  // palm lines
+  ctx.strokeStyle = 'rgba(90,50,38,0.5)'; ctx.lineWidth = 0.6;
+  ctx.beginPath(); ctx.moveTo(172, 132); ctx.quadraticCurveTo(192, 124, 214, 134); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(176, 142); ctx.quadraticCurveTo(196, 150, 206, 164); ctx.stroke();
+  // the glove sliding off
+  const gk = clamp(T / 1.8, 0, 1);
+  if (gk < 1) {
+    ctx.save(); ctx.globalAlpha = inA * (1 - ease(gk)); ctx.translate(0, ease(gk) * 90);
+    ctx.fillStyle = '#231a1e'; ctx.fill(hand); ctx.strokeStyle = '#3a2c30'; ctx.lineWidth = 0.6; ctx.stroke(hand);
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  // petals peel away from the crumbling fingertips
+  if (grey > 0.05) {
+    st.spawn -= 1 / 60;
+    while (st.spawn <= 0) {
+      st.spawn += 0.09 - erode * 0.05;
+      const [tx, ty, bx, by] = choice(tips), k = rand(0.75, 1.02), x = bx + (tx - bx) * k, y = by + (ty - by) * k;
+      if (y < yF) { const q = newGPetal(W / 2 + (x - W / 2) * zoom, H / 2 + (y - H / 2) * zoom); q.vy = -rand(6, 16); q.vx = -rand(6, 18); cs.gp.push(q); if (Math.random() < 0.4) cs.gp.push(newGDust(q.x, q.y)); }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- theater: watch the story scenes from the title screen
+class TheaterUI extends Overlay {
+  constructor() { super(); this.sel = 0; this.items = [['Prologue', 'The five doors'], ['The Last Letter', 'An interlude'], ['The Fifth Door', 'Finale']]; }
+  play(i) {
+    this.close(); sfx('confirm');
+    const prev = S; Game.theater = { prev };
+    S = freshState(9); S.tut = { done: true }; S.flags.prologue = true;
+    const cs = [storyPrologue, storyLastLetter, storyFinale][i]();
+    Game.fade(() => Game.setScene(cs));
+  }
+  update(dt) {
+    super.update(dt);
+    const d = Input.dir();
+    if (d === 'U') { this.sel = (this.sel + 2) % 3; sfx('move'); }
+    if (d === 'D') { this.sel = (this.sel + 1) % 3; sfx('move'); }
+    if (tapHits(this)) return;
+    if (Input.pressed('A')) this.play(this.sel);
+    if (Input.pressed('B')) { sfx('cancel'); this.close(); }
+  }
+  draw() {
+    this.hits = [];
+    ctx.globalAlpha = 0.86; R(ctx, 0, 0, W, H, '#07050a'); ctx.globalAlpha = 1;
+    spaced('THEATER', W / 2, 44, 11, DISPLAY, '#ecd49a', 3, 1);
+    ctx.globalAlpha = 0.7; ctx.fillStyle = CINE.gold; ctx.fillRect(W / 2 - 70, 52, 140, 0.5); ctx.globalAlpha = 1; diamond(W / 2, 52.25, 2, CINE.gold);
+    this.items.forEach(([t, sub], i) => {
+      const y = 82 + i * 34, sel = i === this.sel;
+      hit(this, W / 2 - 90, y - 14, 180, 28, () => { this.sel = i; this.play(i); });
+      if (sel) { ctx.globalAlpha = 0.12; R(ctx, W / 2 - 90, y - 14, 180, 28, '#d9b86a'); ctx.globalAlpha = 1; diamond(W / 2 - 84, y - 3, 2.2, CINE.gold); diamond(W / 2 + 84, y - 3, 2.2, CINE.gold); }
+      txt(t, W / 2, y, { size: 11, align: 'center', color: sel ? '#fff3d6' : '#cbbd9e', fam: SERIF, bold: true });
+      txt(sub, W / 2, y + 10, { size: 7, align: 'center', color: '#9a8c70', fam: SERIF, italic: true });
+    });
+    promptBar([['A', 'Watch'], ['B', 'Back']], H - 8);
+  }
 }

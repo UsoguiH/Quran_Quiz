@@ -31,7 +31,7 @@ function drawTitleText(cx, y, size = 22) {
 
 class TitleScene {
   constructor() {
-    this.t = 0; this.sel = 0; this.items = ['Play', 'Options', 'Exit'];
+    this.t = 0; this.sel = 0; this.items = ['Play', 'Theater', 'Options', 'Exit'];
     const r = mulberry32(8);
     this.blobs = [];
     for (let i = 0; i < 14; i++) this.blobs.push({ x: r() * W, y: r() * H, r: 10 + r() * 38, vx: (r() - 0.5) * 6, vy: (r() - 0.5) * 5, ph: r() * 6, light: r() < 0.65 });
@@ -48,8 +48,9 @@ class TitleScene {
     }
     for (const b of this.blobs) { b.x += b.vx * dt; b.y += b.vy * dt; if (b.x < -60) b.x = W + 60; if (b.x > W + 60) b.x = -60; if (b.y < -60) b.y = H + 60; if (b.y > H + 60) b.y = -60; }
     const d = Input.dir();
-    if (d === 'U') { this.sel = (this.sel + 2) % 3; sfx('move'); }
-    if (d === 'D') { this.sel = (this.sel + 1) % 3; sfx('move'); }
+    const n = this.items.length;
+    if (d === 'U') { this.sel = (this.sel + n - 1) % n; sfx('move'); }
+    if (d === 'D') { this.sel = (this.sel + 1) % n; sfx('move'); }
     if (tapHits(this)) return;
     if (Input.pressed('A') || Input.pressed('X')) this.activate();
   }
@@ -57,8 +58,9 @@ class TitleScene {
     {
       sfx('confirm');
       if (this.sel === 0) Game.setScene(new SlotScene());
-      if (this.sel === 1) UI.open(new OptionsUI());
-      if (this.sel === 2) ask('Leave the game?', () => { location.href = '../'; });
+      if (this.sel === 1) UI.open(new TheaterUI());
+      if (this.sel === 2) UI.open(new OptionsUI());
+      if (this.sel === 3) ask('Leave the game?', () => { location.href = '../'; });
     }
   }
   draw() {
@@ -79,7 +81,7 @@ class TitleScene {
     drawTitleText(W / 2, 100, 24);
     this.hits = [];
     if (this.awake) this.items.forEach((it, i) => {
-      const y = 140 + i * 16, sel = i === this.sel;
+      const y = 136 + i * 15, sel = i === this.sel;
       hit(this, W / 2 - 60, y - 11, 120, 15, () => { this.sel = i; this.activate(); });
       txt(it, W / 2, y, { size: 8, align: 'center', color: sel ? '#ffffff' : '#d8f4e0', outline: sel ? C.teal3 : undefined });
       if (sel) { const w = textW(it, 8) / 2 + 12; ctx.drawImage(swirlIcon(false), W / 2 - w - 4, y - 7); ctx.drawImage(swirlIcon(true), W / 2 + w - 3, y - 7); }

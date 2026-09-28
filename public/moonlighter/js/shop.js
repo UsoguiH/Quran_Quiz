@@ -383,7 +383,7 @@ class ShopScene {
     list.push({ y: CHEST_POS.y, draw: () => drawSpr(chestSprite(false, false), CHEST_POS.x, CHEST_POS.y + 2) });
     list.push({ y: BED_POS.y, draw: () => drawSpr(bedSprite(), BED_POS.x + 1, BED_POS.y + 2) });
     if (S.flags.finale) list.push({ y: 62, draw: () => { shadow(226, 62, 12); drawSpr(personSprite(ALDRIC_LOOK, 0, 0, 'idle'), 226, 63); } });
-    list.push(...this.customers, this.player, this.cat);
+    list.push(...this.customers, this.player, this.cat, ...(this.extra || []));
     if (this.pip) list.push(this.pip);
     list.sort((a, b) => a.y - b.y);
     for (const o of list) o.draw ? o.draw(0, 0) : null;
@@ -398,6 +398,7 @@ class ShopScene {
     for (const c of this.customers) c.drawBubble();
     if (this.pip) this.pip.drawBubble();
     drawFX(this, 0, 0);
+    if (this.cinematic) return;
     if (this.near) worldPrompt(this.near.x, this.near.y - 26, [['A', this.near.label]]);
     this.drawHUD();
     drawFlyingCoins(this);
