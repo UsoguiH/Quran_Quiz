@@ -1,5 +1,5 @@
 // Offline cache for the installed game: serve cached files first, refresh them in the background.
-const CACHE = 'moonkeeper-v10';
+const CACHE = 'moonkeeper-v11';
 const FILES = ['./', './index.html', './manifest.webmanifest',
   './js/engine.js', './js/voice.js', './js/art.js', './js/pixelui.js', './js/data.js', './js/ui.js', './js/hud.js', './js/postfx.js',
   './js/entities.js', './js/dungeon.js', './js/town.js', './js/shop.js', './js/menus.js', './js/craft.js', './js/minigame.js', './js/tutorial.js', './js/story.js', './js/main.js',

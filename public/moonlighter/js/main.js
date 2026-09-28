@@ -164,9 +164,11 @@ function syncTouchMode() {
   const peace = !cine && !ui && !(sc instanceof DungeonScene);
   const near = !cine && !ui && sc && sc.near;
   const hint = near ? (near.label || near.interact || '') : '';
-  const key = cine + '|' + ui + '|' + hint + '|' + (sc && sc.constructor.name);
+  const pots = S && S.potions ? S.potions.reduce((n, v) => n + v, 0) : 0;
+  const key = cine + '|' + ui + '|' + hint + '|' + (sc && sc.constructor.name) + '|' + pots;
   if (key === _touchMode) return;
   _touchMode = key;
+  const rb = document.querySelector('.tbtn[data-b="RB"]'); if (rb) rb.dataset.n = pots;
   const cl = document.body.classList;
   cl.toggle('cine', cine); cl.toggle('ui', ui); cl.toggle('peace', peace);
   cl.toggle('menu', sc instanceof TitleScene || sc instanceof SlotScene);

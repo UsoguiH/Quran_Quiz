@@ -299,7 +299,14 @@ const Input = (() => {
     const k = clamp(u / 150, 2, 3.2); // css px per art pixel of the button skins
     // medallion skins are (d+6) x (d+7) art pixels including their drop shadow
     const place = (el, x, y, w, h = w) => { if (el) Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
-    const med = (el, x, y, d, kk = k) => place(el, x, y + 0.5 * kk, (d + 6) * kk, (d + 7) * kk);
+    // glass buttons: d art pixels across; the icon is scaled by a whole number so it stays crisp
+    const med = (el, x, y, d, kk = k) => {
+      if (!el) return;
+      const cap = el.classList.contains('cap'), w = Math.round(d * kk * (cap ? 1.08 : 0.94)); place(el, x, y, w);
+      const iw = +el.dataset.iw || 0;
+      if (iw) el.style.setProperty('--ics', iw * Math.max(2, Math.round(w * (cap ? 0.46 : 0.5) / iw)) + 'px');
+      el.style.setProperty('--lbs', Math.max(8, Math.round(w * 0.1)) + 'px');
+    };
     const fsShown = !cl.contains('fs') && !cl.contains('nofs');
     let bx, by, sx, sy, sr, sm = 20;
     const big = 32 * k, sat = 24 * k;
@@ -317,7 +324,7 @@ const Input = (() => {
       sr = u * 0.42; sx = sr * 0.62 + 14; sy = VP.h - sr * 0.62 - 14;
       bx = VP.w - big / 2 - 22; by = VP.h - big / 2 - 14;
       const side = (VP.w - W * VIEW.s) / 2; // letterbox bars beside the game view
-      const step = (sm + 9) * k;
+      const step = (sm + 5) * k;
       if (side >= (sm + 8) * k) {
         // wide phones: small buttons live in the empty side bars, clear of the HUD
         ['SELECT', 'RB', 'LB'].forEach((n, i) => med(btns[n], VP.w - side / 2, 10 + step / 2 + i * step, sm));
@@ -336,13 +343,17 @@ const Input = (() => {
     if (portrait) { const zt = (VIEW.bottom || VP.h * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h - zt) + 'px' }); }
     else Object.assign(zone.style, { left: '0px', top: (VP.h * 0.22) + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h * 0.78) + 'px' });
     // action buttons: one big thumb button in the corner, the others fanned around it
-    const Rr = (big + sat) / 2 + 6;
+    const Rr = (big + sat) / 2 * 1.08 + 9;
     const at = deg => [bx + Math.cos(deg * Math.PI / 180) * Rr, by + Math.sin(deg * Math.PI / 180) * Rr];
     let aPos;
     if (mode === 'fight') {
       med(btns.X, bx, by, 32);
       med(btns.B, ...at(185), 24); med(btns.Y, ...at(230), 24);
       aPos = at(275); med(btns.A, ...aPos, 28, k * 24 / 28);
+    } else if (mode === 'ui') {
+      // menus are tapped directly; OK/BACK stay small and out of the way
+      aPos = [bx + 4, by + 4]; med(btns.A, ...aPos, 22);
+      med(btns.B, bx - 22 * k * 1.08 - 8, by + 8, 18);
     } else {
       aPos = [bx, by]; med(btns.A, bx, by, 28, k * 32 / 28 * 0.94);
       med(btns.B, ...at(190), 24);
@@ -352,7 +363,7 @@ const Input = (() => {
       const r = Math.min(VP.w - 6, aPos[0] + sat * 0.6), hb = aPos[1] - (mode === 'fight' ? sat : big) / 2 - 4;
       Object.assign(hint.style, { left: (r - 300) + 'px', width: '300px', top: (hb - 30) + 'px', height: '30px' });
     }
-    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, VP.w - 16 - 40 * kk / 2, 12 + 18 * kk / 2, 40 * kk, 18 * kk); }
+    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, VP.w - 16 - 40 * kk / 2, 12 + 16 * kk / 2, 40 * kk, 16 * kk); sk.style.setProperty('--ics', (+sk.dataset.iw || 10) * Math.max(2, Math.floor(16 * kk * 0.5 / (+sk.dataset.iw || 10))) + 'px'); sk.style.setProperty('--lbs', Math.max(9, Math.round(16 * kk * 0.34)) + 'px'); }
     if (cl.contains('cine')) med(btns.FS, 16 + (sm + 6) * k * 0.4, 12 + (sm + 7) * k * 0.4, sm, k * 0.8);
   }
 
