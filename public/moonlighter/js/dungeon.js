@@ -408,6 +408,7 @@ class DungeonScene {
     this.pickups.push(new Pickup(x, y, { id: it.id, n, curse }));
   }
   update(dt) {
+    if (this.warp) { this.updateWarp(dt); return; }
     this.t += dt;
     for (const d of this.rain) { d.y += d.v * dt; d.x -= d.v * 0.35 * dt; if (d.y > H) { d.y = -6; d.x = rand(W + 60); } }
     if (this.slide) { this.slide.t += dt; if (this.slide.t >= this.slide.dur) this.slide = null; return; }
@@ -439,7 +440,7 @@ class DungeonScene {
     // pendant (hold)
     if (Input.down('PENDANT') && p.state !== 'dead') {
       this.pendantT += dt;
-      if (this.pendantT >= 1.2) { this.pendantT = 0; Input.consume('PENDANT'); this.usePendant(); }
+      if (this.pendantT >= 1.2 && !this.warp) { this.pendantT = 0; Input.consume('PENDANT'); this.usePendant(); }
     } else this.pendantT = Math.max(0, this.pendantT - dt * 3);
     // door transitions
     if (p.state !== 'dead' && p.state !== 'fall' && !this.room.closed) {
@@ -480,8 +481,19 @@ class DungeonScene {
     if (this.room.type === 'boss' && this.boss && !this.boss.dead) { toast('The guardian\'s power blocks the pendant!', '#ffb0a0'); sfx('error'); return; }
     if (S.gold < cost) { toast(`The pendant needs ${fmt(cost)} gold to activate`, '#ffb0a0'); sfx('error'); return; }
     S.gold -= cost; sfx('teleport');
-    FX.burst(this, this.player.x, this.player.y - 10, [C.mint, '#fff', C.teal], 30, 80);
-    this.exitToTown('pendant');
+    const p = this.player; p.state = 'warp'; p.st = 0; p.kx = p.ky = 0;
+    this.warp = { t: 0, burst: false, done: false, trickle: 0 };
+  }
+  // pendant: grey creeps over the Keeper, who scatters into petals and is carried home
+  updateWarp(dt) {
+    const w = this.warp, p = this.player; w.t += dt;
+    const sx = p.x, sy = p.y - CAM_Y;
+    p.grey = clamp(w.t / 0.9, 0, 1);
+    w.trickle -= dt;
+    if (!w.burst && w.trickle <= 0) { w.trickle = 0.05; Warp.petalAt(sx + rand(-5, 5), sy - rand(4, 24)); }
+    if (!w.burst && w.t >= 0.9) { w.burst = true; p.hidden = true; Warp.scatter(sx, sy); sfx('whoosh'); this.shake(1.5); }
+    if (!w.done && w.t >= 2.1) { w.done = true; this.exitToTown('pendant'); }
+    updateFX(this, dt);
   }
   exitToTown(how) {
     Game.fade(() => { returnFromDungeon(this, how); });

@@ -31,7 +31,7 @@ function portraitFor(who, ctx2) {
   }
   return null;
 }
-const ALDRIC_LOOK = { id: 'aldric', skin: '#e8b890', hair: '#e8e4dc', hairStyle: 'short', beard: '#e8e4dc', shirt: '#c8b890', pants: '#3a2a3a', outfit: 'coat', coat: '#6a4a8a', hat: 'tophat', hatCol: '#3a2a20', band: '#c8a050' };
+const ALDRIC_LOOK = { id: 'aldric', ref: 8, skin: '#e8b890', hair: '#e8e4dc', hairStyle: 'short', beard: '#e8e4dc', shirt: '#c8b890', pants: '#3a2a3a', outfit: 'coat', coat: '#6a4a8a', hat: 'tophat', hatCol: '#3a2a20', band: '#c8a050' };
 
 // ---------------------------------------------------------------- actors
 class Actor {
@@ -603,6 +603,48 @@ function drawGP(list) {
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
+// ---------------------------------------------------------------- Warp: the gommage on the Keeper (pendant)
+// Screen-space petals: scatter away from a body, or gather into one.
+const Warp = {
+  gp: [], conv: [],
+  petalAt(x, y) { const q = newGPetal(x, y); q.vx = -rand(8, 26); q.vy = -rand(8, 24); q.life = rand(2.5, 4); this.gp.push(q); },
+  scatter(x, y) {
+    for (let i = 0; i < 70; i++) { const q = newGPetal(x + rand(-6, 6), y - rand(1, 26)); q.vx = rand(-34, 10); q.vy = -rand(10, 40); q.life = rand(2.5, 4.5); this.gp.push(q); }
+    for (let i = 0; i < 26; i++) this.gp.push(newGDust(x + rand(-7, 7), y - rand(1, 26)));
+  },
+  converge(x, y, dur) {
+    for (let i = 0; i < 80; i++) {
+      const a = rand(6.283), r = rand(40, 110), tx = x + rand(-5, 5), ty = y - rand(2, 25);
+      this.conv.push({ x0: tx + Math.cos(a) * r, y0: ty + Math.sin(a) * r * 0.7 - 20, tx, ty, t: -rand(0, dur * 0.45), dur: dur * rand(0.5, 0.55), rx: rand(6.28), rz: rand(6.28), srx: rand(2, 5), srz: rand(-3, 3), s: rand(1.4, 2.6), white: Math.random() < 0.34 });
+    }
+  },
+  update(dt) {
+    updateGP(this.gp, dt);
+    for (const c of this.conv) { c.t += dt; c.rx += c.srx * dt; c.rz += c.srz * dt; }
+    this.conv = this.conv.filter(c => c.t < c.dur);
+  },
+  draw() {
+    if (this.gp.length) drawGP(this.gp);
+    if (!this.conv.length) return;
+    const redG = glowSprite('rgba(255,40,40,0.9)'), whiteG = glowSprite('rgba(255,250,240,1)');
+    for (const c of this.conv) {
+      if (c.t < 0) continue;
+      const k = c.t / c.dur, e = k * k * (3 - 2 * k);
+      // spiral in: the angle turns as the petal falls towards the body
+      const ang = (1 - e) * 2.2, dx = c.x0 - c.tx, dy = c.y0 - c.ty;
+      const x = c.tx + (dx * Math.cos(ang) - dy * Math.sin(ang)) * (1 - e), y = c.ty + (dx * Math.sin(ang) + dy * Math.cos(ang)) * (1 - e);
+      const fade = Math.min(1, k * 4) * (k > 0.85 ? (1 - k) / 0.15 : 1), face = Math.abs(Math.cos(c.rx)), s = c.s, shade = 0.4 + 0.6 * face;
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 * fade; ctx.drawImage(c.white ? whiteG : redG, x - s * 3, y - s * 3, s * 6, s * 6);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = fade;
+      const cc = Math.round(238 * shade);
+      ctx.fillStyle = c.white ? `rgb(${cc},${cc},${Math.round(cc * 0.97)})` : `rgb(${Math.round(175 * shade + 20)},${Math.round(6 * shade)},${Math.round(10 * shade)})`;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(c.rz); ctx.scale(1, Math.max(0.18, face));
+      ctx.beginPath(); ctx.moveTo(0, -s); ctx.quadraticCurveTo(s * 0.95, -s * 0.15, 0, s * 0.8); ctx.quadraticCurveTo(-s * 0.95, -s * 0.15, 0, -s); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  },
+};
 // a soft iris of darkness closing on the centre
 function inkIris(f) {
   f = clamp(f, 0, 1);
@@ -631,7 +673,7 @@ const GUARDIAN_LINES = [
 // ---------------------------------------------------------------- opening: the Lantern Tide
 // Saltmere, the Keeper's home by the sea, on its happiest night of the year... and its last.
 const MOTHER_LOOK = { id: 'mother', ref: 7, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'bun', dress: '#5a7ab8', shirt: '#ece2d0', scarf: '#e8c060' };
-const MIRA_LOOK = { id: 'mira', kid: true, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'long', dress: '#e89ab8', shirt: '#f6ece2' };
+const MIRA_LOOK = { id: 'mira', ref: 12, kid: true, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'long', dress: '#e89ab8', shirt: '#f6ece2' };
 function greyOf(img) {
   const m = greyOf.m || (greyOf.m = new WeakMap());
   let c = m.get(img);

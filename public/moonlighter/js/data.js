@@ -202,7 +202,7 @@ const LOOKS = [];
     }
     if (kind === 'villager') { if (r() < 0.4) o.beard = o.hair; if (r() < 0.25) o.hairStyle = 'bald'; if (r() < 0.3) o.apron = '#e8dcc4'; }
     // grown-ups are drawn from the townsfolk sheet
-    const REF = { lady: [3, 4, 7, 0], rich: [2, 3, 7], adventurer: [1, 5, 6, 0], villager: [4, 2, 6, 7, 0, 1] }[kind];
+    const REF = { kid: [10, 15], lady: [3, 4, 7, 0, 9], rich: [2, 3, 7], adventurer: [1, 5, 6, 0], villager: [9, 11, 4, 2, 6, 7, 0, 1] }[kind];
     if (REF) o.ref = REF[i % REF.length];
     LOOKS.push(o);
   }
@@ -210,8 +210,8 @@ const LOOKS = [];
 const THIEF_LOOK = { id: 'thief', hat: 'hood', hatCol: '#3a3446', mask: '#1a1620', shirt: '#4a4456', pants: '#2a2630', skin: '#e0b088' };
 const NPC_LOOKS = {
   elder: { id: 'elder', skin: '#f0c49a', hair: '#f4f0e8', hairStyle: 'bald', beard: '#f4f0e8', shirt: '#5e7a3e', pants: '#4a3a2a', outfit: 'coat', coat: '#4a5a3a' },
-  smith: { id: 'smith', ref: 6, skin: '#e8b88a', hair: '#3a2a28', beard: '#6a4028', shirt: '#d8723a', apron: '#6a4a2a', pants: '#4a3a4a', wide: true },
-  witch: { id: 'witch', skin: '#f0c8a0', hair: '#6ad8a8', hairStyle: 'long', dress: '#b8485a', shirt: '#e0a040', hat: 'witch', hatCol: '#5a3a6a' },
+  smith: { id: 'smith', ref: 13, skin: '#e8b88a', hair: '#3a2a28', beard: '#6a4028', shirt: '#d8723a', apron: '#6a4a2a', pants: '#4a3a4a', wide: true },
+  witch: { id: 'witch', ref: 14, skin: '#f0c8a0', hair: '#6ad8a8', hairStyle: 'long', dress: '#b8485a', shirt: '#e0a040', hat: 'witch', hatCol: '#5a3a6a' },
   mayor: { id: 'mayor', ref: 2, skin: '#e8b890', hair: '#2a2a3a', shirt: '#c8b890', pants: '#2a2a3a', outfit: 'coat', coat: '#3a4a7a', hat: 'tophat', hatCol: '#2a2230', beard: '#7a5a3a', wide: true },
 };
 const CUSTOMER_KINDS = {

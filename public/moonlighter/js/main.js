@@ -119,7 +119,9 @@ function returnFromDungeon(sc, how) {
   S.hp = playerStats().maxHp;
   if (S.phase === 'day') { S.phase = 'night'; S.shopOpenedToday = true; }
   else advanceDay();
-  Game.setScene(new TownScene('gates'));
+  const town = new TownScene('gates');
+  if (how === 'pendant') town.arrive = { t: 0 };
+  Game.setScene(town);
   saveGame();
   if (died) say(['You wake up at the gates, bruised and lighter. The dungeon kept most of your loot.', 'Only the items in the top row of your bag made it back.'], { name: 'Elder Oren', portrait: elderPortrait() });
   else toast(how === 'pendant' ? 'The pendant carried you home safely.' : 'Back in town!', C.mint);
@@ -190,11 +192,13 @@ function frame(now) {
     } else if (UI.blocking()) UI.update(dt);
     else Game.scene.update(dt);
     if (!Game.fadeDir) Tutorial.update(dt);
+    Warp.update(dt);
     Toasts.update(dt);
     if (S) HUD.update(dt);
     syncTouchMode();
     resetCtx();
     Game.scene.draw();
+    Warp.draw();
     Tutorial.draw();
     UI.draw();
     if (!(Game.scene instanceof Cutscene)) Toasts.draw();

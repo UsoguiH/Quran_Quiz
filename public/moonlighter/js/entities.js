@@ -127,6 +127,7 @@ class Player {
     if (!['walk', 'run', 'idle'].includes(this.state)) { this.vx = 0; this.vy = 0; }
     switch (this.state) {
       case 'dead': return;
+      case 'warp': return; // the pendant is carrying the Keeper home
       case 'fall':
         if (this.st > 0.6) {
           this.x = this.lastSafe.x; this.y = this.lastSafe.y; this.state = 'idle'; this.inv = 1;
@@ -342,6 +343,7 @@ class Player {
       ctx.drawImage(img, x - img.width * k / 2, y - img.height * k + (1 - k) * 6, img.width * k, img.height * k);
       return;
     }
+    if (this.hidden) return;
     shadow(x, y, 12);
     if (this.inv > 0 && this.state !== 'roll' && Math.floor(this.inv * 20) % 2 === 0) return;
     if (this.state === 'dead') {
@@ -369,6 +371,7 @@ class Player {
     const img = heroSprite(this.dir, frame, pose);
     if (sunOut()) castSprShadow(img, x, y);
     drawSpr(img, x, y + 1);
+    if (this.grey > 0) drawSpr(greyOf(img), x, y + 1, { alpha: Math.min(1, this.grey) });
     if (this.flash > 0) drawSpr(whiteOf(img), x, y + 1, { alpha: 0.7 });
     if ((atk || this.state === 'block' || this.state === 'charge') && !drawWeaponFirst) this.drawWeapon(x, y);
   }

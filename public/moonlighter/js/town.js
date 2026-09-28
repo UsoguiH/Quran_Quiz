@@ -376,9 +376,20 @@ class TownScene {
     else say(['An ancient door, larger than the others. It does not budge.', 'Perhaps the guardians of the four dungeons hold the answer.']);
   }
   snapCam() { this.cam.x = clamp(this.player.x - W / 2, 0, TW - W); this.cam.y = clamp(this.player.y - H / 2 - 10, 0, TH - H); }
+  // arriving by pendant: petals gather from the air and the Keeper steps out of them
+  updateArrive(dt) {
+    const a = this.arrive, p = this.player;
+    if (!a.started) { a.started = true; this.snapCam(); p.hidden = true; p.state = 'warp'; Warp.converge(p.x - this.cam.x, p.y - this.cam.y, 1.4); sfx('whoosh'); }
+    a.t += dt;
+    if (a.t >= 1.4 && p.hidden) { p.hidden = false; p.grey = 1; sfx('teleport'); FX.burst(this, p.x, p.y - 12, ['#ffffff', '#e8203a', '#f4e8d8'], 22, 60); }
+    if (!p.hidden) p.grey = Math.max(0, p.grey - dt * 1.4);
+    if (a.t >= 2.3) { p.state = 'idle'; p.grey = 0; this.arrive = null; Input.clearAll(); }
+    updateFX(this, dt);
+  }
   update(dt) {
     this.t += dt;
     const p = this.player;
+    if (this.arrive) { this.updateArrive(dt); return; }
     if (Input.pressed('START')) { UI.open(new PauseUI()); return; }
     if (Input.pressed('SELECT')) { UI.open(new InventoryUI({})); return; }
     p.update(dt, this, 'town');
