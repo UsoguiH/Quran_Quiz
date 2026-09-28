@@ -10,6 +10,7 @@ function keeperPortrait() {
   return cached('keeperP', () => { const s = hudPortrait(false), c = mkCanvas(52, 52), g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(s, 0, 0, 52, 52); return c; });
 }
 function aldricPortrait() {
+  if (TOWNSFOLK.ready) return refPortrait(ALDRIC_LOOK.ref);
   return cached('aldricP', () => sprite(40, 48, g => {
     const skin = '#e8b890', beard = '#e8e4dc', coat = '#6a4a8a';
     ell(g, 2, 26, 36, 24, coat); R(g, 16, 28, 8, 18, '#4a3060'); R(g, 30, 30, 6, 10, '#3a3440'); ell(g, 29, 32, 8, 8, '#ffd070');
@@ -681,7 +682,7 @@ function greyOf(img) {
     c = mkCanvas(img.width, img.height); const g = c.getContext('2d'); g.drawImage(img, 0, 0);
     const id = g.getImageData(0, 0, c.width, c.height), d = id.data;
     for (let i = 0; i < d.length; i += 4) { const l = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15, v = 70 + l * 0.55; d[i] = v; d[i + 1] = v + 2; d[i + 2] = v + 8; }
-    g.putImageData(id, 0, 0); m.set(img, c);
+    g.putImageData(id, 0, 0); c.scale = img.scale; m.set(img, c);
   }
   return c;
 }

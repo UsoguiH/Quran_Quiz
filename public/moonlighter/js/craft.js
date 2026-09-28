@@ -501,10 +501,13 @@ function recipePanel(x, y, w, rec, title) {
   });
 }
 function portraitStage(img, x, y) {
+  // sheet sprites are scaled up to the counter's height
+  const k = img.tall ? img.tall / img.height : 1, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  if (k !== 1) { x += Math.round((60 - w) / 2); y += 84 - h; }
   // wooden platform like the reference
-  R(ctx, x - 8, y + img.height - 6, img.width + 16, 10, C.wood4); R(ctx, x - 6, y + img.height - 5, img.width + 12, 6, C.wood);
-  R(ctx, x - 4, y + img.height - 3, img.width + 8, 1, C.wood3);
-  ctx.drawImage(img, x, y);
+  R(ctx, x - 8, y + h - 6, w + 16, 10, C.wood4); R(ctx, x - 6, y + h - 5, w + 12, 6, C.wood);
+  R(ctx, x - 4, y + h - 3, w + 8, 1, C.wood3);
+  ctx.drawImage(img, x, y, w, h);
 }
 
 // ---------------------------------------------------------------- forge
@@ -541,7 +544,7 @@ class ForgeUI extends Overlay {
   draw() {
     R(ctx, 0, 0, W, H, '#150f18');
     for (let i = 0; i < 40; i++) { const r = mulberry32(i); P(ctx, r() * W, r() * H, '#2a2230'); }
-    portraitStage(smithPortrait(), 12, 72);
+    portraitStage(TOWNSFOLK.ready ? refStanding(13) : smithPortrait(), 12, 72);
     banner(160, 8, 150, "BROM'S ANVIL");
     // centre paper with categories
     this.hits = [];
@@ -601,7 +604,7 @@ class WitchUI extends Overlay {
   }
   draw() {
     R(ctx, 0, 0, W, H, '#150f18');
-    portraitStage(witchPortrait(), 14, 76);
+    portraitStage(TOWNSFOLK.ready ? refStanding(14) : witchPortrait(), 14, 76);
     banner(162, 8, 150, 'COPPER CAULDRON');
     paperPanel(96, 34, 132, 64);
     txt('Potions List:', 104, 46, { size: 7, color: C.paperDark });

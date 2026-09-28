@@ -303,66 +303,64 @@ function heroPortrait() {
 }
 
 // ---------------------------------------------------------------- people
-// ---------------------------------------------------------------- townsfolk sheet (img/townsfolk.png)
-// Eight hand-picked characters, 34x46 cells, front view. Walk frames and a back view are derived.
-const TOWNSFOLK = { img: null, ready: false, CW: 34, CH: 46 };
+// ---------------------------------------------------------------- townsfolk sheets
+// Two hand-drawn sheets, eight characters each. Every cell row is one facing:
+// row 0 down, row 1 up, row 2 left, row 3 right. Refs 0-7 come from sheet A, 8-15 from sheet B.
+// Sheet B is drawn at a finer pixel size, so its sprites carry a draw scale.
+const TOWNSFOLK = {
+  ready: false,
+  sheets: [
+    { src: 'img/townsfolk_a.png', CW: 34, CH: 46, scale: 1, img: null },
+    { src: 'img/townsfolk_b.png', CW: 44, CH: 64, scale: 0.68, img: null },
+  ],
+};
 function loadTownsfolk() {
-  return new Promise(res => {
+  return Promise.all(TOWNSFOLK.sheets.map(sh => new Promise(res => {
     const im = new Image();
-    im.onload = () => { TOWNSFOLK.img = im; TOWNSFOLK.ready = true; res(); };
-    im.onerror = () => res();
-    im.src = 'img/townsfolk.png';
-  });
+    im.onload = () => { sh.img = im; res(true); };
+    im.onerror = () => res(false);
+    im.src = sh.src;
+  }))).then(ok => { TOWNSFOLK.ready = ok.every(Boolean); });
 }
-function townsfolkBase(k) {
-  return cached('tf_' + k, () => { const c = mkCanvas(TOWNSFOLK.CW, TOWNSFOLK.CH); c.getContext('2d').drawImage(TOWNSFOLK.img, k * TOWNSFOLK.CW, 0, TOWNSFOLK.CW, TOWNSFOLK.CH, 0, 0, TOWNSFOLK.CW, TOWNSFOLK.CH); return c; });
-}
-// back view: the face turns into hair
-function townsfolkBack(k) {
-  return cached('tfb_' + k, () => {
-    const src = townsfolkBase(k), c = mkCanvas(src.width, src.height), g = c.getContext('2d'); g.drawImage(src, 0, 0);
-    const id = g.getImageData(0, 0, c.width, c.height), d = id.data, w = c.width;
-    let top = c.height, bot = 0;
-    for (let y = 0; y < c.height; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { top = Math.min(top, y); bot = Math.max(bot, y); }
-    const hh = Math.round((bot - top) * 0.45), counts = new Map();
-    for (let y = top; y < top + hh * 0.35; y++) for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4; if (!d[i + 3]) continue;
-      const L = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; if (L < 60) continue;
-      const key = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4); counts.set(key, (counts.get(key) || 0) + 1);
-    }
-    let best = null, bn = 0; for (const [k2, n] of counts) if (n > bn) { bn = n; best = k2; }
-    const [hr, hg, hb] = best ? best.split(',').map(v => v * 16 + 8) : [60, 40, 30];
-    // the head's width, measured across the hair near the top of the head
-    const spanAt = y => { let l = -1, r = -1; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (l < 0) l = x; r = x; } return [l, r]; };
-    const [hl, hr2] = spanAt(top + Math.round(hh * 0.3));
-    for (let y = top + Math.round(hh * 0.22); y < top + hh; y++) {
-      const [l, r] = spanAt(y); if (l < 0) continue;
-      const x0 = Math.max(l + 1, hl + 1), x1 = Math.min(r - 1, hr2 - 1);
-      for (let x = x0; x <= x1; x++) {
-        const i = (y * w + x) * 4; if (!d[i + 3]) continue;
-        const k3 = (x - x0) % 3 === 2 ? 0.72 : y > top + hh - 3 ? 0.78 : 0.92 + ((x * 7 + y) % 4) * 0.03;
-        d[i] = hr * k3; d[i + 1] = hg * k3; d[i + 2] = hb * k3;
-      }
-    }
-    g.putImageData(id, 0, 0);
+function townsfolkBase(k, dir) {
+  return cached(`tf_${k}_${dir}`, () => {
+    const sh = TOWNSFOLK.sheets[k >> 3], col = k & 7;
+    const c = mkCanvas(sh.CW, sh.CH);
+    c.getContext('2d').drawImage(sh.img, col * sh.CW, dir * sh.CH, sh.CW, sh.CH, 0, 0, sh.CW, sh.CH);
+    c.scale = sh.scale;
     return c;
   });
 }
 function townsfolkSprite(k, dir, frame, pose) {
   const f = pose === 'walk' ? frame % 4 : 0;
   return cached(`tfs_${k}_${dir}_${f}`, () => {
-    if (dir === 3) return flipH(townsfolkSprite(k, 2, frame, pose));
-    const src = dir === 1 ? townsfolkBack(k) : townsfolkBase(k);
+    const src = townsfolkBase(k, dir);
     if (!f || f === 2) return src;
     // walking: a small bob, and one foot lifted
-    const c = mkCanvas(src.width, src.height), g = c.getContext('2d'), w = src.width, h = src.height, legs = 5;
-    g.drawImage(src, 0, 0, w, h - legs, 0, -1, w, h - legs);
+    const sh = TOWNSFOLK.sheets[k >> 3], u = Math.round(1 / sh.scale);
+    const c = mkCanvas(src.width, src.height), g = c.getContext('2d'), w = src.width, h = src.height, legs = Math.round(5 / sh.scale);
+    g.drawImage(src, 0, 0, w, h - legs, 0, -u, w, h - legs);
     const half = w / 2, lift = f === 1 ? 0 : 1;
-    g.drawImage(src, 0, h - legs, half, legs, 0, h - legs - (lift === 0 ? 2 : 1), half, legs);
-    g.drawImage(src, half, h - legs, w - half, legs, half, h - legs - (lift === 1 ? 2 : 1), w - half, legs);
+    g.drawImage(src, 0, h - legs, half, legs, 0, h - legs - (lift === 0 ? 2 : 1) * u, half, legs);
+    g.drawImage(src, half, h - legs, w - half, legs, half, h - legs - (lift === 1 ? 2 : 1) * u, w - half, legs);
+    c.scale = sh.scale;
     return c;
   });
 }
+// head-and-shoulders crop of a character's front view, for dialogue boxes
+function refPortrait(k) {
+  return cached('tfp_' + k, () => {
+    const src = townsfolkBase(k, 0), g0 = src.getContext('2d'), d = g0.getImageData(0, 0, src.width, src.height).data;
+    let top = src.height, bot = 0;
+    for (let y = 0; y < src.height; y++) for (let x = 0; x < src.width; x++) if (d[(y * src.width + x) * 4 + 3] > 40) { top = Math.min(top, y); bot = Math.max(bot, y); }
+    const h = Math.min(src.width, Math.round((bot - top + 1) * 0.62)), c = mkCanvas(src.width, h);
+    c.getContext('2d').drawImage(src, 0, top, src.width, h, 0, 0, src.width, h);
+    c.fill = true;
+    return c;
+  });
+}
+// the whole front view, for the forge and potion counters
+function refStanding(k) { return cached('tfst_' + k, () => { const src = townsfolkBase(k, 0), c = mkCanvas(src.width, src.height); c.getContext('2d').drawImage(src, 0, 0); c.tall = 84; return c; }); }
 // o: {skin, hair, hairStyle, eyes, shirt, pants, boots, dress, outfit, metal, coat, hat, hatCol, beard, kid, wide, apron, scarf, mask}
 // Townsfolk in a chibi RPG style: large round heads with full hair, bright eyes, layered outfits
 // (tunic, dress, armour with pauldrons, long coat), boots. 22x32 art. dir 0 down, 1 up, 2 left, 3 right.
@@ -780,6 +778,7 @@ function fenceSprite() {
 
 // ---------------------------------------------------------------- portraits (bigger art for shop UIs & dialogue)
 function smithPortrait() {
+  if (TOWNSFOLK.ready) return refPortrait(13);
   return cached('smithP', () => sprite(64, 84, g => {
     const skin = '#e8b88a', skin2 = '#c8906a', beard = '#6a4028', beard2 = '#4a2a18', shirt = '#d8723a', apron = '#5e7a3e', apron2 = '#4a6030';
     // legs & boots
@@ -800,6 +799,7 @@ function smithPortrait() {
   }));
 }
 function witchPortrait() {
+  if (TOWNSFOLK.ready) return refPortrait(14);
   return cached('witchP', () => sprite(60, 84, g => {
     const skin = '#f0c8a0', hair = '#6ad8a8', hair2 = '#46b088', cloak = '#b8485a', cloak2 = '#8a3044', dress = '#e0a040';
     // cloak back
@@ -826,6 +826,7 @@ function witchPortrait() {
   }));
 }
 function elderPortrait() {
+  if (TOWNSFOLK.ready) return refPortrait(8);
   return cached('elderP', () => sprite(40, 48, g => {
     const skin = '#f0c8a0', beard = '#f4f0e8', coat = '#5e7a3e';
     ell(g, 2, 26, 36, 24, coat); R(g, 30, 4, 3, 44, '#6a4a2a'); ell(g, 27, 0, 9, 7, '#3fae8f');
@@ -835,6 +836,7 @@ function elderPortrait() {
   }));
 }
 function mayorPortrait() {
+  if (TOWNSFOLK.ready) return refPortrait(2);
   return cached('mayorP', () => sprite(40, 48, g => {
     ell(g, 2, 26, 36, 24, '#3a4a7a'); R(g, 16, 28, 8, 18, '#e8e0d0'); R(g, 18, 30, 4, 6, '#b8303a');
     ell(g, 8, 4, 24, 24, '#e8b890'); R(g, 6, 2, 28, 8, '#2a2a3a'); R(g, 10, -2, 20, 6, '#2a2a3a'); R(g, 6, 8, 28, 2, '#b8303a');

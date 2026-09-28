@@ -248,7 +248,7 @@ class Dialogue extends Overlay {
     let tx = x + 8;
     if (this.o.portrait) {
       const p = this.o.portrait;
-      const s = Math.min(1, 44 / p.height);
+      const s = p.fill ? 44 / Math.max(p.width, p.height) : Math.min(1, 44 / p.height);
       R(ctx, x + 4, y + 3, 44, 44, C.paper2);
       ctx.drawImage(p, x + 4 + (44 - p.width * s) / 2, y + 3 + (44 - p.height * s), p.width * s, p.height * s);
       tx = x + 54;
