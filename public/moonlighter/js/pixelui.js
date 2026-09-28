@@ -233,54 +233,121 @@ function pillBtn(label, icon, on = false, s = 1) {
     return c;
   });
 }
-// how each touch button looks: icon, caption, accent colours [glow, deep]; icu/lu = icon/caption in menus
+// how each touch button looks: size in art pixels, icon, caption plate, accent colours [light, deep];
+// icu/lu = icon/caption in menus
 const TOUCH_LOOK = {
-  X: { ic: 'sword', l: 'ATTACK', acc: ['#e0485c', '#4a1620'] },
-  B: { ic: 'dash', l: 'ROLL', acc: ['#34b8a8', '#10383a'], icu: 'back', lu: 'BACK' },
-  Y: { ic: 'shield', l: 'GUARD', acc: ['#5a7ee0', '#18244a'] },
-  A: { ic: 'hand', l: 'USE', acc: ['#5cc06a', '#1d3b23'], icu: 'check', lu: 'OK' },
-  SELECT: { ic: 'bag', sq: true, acc: ['#c8904a', '#3a2412'] },
-  RB: { ic: 'potion', sq: true, acc: ['#e24a5a', '#4a1620'] },
-  LB: { ic: 'swap', sq: true, acc: ['#8a96c8', '#222840'] },
-  START: { ic: 'pause', sq: true, acc: ['#8a96c8', '#222840'] },
-  PENDANT: { ic: 'pendant', sq: true, acc: ['#5ad0c0', '#10383a'] },
-  FS: { ic: 'full', sq: true, acc: ['#8a96c8', '#222840'] },
-  SKIP: { ic: 'skip', l: 'SKIP', pill: true, acc: ['#8a96c8', '#222840'] },
+  X: { d: 40, ic: 'sword', l: 'ATTACK', acc: ['#e0485c', '#5a1a26'] },
+  B: { d: 30, ic: 'dash', l: 'ROLL', acc: ['#34b8a8', '#10403e'], icu: 'back', lu: 'BACK', accu: ['#d8844e', '#4a2418'] },
+  Y: { d: 30, ic: 'shield', l: 'GUARD', acc: ['#5a7ee0', '#1c2a58'] },
+  A: { d: 30, ic: 'hand', l: 'USE', acc: ['#5cc06a', '#1d4426'], icu: 'check', lu: 'OK' },
+  SELECT: { d: 20, ic: 'bag', sq: true, acc: ['#c8904a', '#3a2412'] },
+  RB: { d: 20, ic: 'potion', sq: true, acc: ['#e24a5a', '#4a1620'] },
+  LB: { d: 20, ic: 'swap', sq: true, acc: ['#8a96c8', '#262c48'] },
+  START: { d: 20, ic: 'pause', sq: true, acc: ['#8a96c8', '#262c48'] },
+  PENDANT: { d: 20, ic: 'pendant', sq: true, acc: ['#5ad0c0', '#10403e'] },
+  FS: { d: 20, ic: 'full', sq: true, acc: ['#8a96c8', '#262c48'] },
+  SKIP: { d: 16, w: 40, ic: 'skip', l: 'SKIP', pill: true, acc: ['#8a96c8', '#262c48'] },
 };
-// a pixel icon blown up with hard edges, as a CSS url()
-function iconURL(name) {
-  return cached('icurl_' + name, () => {
-    const ic = tIcon(name), k = 8, c = mkCanvas(ic.width * k, ic.height * k), g = c.getContext('2d');
-    g.imageSmoothingEnabled = false; g.drawImage(ic, 0, 0, c.width, c.height);
-    return `url(${c.toDataURL()})`;
+const PXB_PAD = 2;
+// fill a rounded shape row by row (r = w/2 gives a circle) so every edge sits on whole pixels
+function pxShape(g, x, y, w, h, r, col) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2)); g.fillStyle = col;
+  for (let j = 0; j < h; j++) {
+    const dy = j < r ? r - j - 0.5 : j >= h - r ? j - (h - r) + 0.5 : 0;
+    const inset = dy > 0 ? Math.round(r - Math.sqrt(Math.max(0, r * r - dy * dy))) : 0;
+    g.fillRect(x + inset, y + j, w - inset * 2, 1);
+  }
+}
+// a touch button as pixel art, 1 canvas pixel = 1 art pixel. state: 0 idle, 1 pressed, 2 ready (glowing)
+function pixelBtn(L, state = 0, ui = false) {
+  const icon = ui && L.icu ? L.icu : L.ic, label = ui && L.lu ? L.lu : L.l, acc = ui && L.accu ? L.accu : L.acc;
+  return cached(`pxb_${L.d}_${L.w}_${icon}_${label}_${acc[0]}_${!!L.sq}_${!!L.pill}_${state}`, () => {
+    const pad = PXB_PAD, w = L.w || L.d, h = L.d, plate = label && !L.pill;
+    const c = mkCanvas(w + pad * 2, h + pad * 2 + 1 + (plate ? 4 : 0)), g = c.getContext('2d');
+    const r = L.pill ? h / 2 : L.sq ? Math.round(w * 0.3) : w / 2;
+    // drop shadow, and a coloured halo when pressed or ready
+    g.globalAlpha = 0.45; pxShape(g, pad, pad + 2, w, h, r, '#000'); g.globalAlpha = 1;
+    if (state) { g.globalAlpha = state === 2 ? 0.6 : 0.45; pxShape(g, pad - 2, pad - 2, w + 4, h + 4, r + 2, acc[0]); g.globalAlpha = 1; }
+    const ox = pad, oy = pad + (state === 1 ? 1 : 0);
+    pxShape(g, ox, oy, w, h, r, TB.rim);
+    pxShape(g, ox + 1, oy + 1, w - 2, h - 2, r - 1, state ? '#c8903e' : '#98682e');   // rim, shaded underside
+    pxShape(g, ox + 1, oy + 1, w - 2, h - 3, r - 1, state ? '#fff0c0' : '#e8be6e');  // rim, lit top
+    pxShape(g, ox + 2, oy + 2, w - 4, h - 4, r - 2, '#0c0a14');
+    // the glass, painted in bands on its own canvas so they stay inside the shape
+    const bw = w - 6, bh = h - 6, bc = mkCanvas(bw, bh), bg = bc.getContext('2d');
+    pxShape(bg, 0, 0, bw, bh, r - 3, '#fff');
+    bg.globalCompositeOperation = 'source-in';
+    if (state === 1) {
+      R(bg, 0, 0, bw, bh, acc[1]); R(bg, 0, 0, bw, Math.round(bh * 0.45), shade(acc[1], 0.18));
+      R(bg, 0, bh - 3, bw, 3, acc[0]);
+    } else {
+      R(bg, 0, 0, bw, bh, '#14111e'); R(bg, 0, 0, bw, Math.round(bh * 0.5), '#1f1a2e');
+      // coloured moon-glow along the bottom, with a dithered edge
+      R(bg, 0, bh - 3, bw, 3, acc[1]); R(bg, 0, bh - 1, bw, 1, shade(acc[0], -0.1));
+      for (let x = (bh & 1); x < bw; x += 2) R(bg, x, bh - 4, 1, 1, acc[1]);
+    }
+    // glint on the upper left
+    const gx = Math.max(1, Math.round(bw * 0.2));
+    R(bg, gx, 1, Math.max(2, Math.round(bw * 0.2)), 1, 'rgba(255,255,255,0.32)'); R(bg, gx - 1, 2, 1, 1, 'rgba(255,255,255,0.2)');
+    g.globalAlpha = 0.92; g.drawImage(bc, ox + 3, oy + 3); g.globalAlpha = 1;
+    // icon (and caption)
+    const ic = tIcon(icon);
+    if (L.pill) {
+      g.drawImage(ic, ox + 4, oy + Math.round((h - ic.height) / 2));
+      const tx = ox + 4 + ic.width + 2;
+      pText(g, label, tx, oy + Math.round((h - 5) / 2) + 1, '#0c0a14'); pText(g, label, tx, oy + Math.round((h - 5) / 2), PK.cream);
+    } else {
+      g.drawImage(ic, ox + Math.round((w - ic.width) / 2), oy + Math.round((h - ic.height) / 2) - (plate ? 2 : 0));
+    }
+    if (plate) {
+      // a small parchment plate across the bottom of the rim names the action
+      const tw = pTextW(label), pw = tw + 6, px = ox + Math.round((w - pw) / 2), py = oy + h - 5;
+      R(g, px + 1, py, pw - 2, 9, TB.rim); R(g, px, py + 1, pw, 7, TB.rim);
+      R(g, px + 1, py + 1, pw - 2, 7, '#efe3c5'); R(g, px + 1, py + 6, pw - 2, 1, '#d8c9a0');
+      pText(g, label, px + 3, py + 2, '#3a2a1e');
+    }
+    return c;
   });
 }
-// joystick ring: eight small ticks, the four main ones as gold diamonds
-function stickTicks() {
-  return cached('stickTicks', () => {
-    const n = 200, c = mkCanvas(n, n), g = c.getContext('2d'), m = n / 2;
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4 - Math.PI / 2, main = i % 2 === 0, r = m - 16;
-      g.save(); g.translate(m + Math.cos(a) * r, m + Math.sin(a) * r); g.rotate(a + Math.PI / 4);
-      g.fillStyle = main ? 'rgba(244,212,154,.95)' : 'rgba(244,212,154,.45)';
-      const d = main ? 9 : 5; g.fillRect(-d / 2, -d / 2, d, d); g.restore();
-    }
-    return `url(${c.toDataURL()})`;
+// joystick: a thin gold ring with diamond ticks, and a jewelled knob
+function stickArt() {
+  return cached('pxStick', () => {
+    const d = 48, c = mkCanvas(d, d), g = c.getContext('2d'), m = d / 2;
+    pxShape(g, 0, 0, d, d, m, TB.rim); pxShape(g, 1, 1, d - 2, d - 2, m - 1, '#e8be6e'); pxShape(g, 2, 2, d - 4, d - 4, m - 2, TB.rim);
+    g.globalCompositeOperation = 'destination-out'; pxShape(g, 3, 3, d - 6, d - 6, m - 3, '#000');
+    g.globalCompositeOperation = 'source-over'; pxShape(g, 3, 3, d - 6, d - 6, m - 3, 'rgba(12,10,20,0.35)');
+    const dia = (x, y, col) => { R(g, x - 1, y, 3, 1, col); R(g, x, y - 1, 1, 3, col); };
+    dia(m, 7, '#f4d49a'); dia(m - 1, d - 8, '#f4d49a'); dia(7, m - 1, '#f4d49a'); dia(d - 8, m, '#f4d49a');
+    [[13, 13], [d - 14, 13], [13, d - 14], [d - 14, d - 14]].forEach(([x, y]) => R(g, x, y, 1, 1, 'rgba(244,212,154,0.6)'));
+    return c;
+  });
+}
+function knobArt() {
+  return cached('pxKnob', () => {
+    const d = 20, c = mkCanvas(d, d + 1), g = c.getContext('2d');
+    g.globalAlpha = 0.45; pxShape(g, 0, 1, d, d, d / 2, '#000'); g.globalAlpha = 1;
+    pxShape(g, 0, 0, d, d, d / 2, TB.rim); pxShape(g, 1, 1, d - 2, d - 2, d / 2 - 1, '#98682e'); pxShape(g, 1, 1, d - 2, d - 3, d / 2 - 1, '#e8be6e');
+    pxShape(g, 2, 2, d - 4, d - 4, d / 2 - 2, '#0c0a14'); pxShape(g, 3, 3, d - 6, d - 6, d / 2 - 3, '#1f1a2e');
+    pxShape(g, 6, 6, 8, 8, 4, '#98682e'); pxShape(g, 6, 6, 8, 7, 4, '#e8b84a'); R(g, 8, 7, 2, 1, '#fff0c0');
+    return c;
   });
 }
 function skinTouchButtons() {
+  const url = c => `url(${c.toDataURL()})`;
   document.querySelectorAll('.tbtn').forEach(b => {
     const L = TOUCH_LOOK[b.dataset.b]; if (!L) return;
     b.textContent = '';
-    b.classList.add('gl'); if (L.sq) b.classList.add('sq'); if (L.pill) b.classList.add('pill'); if (L.l) b.classList.add('cap');
-    b.style.setProperty('--acc', L.acc[0]); b.style.setProperty('--acc2', L.acc[1]);
-    b.style.setProperty('--ic', iconURL(L.ic)); b.dataset.iw = tIcon(L.ic).width;
-    if (L.icu) b.style.setProperty('--ic-ui', iconURL(L.icu));
-    const ic = document.createElement('i'); ic.className = 'ic'; b.appendChild(ic);
-    if (L.l) { const lb = document.createElement('b'); lb.className = 'lb'; lb.dataset.l = L.l; lb.dataset.lu = L.lu || L.l; b.appendChild(lb); }
+    b.classList.add('px');
+    const idle = pixelBtn(L, 0);
+    b.style.setProperty('--img', url(idle)); b.style.setProperty('--img-on', url(pixelBtn(L, 1)));
+    if (b.dataset.b === 'A') b.style.setProperty('--img-glow', url(pixelBtn(L, 2)));
+    if (L.icu) { b.style.setProperty('--img-ui', url(pixelBtn(L, 0, true))); b.style.setProperty('--img-ui-on', url(pixelBtn(L, 1, true))); }
+    // art size: the button face (d) and the whole canvas, used to scale it by a whole number
+    Object.assign(b.dataset, { ad: L.d, aw: idle.width, ah: idle.height });
   });
-  const stick = document.getElementById('stick');
-  if (stick) stick.style.setProperty('--ticks', stickTicks());
+  const stick = document.getElementById('stick'), knob = document.getElementById('knob');
+  if (stick) { stick.classList.add('px'); stick.style.setProperty('--img', url(stickArt())); }
+  if (knob) { knob.classList.add('px'); knob.style.setProperty('--img', url(knobArt())); }
 }
 // small version drawn inside in-game prompts on phones; returns the canvas
 function miniAction(b) {

@@ -296,16 +296,15 @@ const Input = (() => {
     const mode = cl.contains('ui') ? 'ui' : cl.contains('peace') ? 'peace' : 'fight';
     const btns = {}; touchEl.querySelectorAll('.tbtn').forEach(b => btns[b.dataset.b] = b);
     const u = Math.min(VP.w, VP.h);
-    const k = clamp(u / 150, 2, 3.2); // css px per art pixel of the button skins
-    // medallion skins are (d+6) x (d+7) art pixels including their drop shadow
-    const place = (el, x, y, w, h = w) => { if (el) Object.assign(el.style, { left: (x - w / 2) + 'px', top: (y - h / 2) + 'px', width: w + 'px', height: h + 'px' }); };
-    // glass buttons: d art pixels across; the icon is scaled by a whole number so it stays crisp
+    const k = clamp(u / 150, 2, 3.2); // rough css px per art pixel; buttons round it to whole device pixels
+    // pixel-art buttons: each art pixel covers a whole number of device pixels, so edges stay sharp
+    const dpr = window.devicePixelRatio || 1, snap = v => Math.round(v * dpr) / dpr;
     const med = (el, x, y, d, kk = k) => {
       if (!el) return;
-      const cap = el.classList.contains('cap'), w = Math.round(d * kk * (cap ? 1.08 : 0.94)); place(el, x, y, w);
-      const iw = +el.dataset.iw || 0;
-      if (iw) el.style.setProperty('--ics', iw * Math.max(2, Math.round(w * (cap ? 0.46 : 0.5) / iw)) + 'px');
-      el.style.setProperty('--lbs', Math.max(8, Math.round(w * 0.1)) + 'px');
+      const ad = +el.dataset.ad || d, n = Math.max(1, Math.round(d * kk * 1.08 * dpr / ad)), u = n / dpr;
+      const aw = +el.dataset.aw || ad + 4, ah = +el.dataset.ah || ad + 5, c = 2 + ad / 2; // face centre inside the canvas
+      Object.assign(el.style, { left: snap(x - c * u) + 'px', top: snap(y - c * u) + 'px', width: aw * u + 'px', height: ah * u + 'px' });
+      el.style.setProperty('--u', u + 'px');
     };
     const fsShown = !cl.contains('fs') && !cl.contains('nofs');
     let bx, by, sx, sy, sr, sm = 20;
@@ -338,7 +337,13 @@ const Input = (() => {
         med(btns.FS, VP.w / 2 + st * 0.6, (sm + 7) * kk / 2 + 4, sm, kk);
       }
     }
-    place(stickEl, sx, sy, sr); stickHome = { x: sx, y: sy };
+    { // joystick art is 48 art pixels across, the knob 20
+      const n = Math.max(1, Math.round(sr * dpr / 48)), u = n / dpr; sr = 48 * u;
+      Object.assign(stickEl.style, { left: snap(sx - sr / 2) + 'px', top: snap(sy - sr / 2) + 'px', width: sr + 'px', height: sr + 'px' });
+      const knobEl = stickEl.firstElementChild;
+      if (knobEl) Object.assign(knobEl.style, { width: 20 * u + 'px', height: 21 * u + 'px', left: 14 * u + 'px', top: 14 * u + 'px' });
+    }
+    stickHome = { x: sx, y: sy };
     // the floating-stick zone covers the lower-left of the screen
     if (portrait) { const zt = (VIEW.bottom || VP.h * 0.58) + 50; Object.assign(zone.style, { left: '0px', top: zt + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h - zt) + 'px' }); }
     else Object.assign(zone.style, { left: '0px', top: (VP.h * 0.22) + 'px', width: (VP.w * 0.5) + 'px', height: (VP.h * 0.78) + 'px' });
@@ -363,7 +368,7 @@ const Input = (() => {
       const r = Math.min(VP.w - 6, aPos[0] + sat * 0.6), hb = aPos[1] - (mode === 'fight' ? sat : big) / 2 - 4;
       Object.assign(hint.style, { left: (r - 300) + 'px', width: '300px', top: (hb - 30) + 'px', height: '30px' });
     }
-    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9; place(sk, VP.w - 16 - 40 * kk / 2, 12 + 16 * kk / 2, 40 * kk, 16 * kk); sk.style.setProperty('--ics', (+sk.dataset.iw || 10) * Math.max(2, Math.floor(16 * kk * 0.5 / (+sk.dataset.iw || 10))) + 'px'); sk.style.setProperty('--lbs', Math.max(9, Math.round(16 * kk * 0.34)) + 'px'); }
+    const sk = document.getElementById('skipBtn'); if (sk) { const kk = k * 0.9, u = Math.max(1, Math.round(kk * dpr)) / dpr, w = (+sk.dataset.aw || 44) * u; Object.assign(sk.style, { left: snap(VP.w - 12 - w) + 'px', top: snap(10) + 'px', width: w + 'px', height: (+sk.dataset.ah || 21) * u + 'px' }); }
     if (cl.contains('cine')) med(btns.FS, 16 + (sm + 6) * k * 0.4, 12 + (sm + 7) * k * 0.4, sm, k * 0.8);
   }
 
