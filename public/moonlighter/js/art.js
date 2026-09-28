@@ -311,7 +311,7 @@ const TOWNSFOLK = {
   ready: false,
   sheets: [
     { src: 'img/townsfolk_a.png', CW: 34, CH: 46, scale: 1, img: null },
-    { src: 'img/townsfolk_b.png', CW: 44, CH: 64, scale: 0.68, img: null },
+    { src: 'img/townsfolk_b.png', CW: 44, CH: 64, scale: 0.72, img: null },
   ],
 };
 function loadTownsfolk() {
