@@ -565,11 +565,11 @@ class Customer {
     if (this.state === 'react' && this.reaction === 'angry' && this.st < 0.6) sx = Math.round(Math.sin(this.st * 48));
     drawSpr(personSprite(this.look, this.dir, Math.floor(this.anim) % 4, pose), x + sx, y + 1 - hop);
     const ib = moving ? (Math.floor(this.anim) % 2) : 0;
-    if (this.carry) { const ic = itemIcon(this.carry.id); ctx.drawImage(ic, x - ic.width / 2, y - 40 - hop + ib); }
+    if (this.carry) { const ic = itemIcon(this.carry.id); ctx.drawImage(ic, x - ic.width / 2, y - 46 - hop + ib); }
   }
   drawBubble() {
     if (!this.bubble) return;
-    const x = Math.round(this.x), y = Math.round(this.y) - (this.carry ? 52 : 38);
+    const x = Math.round(this.x), y = Math.round(this.y) - (this.carry ? 58 : 44);
     // bubbles pop in with a little overshoot
     const a = this.bubble.age || 0, sc = a < 0.22 ? easeOut(a / 0.22) * 1.15 - Math.max(0, a - 0.14) * 1.9 : 1;
     ctx.save(); ctx.translate(x, y + 8); ctx.scale(sc, sc); ctx.translate(-x, -(y + 8));

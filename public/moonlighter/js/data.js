@@ -176,29 +176,40 @@ const INVEST = [
 // ---------------------------------------------------------------- customers
 const LOOKS = [];
 (function buildLooks() {
-  const skins = ['#f0c49a', '#e0a878', '#c8865a', '#9a6040', '#f6d6b8'];
-  const hairs = ['#6a4028', '#2a2020', '#d8b050', '#b0482a', '#8a8a8a', '#4a3020', '#f0e0c0'];
-  const shirts = ['#8aa860', '#c86a4a', '#5a8ac8', '#b88ad8', '#d8a848', '#6ab8a8', '#c84a6a', '#8a6a4a'];
-  const pants = ['#5a4634', '#3a3a5a', '#4a5a3a', '#6a4a3a'];
+  const skins = ['#f6d2b0', '#f0c49a', '#e0a878', '#c8865a', '#9a6040'];
+  const hairs = ['#e8c060', '#c8582a', '#6a4028', '#2a2020', '#8a5a34', '#e8e0d0', '#b0482a', '#4a3020'];
+  const cloth = ['#3f8a86', '#c86a4a', '#5a7ab8', '#9a6ac8', '#d8a848', '#6aa860', '#c84a6a', '#8a6a4a', '#4a5a8a'];
+  const dresses = ['#c8485a', '#5a7ab8', '#d8a848', '#6aa88a', '#9a6ac8', '#e8e0d0', '#8a3a3a'];
+  const pants = ['#5a4634', '#3a3a5a', '#4a5a3a', '#6a4a3a', '#2e2a36'];
   const r = mulberry32(1234);
   const pick = a => a[Math.floor(r() * a.length)];
   for (let i = 0; i < 28; i++) {
     const kind = i < 6 ? 'kid' : i < 14 ? 'lady' : i < 18 ? 'rich' : i < 22 ? 'adventurer' : 'villager';
-    const o = { id: 'look' + i, kind, skin: pick(skins), hair: pick(hairs), shirt: pick(shirts), pants: pick(pants), hairStyle: pick(['short', 'short', 'bald', 'long']) };
-    if (kind === 'kid') { o.kid = true; o.hairStyle = pick(['short', 'long']); }
-    if (kind === 'lady') { o.hairStyle = pick(['long', 'bun']); o.dress = pick(['#c86a8a', '#6a8ac8', '#d8a848', '#8ac0a0', '#a86ad8']); }
-    if (kind === 'rich') { o.shirt = pick(['#5a2a6a', '#2a3a6a', '#6a1a2a']); o.hat = 'cap'; o.hatCol = '#2a2a3a'; o.scarf = '#e0c060'; o.wide = r() < 0.5; }
-    if (kind === 'adventurer') { o.hat = 'bandana'; o.hatCol = pick(['#c84a4a', '#4a8ac8', '#4aa05a']); o.scarf = '#8a6a4a'; }
-    if (kind === 'villager' && r() < 0.4) { o.beard = o.hair; }
+    const o = { id: 'look' + i, kind, skin: pick(skins), hair: pick(hairs), shirt: pick(cloth), pants: pick(pants), hairStyle: pick(['short', 'short', 'curly', 'long']) };
+    if (kind === 'kid') { o.kid = true; o.hairStyle = pick(['short', 'ponytail', 'curly', 'long']); if (r() < 0.5) o.dress = pick(dresses); }
+    if (kind === 'lady') {
+      o.hairStyle = pick(['long', 'bun', 'ponytail', 'curly']); o.dress = pick(dresses); o.shirt = pick(['#f4ecde', '#e8d8c0', '#f0e0e8']);
+      if (r() < 0.3) o.apron = '#efe6d2'; if (r() < 0.3) o.ribbon = pick(['#c8384a', '#3a6ab8', '#e8c060']);
+    }
+    if (kind === 'rich') {
+      if (r() < 0.6) { o.outfit = 'coat'; o.coat = pick(['#3a3042', '#4a2a2a', '#2a3a4a', '#3a2a1a']); o.shirt = pick(['#c8b890', '#8a3a3a', '#e8e0d0']); o.hat = 'tophat'; o.hatCol = '#2a2230'; o.band = pick(['#8a3a2a', '#3a5a8a']); o.wide = r() < 0.4; if (r() < 0.4) o.beard = o.hair; }
+      else { o.dress = pick(['#6a2a4a', '#2a3a6a', '#7a5a2a']); o.shirt = '#f4ecde'; o.hairStyle = 'bun'; o.scarf = '#e0c060'; }
+    }
+    if (kind === 'adventurer') {
+      o.outfit = 'armor'; o.metal = pick(['#b8c2d0', '#c8a870', '#9aa0a8']); o.shirt = pick(['#3f7a8a', '#8a3a3a', '#3a5a8a', '#6a8a3a']); o.boots = '#3a2a22';
+      if (r() < 0.4) o.hairStyle = 'ponytail'; if (r() < 0.35) { o.beard = o.hair; o.hairStyle = 'short'; }
+      if (r() < 0.25) { o.hat = 'bandana'; o.hatCol = pick(['#c84a4a', '#4a8ac8', '#4aa05a']); }
+    }
+    if (kind === 'villager') { if (r() < 0.4) o.beard = o.hair; if (r() < 0.25) o.hairStyle = 'bald'; if (r() < 0.3) o.apron = '#e8dcc4'; }
     LOOKS.push(o);
   }
 })();
 const THIEF_LOOK = { id: 'thief', hat: 'hood', hatCol: '#3a3446', mask: '#1a1620', shirt: '#4a4456', pants: '#2a2630', skin: '#e0b088' };
 const NPC_LOOKS = {
-  elder: { id: 'elder', skin: '#f0c49a', hair: '#f4f0e8', hairStyle: 'bald', beard: '#f4f0e8', shirt: '#5e7a3e', pants: '#4a3a2a' },
-  smith: { id: 'smith', skin: '#e8b88a', hair: '#3a2a28', beard: '#6a4028', shirt: '#d8723a', apron: '#5e7a3e', pants: '#4a3a4a', wide: true },
+  elder: { id: 'elder', skin: '#f0c49a', hair: '#f4f0e8', hairStyle: 'bald', beard: '#f4f0e8', shirt: '#5e7a3e', pants: '#4a3a2a', outfit: 'coat', coat: '#4a5a3a' },
+  smith: { id: 'smith', skin: '#e8b88a', hair: '#3a2a28', beard: '#6a4028', shirt: '#d8723a', apron: '#6a4a2a', pants: '#4a3a4a', wide: true },
   witch: { id: 'witch', skin: '#f0c8a0', hair: '#6ad8a8', hairStyle: 'long', dress: '#b8485a', shirt: '#e0a040', hat: 'witch', hatCol: '#5a3a6a' },
-  mayor: { id: 'mayor', skin: '#e8b890', hair: '#2a2a3a', shirt: '#3a4a7a', pants: '#2a2a3a', hat: 'cap', hatCol: '#2a2a3a', beard: '#7a5a3a' },
+  mayor: { id: 'mayor', skin: '#e8b890', hair: '#2a2a3a', shirt: '#c8b890', pants: '#2a2a3a', outfit: 'coat', coat: '#3a4a7a', hat: 'tophat', hatCol: '#2a2230', beard: '#7a5a3a', wide: true },
 };
 const CUSTOMER_KINDS = {
   kid: { tol: 0.97, budget: 250 },

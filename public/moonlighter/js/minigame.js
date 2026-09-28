@@ -11,7 +11,7 @@ function pipPortrait() {
     const src = personSprite(PIP_LOOK, 0, 0, 'idle');
     const c = mkCanvas(src.width * 2, 22 * 2), g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
-    g.drawImage(src, 0, 0, src.width, 22, 0, 0, src.width * 2, 44);
+    g.drawImage(src, 0, 10, src.width, 22, 0, 0, src.width * 2, 44);
     return c;
   });
 }
@@ -74,14 +74,14 @@ class Gambler {
     if (this.state === 'wait' && !this.bubble) {
       for (let i = 0; i < 3; i++) {
         const a = Game.time * 5 + i * 2.09;
-        const bx = x + Math.cos(a) * 7, by = y - 32 - Math.abs(Math.sin(a)) * 10;
+        const bx = x + Math.cos(a) * 7, by = y - 38 - Math.abs(Math.sin(a)) * 10;
         R(ctx, Math.round(bx) - 1, Math.round(by) - 1, 3, 3, '#1b1420'); P(ctx, Math.round(bx), Math.round(by), PIP_BALLS[i]);
       }
     }
   }
   drawBubble() {
     if (!this.bubble) return;
-    const x = Math.round(this.x), y = Math.round(this.y) - 38;
+    const x = Math.round(this.x), y = Math.round(this.y) - 44;
     const a = this.bubble.age || 0, s = a < 0.22 ? easeOut(a / 0.22) * 1.15 - Math.max(0, a - 0.14) * 1.9 : 1;
     ctx.save(); ctx.translate(x, y + 8); ctx.scale(s, s); ctx.translate(-x, -(y + 8));
     if (this.bubble.kind === 'cups') {

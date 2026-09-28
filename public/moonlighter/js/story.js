@@ -31,7 +31,7 @@ function portraitFor(who, ctx2) {
   }
   return null;
 }
-const ALDRIC_LOOK = { id: 'aldric', skin: '#e8b890', hair: '#e8e4dc', hairStyle: 'bald', beard: '#e8e4dc', shirt: '#6a4a8a', pants: '#3a2a3a', hat: 'cap', hatCol: '#3a2a20' };
+const ALDRIC_LOOK = { id: 'aldric', skin: '#e8b890', hair: '#e8e4dc', hairStyle: 'short', beard: '#e8e4dc', shirt: '#c8b890', pants: '#3a2a3a', outfit: 'coat', coat: '#6a4a8a', hat: 'tophat', hatCol: '#3a2a20', band: '#c8a050' };
 
 // ---------------------------------------------------------------- actors
 class Actor {
@@ -87,7 +87,7 @@ class Actor {
     if (sc) { ctx.restore(); x = ex; y = ey; }
     if (this.emote) {
       const e = this.emote, k = clamp(e.t / 0.15, 0, 1), up = Math.round((1 - k) * 4);
-      const by = y - (this.emoteH || (this.kind === 'hero' ? 38 : 32)) + up;
+      const by = y - (this.emoteH || (this.kind === 'hero' ? 38 : this.kind === 'cat' ? 18 : 38)) + up;
       roundBubble(x - 7, by - 8, 14, 12, '#f7efd8', x);
       if (e.e === '!') txt('!', x, by + 1, { size: 9, align: 'center', color: C.red, bold: true });
       else if (e.e === '?') txt('?', x, by + 1, { size: 8, align: 'center', color: C.tealText, bold: true });
