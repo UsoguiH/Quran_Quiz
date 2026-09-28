@@ -216,6 +216,7 @@ async function boot() {
     ]);
   } catch (e) { /* offline: fall back to monospace */ }
   _mcache.clear();
+  await Promise.race([loadTownsfolk(), new Promise(r => setTimeout(r, 3000))]);
   skinTouchButtons();
   FS.sync();
   PostFX.init();

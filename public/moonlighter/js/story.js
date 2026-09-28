@@ -630,7 +630,7 @@ const GUARDIAN_LINES = [
 
 // ---------------------------------------------------------------- opening: the Lantern Tide
 // Saltmere, the Keeper's home by the sea, on its happiest night of the year... and its last.
-const MOTHER_LOOK = { id: 'mother', skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'bun', dress: '#5a7ab8', shirt: '#ece2d0', scarf: '#e8c060' };
+const MOTHER_LOOK = { id: 'mother', ref: 7, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'bun', dress: '#5a7ab8', shirt: '#ece2d0', scarf: '#e8c060' };
 const MIRA_LOOK = { id: 'mira', kid: true, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'long', dress: '#e89ab8', shirt: '#f6ece2' };
 function greyOf(img) {
   const m = greyOf.m || (greyOf.m = new WeakMap());

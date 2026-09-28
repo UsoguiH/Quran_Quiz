@@ -303,10 +303,71 @@ function heroPortrait() {
 }
 
 // ---------------------------------------------------------------- people
+// ---------------------------------------------------------------- townsfolk sheet (img/townsfolk.png)
+// Eight hand-picked characters, 34x46 cells, front view. Walk frames and a back view are derived.
+const TOWNSFOLK = { img: null, ready: false, CW: 34, CH: 46 };
+function loadTownsfolk() {
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => { TOWNSFOLK.img = im; TOWNSFOLK.ready = true; res(); };
+    im.onerror = () => res();
+    im.src = 'img/townsfolk.png';
+  });
+}
+function townsfolkBase(k) {
+  return cached('tf_' + k, () => { const c = mkCanvas(TOWNSFOLK.CW, TOWNSFOLK.CH); c.getContext('2d').drawImage(TOWNSFOLK.img, k * TOWNSFOLK.CW, 0, TOWNSFOLK.CW, TOWNSFOLK.CH, 0, 0, TOWNSFOLK.CW, TOWNSFOLK.CH); return c; });
+}
+// back view: the face turns into hair
+function townsfolkBack(k) {
+  return cached('tfb_' + k, () => {
+    const src = townsfolkBase(k), c = mkCanvas(src.width, src.height), g = c.getContext('2d'); g.drawImage(src, 0, 0);
+    const id = g.getImageData(0, 0, c.width, c.height), d = id.data, w = c.width;
+    let top = c.height, bot = 0;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { top = Math.min(top, y); bot = Math.max(bot, y); }
+    const hh = Math.round((bot - top) * 0.45), counts = new Map();
+    for (let y = top; y < top + hh * 0.35; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; if (!d[i + 3]) continue;
+      const L = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; if (L < 60) continue;
+      const key = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4); counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    let best = null, bn = 0; for (const [k2, n] of counts) if (n > bn) { bn = n; best = k2; }
+    const [hr, hg, hb] = best ? best.split(',').map(v => v * 16 + 8) : [60, 40, 30];
+    // the head's width, measured across the hair near the top of the head
+    const spanAt = y => { let l = -1, r = -1; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (l < 0) l = x; r = x; } return [l, r]; };
+    const [hl, hr2] = spanAt(top + Math.round(hh * 0.3));
+    for (let y = top + Math.round(hh * 0.22); y < top + hh; y++) {
+      const [l, r] = spanAt(y); if (l < 0) continue;
+      const x0 = Math.max(l + 1, hl + 1), x1 = Math.min(r - 1, hr2 - 1);
+      for (let x = x0; x <= x1; x++) {
+        const i = (y * w + x) * 4; if (!d[i + 3]) continue;
+        const k3 = (x - x0) % 3 === 2 ? 0.72 : y > top + hh - 3 ? 0.78 : 0.92 + ((x * 7 + y) % 4) * 0.03;
+        d[i] = hr * k3; d[i + 1] = hg * k3; d[i + 2] = hb * k3;
+      }
+    }
+    g.putImageData(id, 0, 0);
+    return c;
+  });
+}
+function townsfolkSprite(k, dir, frame, pose) {
+  const f = pose === 'walk' ? frame % 4 : 0;
+  return cached(`tfs_${k}_${dir}_${f}`, () => {
+    if (dir === 3) return flipH(townsfolkSprite(k, 2, frame, pose));
+    const src = dir === 1 ? townsfolkBack(k) : townsfolkBase(k);
+    if (!f || f === 2) return src;
+    // walking: a small bob, and one foot lifted
+    const c = mkCanvas(src.width, src.height), g = c.getContext('2d'), w = src.width, h = src.height, legs = 5;
+    g.drawImage(src, 0, 0, w, h - legs, 0, -1, w, h - legs);
+    const half = w / 2, lift = f === 1 ? 0 : 1;
+    g.drawImage(src, 0, h - legs, half, legs, 0, h - legs - (lift === 0 ? 2 : 1), half, legs);
+    g.drawImage(src, half, h - legs, w - half, legs, half, h - legs - (lift === 1 ? 2 : 1), w - half, legs);
+    return c;
+  });
+}
 // o: {skin, hair, hairStyle, eyes, shirt, pants, boots, dress, outfit, metal, coat, hat, hatCol, beard, kid, wide, apron, scarf, mask}
 // Townsfolk in a chibi RPG style: large round heads with full hair, bright eyes, layered outfits
 // (tunic, dress, armour with pauldrons, long coat), boots. 22x32 art. dir 0 down, 1 up, 2 left, 3 right.
 function personSprite(o, dir, frame, pose = 'walk') {
+  if (o.ref !== undefined && TOWNSFOLK.ready) return townsfolkSprite(o.ref, dir, frame, pose);
   const key = 'p3_' + o.id + '_' + dir + '_' + frame + '_' + pose;
   return cached(key, () => {
     if (dir === 3) return flipH(personSprite(o, 2, frame, pose));
