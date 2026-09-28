@@ -16,6 +16,8 @@ const VOICE_PROFILES = {
   Mirabel: { pitch: 1.4, rate: 1.05, blip: 330, prefer: ['Google UK English Female', 'Samantha', 'Victoria', 'Karen', 'Female', 'Zira', 'Susan'] },
   Villager: { pitch: 1.1, rate: 1.02, blip: 240, prefer: ['Google US English', 'Samantha', 'Female', 'Zira'] },
   'Little Keeper': { pitch: 1.75, rate: 1.05, blip: 420, prefer: ['Google US English', 'Samantha', 'Female', 'Zira'] },
+  Mother: { pitch: 1.1, rate: 0.92, blip: 300, prefer: ['Google UK English Female', 'Samantha', 'Victoria', 'Female', 'Zira'] },
+  Mira: { pitch: 1.85, rate: 1.1, blip: 460, prefer: ['Google US English', 'Samantha', 'Female', 'Zira'] },
   Pip: { pitch: 1.35, rate: 1.12, blip: 280, prefer: ['Google US English', 'Alex', 'Male', 'David'] },
 };
 const Voice = {

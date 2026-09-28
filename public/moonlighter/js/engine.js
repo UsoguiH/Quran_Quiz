@@ -485,6 +485,8 @@ const AudioSys = (() => {
     slam: () => { noise(0.5, 0.55, 500, 40, 0, 0.7, 'lowpass'); tone('sine', 70, 35, 0.4, 0.45); },
     heal: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone('sine', f, f, 0.2, 0.15, i * 0.05)),
     error: () => { tone('square', 160, 140, 0.15, 0.15); tone('square', 120, 110, 0.15, 0.12, 0.08); },
+    toll: () => { tone('sine', 196, 194, 3.4, 0.26); tone('sine', 392, 389, 2.4, 0.08); tone('sine', 523, 519, 1.7, 0.045); tone('sine', 98, 97, 3.8, 0.12); },
+    pop: () => { noise(0.18, 0.1, 1800, 300); tone('triangle', 900, 260, 0.25, 0.04); },
     heart: () => { tone('sine', 72, 38, 0.14, 0.55); tone('sine', 66, 36, 0.12, 0.42, 0.24); },
     chime: () => { tone('sine', 1568, 1568, 1.6, 0.06); tone('sine', 2349, 2349, 1.8, 0.035, 0.12); tone('sine', 1175, 1175, 2, 0.05, 0.25); },
     cash: () => { noise(0.08, 0.3, 4000, 3000, 0, 2); tone('square', 1318, 1318, 0.1, 0.12, 0.05); tone('square', 1760, 1760, 0.3, 0.12, 0.12); },
@@ -574,6 +576,14 @@ const AudioSys = (() => {
     { inst: 'pad', vol: 0.07, seq: held(['D4', 'C4', 'A#3', 'D4', 'F4', 'D4', 'A#3', 'A3']) },
     { inst: 'pad', vol: 0.055, seq: held(['F4', 'E4', 'D4', 'F4', 'A4', 'F4', 'D4', 'C#4']) },
     { inst: 'bass', vol: 0.15, seq: held(['D2', 'A1', 'G1', 'D2', 'F2', 'A#1', 'G1', 'A1']) },
+  ]);
+  // the Lantern Tide: a seaside waltz in D (12 steps per bar)
+  const bars = (roots, f) => roots.map(f).join(' ');
+  defTrack('festival', 138, [
+    { inst: 'lead', vol: 0.17, seq: 'D5 - - F#5 - - A5 - - F#5 - - G5 - - B5 - - A5 - - F#5 - - E5 - - G5 - - F#5 - - D5 - - E5 - - - - - A4 - - - - - D5 - - F#5 - - A5 - - D6 - - C#6 - - B5 - - A5 - - G5 - - F#5 - - E5 - - D5 - - C#5 - - D5 - - - - - - - - . . .' },
+    { inst: 'bass', vol: 0.24, seq: bars(['D2', 'G2', 'A2', 'A2', 'D2', 'A2', 'D2', 'D2'], r => r + ' - - . . . . . . . . .') },
+    { inst: 'arp', vol: 0.05, seq: bars(['F#4', 'B4', 'C#5', 'C#5', 'F#4', 'E4', 'F#4', 'F#4'], c => `. . . . ${c} . . . ${c} . . .`) },
+    { inst: 'bell', vol: 0.05, seq: bars(['A5', 'D6', 'E6', 'C#6', 'A5', 'E6', 'F#6', 'D6'], c => `${c} . . . . . . . . . . .`) },
   ]);
   defTrack('death', 60, [
     { inst: 'lead', vol: 0.18, seq: 'A4 - - - - - G4 - E4 - - - - - - - F4 - - - E4 - D4 - E4 - - - - - - - . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .' },

@@ -48,16 +48,24 @@ class Actor {
     const ex = x, ey = y, sc = this.scale && this.scale !== 1;
     if (sc) { ctx.save(); ctx.translate(x, y); ctx.scale(this.scale, this.scale); x = 0; y = 0; }
     ctx.globalAlpha = Math.max(0, this.alpha);
+    const hop = this.dance ? Math.round(Math.abs(Math.sin(this.t * 6 + (this.ph || 0))) * 2) : 0;
+    const greyed = img => { if (this.grey > 0) { ctx.globalAlpha = Math.max(0, this.alpha) * Math.min(1, this.grey); drawSpr(greyOf(img), x, y + 1 - hop); ctx.globalAlpha = Math.max(0, this.alpha); } };
     if (this.kind === 'hero') {
       shadow(x, y, 12);
       const img = heroSprite(this.dir, Math.floor(this.anim), this.moving ? 'walk' : 'idle');
       if (sunOut()) castSprShadow(img, x, y);
+      drawSpr(img, x, y + 1 - hop); greyed(img);
+    } else if (this.kind === 'cat') {
+      shadow(x, y, 11, 0.25);
+      const f = Math.floor(this.anim) % 4, pose = this.moving ? 'walk' : (this.pose || 'sit');
+      const img = this.flip && pose === 'walk' ? cached(`catF_${pose}_${f}`, () => flipH(catSprite(pose, f))) : catSprite(pose, f);
       drawSpr(img, x, y + 1);
     } else if (this.kind === 'person') {
       shadow(x, y, 12);
+      if (this.dance && !this.moving) this.dir = Math.sin(this.t * 2.4 + (this.ph || 0)) > 0 ? 2 : 3;
       const img = personSprite(this.look, this.dir, Math.floor(this.anim) % 4, this.moving ? 'walk' : 'idle');
       if (sunOut()) castSprShadow(img, x, y);
-      drawSpr(img, x, y + 1);
+      drawSpr(img, x, y + 1 - hop); greyed(img);
       if (this.glow) {
         ctx.globalCompositeOperation = 'lighter';
         const g = ctx.createRadialGradient(x + 8, y - 12, 0, x + 8, y - 12, 26); g.addColorStop(0, 'rgba(255,200,110,0.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -91,8 +99,8 @@ class Actor {
 
 // ---------------------------------------------------------------- cutscene engine (cinematic)
 const WHO_ACTOR = { Keeper: 'hero', 'Elder Oren': 'elder', Aldric: 'aldric' };
-const WHO_COL = { Keeper: '#ec9a86', 'Elder Oren': '#b4dcb4', Aldric: '#ecd49a', Guardian: '#c8a4ec', Narrator: '#d9b86a', Pip: '#f0b070', 'Little Keeper': '#f4c8b8' };
-const WHO_ACTOR_EXTRA = { 'Little Keeper': 'child' };
+const WHO_COL = { Mother: '#f0c0a0', Mira: '#f8b8d0', Keeper: '#ec9a86', 'Elder Oren': '#b4dcb4', Aldric: '#ecd49a', Guardian: '#c8a4ec', Narrator: '#d9b86a', Pip: '#f0b070', 'Little Keeper': '#f4c8b8' };
+const WHO_ACTOR_EXTRA = { 'Little Keeper': 'child', Mother: 'mother', Mira: 'mira' };
 class Cutscene {
   constructor(stage, steps, o = {}) {
     this.stage = stage; this.steps = steps; this.o = o;
@@ -102,7 +110,7 @@ class Cutscene {
     this.rain = []; this.raining = false; this.box = null; this.card = null; this.credits = null; this.skipT = 0; this.overlay = null; this.shakeT = 0;
     this.fog = false; this.fogA = 0; this.motes = Array.from({ length: 36 }, () => ({ x: rand(W), y: rand(H), v: rand(3, 9), ph: rand(6) }));
     this.petals = Array.from({ length: 34 }, () => newPetal(true)); this.petalsOn = o.petals !== false; this.petalA = 0;
-    this.gp = []; this.grade = null; this.gk = { night: 0, memory: 0 }; this.ins = null; this.insT = 0; this.xf = { fsx: W / 2, fsy: H / 2, z: 1 };
+    this.gp = []; this.grade = null; this.gk = { night: 0, memory: 0, hollow: 0 }; this.ins = null; this.insT = 0; this.xf = { fsx: W / 2, fsy: H / 2, z: 1 };
     const p = stage.player && stage.player.x > -500 ? stage.player : { x: W / 2, y: H / 2 };
     this.cam = { x: p.x, y: p.y - 12, z: 1 }; this.camT = { ...this.cam }; this.camRate = 2; this.follow = null;
     this.next();
@@ -201,6 +209,7 @@ class Cutscene {
       if (d < 1) { m.a.x = m.tx; m.a.y = m.ty; m.a.moving = false; m.done = true; continue; }
       const st = Math.min(d, m.sp * dt); m.a.x += dx / d * st; m.a.y += dy / d * st; m.a.moving = true;
       if (m.a.kind === 'hero' || m.a.kind === 'person') m.a.dir = dirFromVec(dx, dy);
+      if (m.a.kind === 'cat') m.a.flip = dx > 0;
     }
     this.movers = this.movers.filter(m => !m.done);
     // camera: follow a subject, ease towards the target with a slow critically-damped glide
@@ -229,13 +238,14 @@ class Cutscene {
     if (this.ended) return; this.ended = true;
     Voice.stop(); AudioSys.ambient(null);
     this.stage.cinematic = false; this.stage.extra = [];
-    if (Game.theater) {
+    const next = this.o.next ? this.o.next() : this.stage;
+    if (Game.theater && !(next instanceof Cutscene)) {
       // watched from the title screen: nothing is saved, back to the menu
       S = Game.theater.prev; Game.theater = null;
       const t = new TitleScene(); t.awake = true; t.sel = 1; Game.setScene(t);
       return;
     }
-    const next = this.o.next ? this.o.next() : this.stage;
+    if (Game.theater) { Game.setScene(next); return; }
     Game.setScene(next);
     if (this.o.onEnd) this.o.onEnd();
   }
@@ -264,6 +274,7 @@ class Cutscene {
     this.drawStage();
     if (this.gk.night > 0) this.drawNightGrade(this.gk.night);
     if (this.gk.memory > 0) this.drawMemoryGrade(this.gk.memory);
+    if (this.gk.hollow > 0) this.drawHollowGrade(this.gk.hollow);
     const warmDay = this.stage instanceof TownScene && !this.stage.night && !this.grade;
     // light shafts on warm days, slowly breathing
     if (warmDay && !this.card) {
@@ -322,7 +333,7 @@ class Cutscene {
       // narration: an italic serif line in the middle of the frame, words bleeding in like ink
       const size = 10, lines = balancedWrap(b.text, 300, size, SERIF, true);
       const y0 = (b.letter ? H * 0.7 : H * 0.56) - (lines.length - 1) * 7.5;
-      if (b.letter) spaced("FROM ALDRIC'S LETTER", W / 2, y0 - 16, 6, DISPLAY, CINE.gold, 1, 0.8 * a);
+      if (b.letter) spaced(`FROM ${b.who.toUpperCase()}'S LETTER`, W / 2, y0 - 16, 6, DISPLAY, CINE.gold, 1, 0.8 * a);
       const band = ctx.createLinearGradient(0, y0 - 30, 0, y0 + lines.length * 15 + 16);
       band.addColorStop(0, 'rgba(6,3,5,0)'); band.addColorStop(0.5, `rgba(6,3,5,${0.45 * a})`); band.addColorStop(1, 'rgba(6,3,5,0)');
       ctx.fillStyle = band; ctx.fillRect(0, y0 - 30, W, lines.length * 15 + 46);
@@ -392,6 +403,13 @@ class Cutscene {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k;
     const lights = this.nightLights ? this.nightLights(this) : [];
     for (const [x, y, r, col] of lights) { const gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+    ctx.restore();
+  }
+  // the Hollow: colour drains out of the world, cold grey light
+  drawHollowGrade(k) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'saturation'; ctx.globalAlpha = 0.92 * k; ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.55 * k; ctx.fillStyle = '#9aa2b4'; ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
   // a faded photograph: sepia, glowing edges, flicker and scratches
@@ -610,33 +628,262 @@ const GUARDIAN_LINES = [
     post: ['No one returns from the fifth door unchanged. Not even me.', 'Whatever waits, I\'ve already paid its price.', 'The four keys sing now. Go to the gates, Moonkeeper.'] },
 ];
 
+// ---------------------------------------------------------------- opening: the Lantern Tide
+// Saltmere, the Keeper's home by the sea, on its happiest night of the year... and its last.
+const MOTHER_LOOK = { id: 'mother', skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'bun', dress: '#5a7ab8', shirt: '#ece2d0', scarf: '#e8c060' };
+const MIRA_LOOK = { id: 'mira', kid: true, skin: '#f0c49a', hair: '#3a2a28', hairStyle: 'long', dress: '#e89ab8', shirt: '#f6ece2' };
+function greyOf(img) {
+  const m = greyOf.m || (greyOf.m = new WeakMap());
+  let c = m.get(img);
+  if (!c) {
+    c = mkCanvas(img.width, img.height); const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const id = g.getImageData(0, 0, c.width, c.height), d = id.data;
+    for (let i = 0; i < d.length; i += 4) { const l = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15, v = 70 + l * 0.55; d[i] = v; d[i + 1] = v + 2; d[i + 2] = v + 8; }
+    g.putImageData(id, 0, 0); m.set(img, c);
+  }
+  return c;
+}
+// an actor turns grey, then scatters into petals
+function gommageActor(id, speed = 1.2) {
+  return { until: (cs, dt) => {
+    const a = cs.actor(id); if (!a || a.alpha <= 0) return true;
+    a.grey = Math.min(1, (a.grey || 0) + dt * speed);
+    if (a.grey >= 1) {
+      const [sx, sy] = cs.w2s(a.x, a.y), z = cs.xf.z;
+      for (let i = 0; i < 44; i++) { const q = newGPetal(sx + rand(-6, 6) * z, sy - rand(2, 24) * z); q.vx = -rand(10, 30); q.vy = -rand(4, 18); q.life = rand(3.5, 5.5); cs.gp.push(q); }
+      for (let i = 0; i < 16; i++) cs.gp.push(newGDust(sx + rand(-6, 6) * z, sy - rand(2, 24) * z));
+      a.alpha = 0; a.dance = false; cs.movers = cs.movers.filter(m => m.a !== a); sfx('whoosh');
+      return true;
+    }
+    return false;
+  } };
+}
+class CoastStage {
+  constructor() {
+    this.t = 0; this.extra = []; this.parts = []; this.texts = []; this.rings = [];
+    this.bg = renderCoastBG();
+    this.festive = true; this.lightsOut = -1; this.fw = []; this.fwT = 1;
+    this.sea = Array.from({ length: 16 }, (_, i) => ({ x: 130 + i * 17 + rand(-6, 6), y: rand(104, 146), ph: rand(6.28), v: rand(1, 3), lit: true }));
+    this.sky = [];
+  }
+  get world() { return this; }
+  shake() { }
+  solid() { return false; }
+  update(dt) {
+    this.t += dt;
+    for (const l of this.sea) { l.x -= l.v * dt; if (l.x < 110) l.x = 390; }
+    for (const l of this.sky) { l.t += dt; if (l.lit) { l.x += l.vx * dt; l.y += l.vy * dt; } else { l.y += 14 * dt; l.x += Math.sin(l.t * 3) * 0.3; } }
+    this.sky = this.sky.filter(l => l.y < 170);
+    if (this.festive) { this.fwT -= dt; if (this.fwT <= 0) { this.fwT = rand(0.7, 1.6); this.fw.push({ x: rand(150, 370), y: 150, ty: rand(20, 60), col: choice(['#ff7a8a', '#ffd24a', '#8ad8ff', '#b8ff9a', '#ffb0f0']), t: 0, burst: false, p: [] }); } }
+    for (const f of this.fw) {
+      f.t += dt;
+      if (!f.burst) { f.y -= 110 * dt; if (f.y <= f.ty) { f.burst = true; sfx('pop'); for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283, v = rand(22, 34); f.p.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(1, 1.6) }); } } }
+      for (const p of f.p) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 16 * dt; p.vx *= 0.985; p.life -= dt; }
+      f.p = f.p.filter(p => p.life > 0);
+    }
+    this.fw = this.fw.filter(f => !f.burst || f.p.length);
+    if (this.lightsOut >= 0) this.lightsOut += dt;
+  }
+  launchLantern(x, y) { this.sky.push({ x, y, vx: 5, vy: -9, t: 0, lit: true }); }
+  draw() {
+    const t = this.t, out = this.lightsOut;
+    ctx.drawImage(this.bg, 0, 0);
+    // moonlight on the water
+    for (let y = 98; y < 150; y += 3) { const w = 4 + Math.sin(t * 1.3 + y * 0.7) * 3 + (y - 98) * 0.25; ctx.globalAlpha = 0.28; R(ctx, 306 - w, y, w * 2, 1, '#f4ecd0'); }
+    ctx.globalAlpha = 1;
+    // lighthouse beam
+    const ang = t * 0.9, bx = Math.cos(ang);
+    if (bx > 0 && out < 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,236,170,${0.12 * bx})`; ctx.beginPath(); ctx.moveTo(352, 62); ctx.lineTo(352 - 170 * bx, 50 - 16 * Math.sin(ang)); ctx.lineTo(352 - 170 * bx, 76 - 16 * Math.sin(ang)); ctx.fill(); ctx.restore(); }
+    // lanterns floating on the tide, snuffed one by one when the bell tolls
+    this.sea.forEach((l, i) => {
+      const lit = out < 0 || out < 0.2 + ((i * 7) % 16) * 0.09, yy = l.y + Math.sin(t * 1.5 + l.ph) * 0.8;
+      if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite('rgba(255,170,70,0.85)'), l.x - 6, yy - 7, 12, 12); ctx.restore(); }
+      R(ctx, l.x - 1, yy - 2, 3, 3, lit ? '#ffcf6a' : '#4a4a52'); P(ctx, l.x, yy - 3, lit ? '#fff0b0' : '#3a3a40');
+      if (lit) { ctx.globalAlpha = 0.25; R(ctx, l.x - 1, yy + 2, 3, 2, '#ffb050'); ctx.globalAlpha = 1; }
+    });
+    // strings of festival bulbs between the poles
+    const poles = [24, 136, 248, 360], cols = ['#ff6a6a', '#ffd24a', '#6ad8ff', '#8aff9a', '#ff9ae8'];
+    let n = 0;
+    for (let k = 0; k < poles.length - 1; k++) {
+      const x0 = poles[k], x1 = poles[k + 1];
+      ctx.strokeStyle = '#2a2024'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x0, 100); ctx.quadraticCurveTo((x0 + x1) / 2, 128, x1, 100); ctx.stroke();
+      for (let u = 0.05; u < 1; u += 0.09) {
+        const bxp = x0 + (x1 - x0) * u, byp = 100 + 28 * 2 * u * (1 - u) * 1 + 0;
+        const on = out < 0 || out < 1.2 - n * 0.035; n++;
+        const col = cols[(n + Math.floor(t * 2)) % cols.length];
+        if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.drawImage(glowSprite(col), bxp - 4, byp - 3, 8, 8); ctx.restore(); }
+        R(ctx, bxp - 0.5, byp + 1, 2, 2, on ? col : '#3a3a42');
+      }
+    }
+    // fireworks
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const f of this.fw) {
+      if (!f.burst) { R(ctx, f.x, f.y, 1, 3, '#ffe0a0'); continue; }
+      for (const p of f.p) { ctx.globalAlpha = clamp(p.life, 0, 1); R(ctx, p.x, p.y, 1, 1, f.col); ctx.globalAlpha = clamp(p.life, 0, 1) * 0.3; R(ctx, p.x - 1, p.y - 1, 3, 3, f.col); }
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+    // sky lanterns
+    for (const l of this.sky) {
+      if (l.lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite('rgba(255,170,70,0.9)'), l.x - 8, l.y - 8, 16, 16); ctx.restore(); }
+      R(ctx, l.x - 2, l.y - 3, 4, 5, l.lit ? '#ffcf6a' : '#5a5a62'); R(ctx, l.x - 1, l.y + 2, 2, 1, l.lit ? '#ff9a40' : '#3a3a40');
+    }
+    // people on the boardwalk
+    const list = [...this.extra].sort((a, b) => a.y - b.y);
+    for (const a of list) a.draw(0, 0);
+    drawFX(this, 0, 0);
+  }
+}
+function renderCoastBG() {
+  const c = mkCanvas(W, H), g = c.getContext('2d'), r = mulberry32(21);
+  const sky = g.createLinearGradient(0, 0, 0, 96); sky.addColorStop(0, '#0c0e2c'); sky.addColorStop(0.6, '#27204a'); sky.addColorStop(1, '#5a3858');
+  g.fillStyle = sky; g.fillRect(0, 0, W, 96);
+  for (let i = 0; i < 110; i++) { g.globalAlpha = 0.3 + r() * 0.7; P(g, r() * W, r() * 80, r() < 0.2 ? '#ffe8c0' : '#dfe6ff'); }
+  g.globalAlpha = 1;
+  const mg = g.createRadialGradient(306, 34, 4, 306, 34, 50); mg.addColorStop(0, 'rgba(255,240,200,0.35)'); mg.addColorStop(1, 'rgba(255,240,200,0)');
+  g.fillStyle = mg; g.fillRect(250, 0, 120, 90);
+  ell(g, 293, 21, 26, 26, '#f4ecd0'); ell(g, 299, 26, 6, 5, '#e2d8b8'); ell(g, 306, 34, 4, 4, '#e2d8b8'); ell(g, 297, 36, 3, 3, '#e8dec0');
+  // far hills and the lighthouse
+  g.fillStyle = '#1c1830';
+  for (let x = 0; x < W; x++) { const h = 88 + Math.sin(x * 0.03) * 3 + Math.sin(x * 0.011 + 1) * 4; g.fillRect(x, h, 1, 96 - h); }
+  R(g, 346, 58, 12, 36, '#d8d0c4'); R(g, 346, 66, 12, 5, '#b8403a'); R(g, 346, 80, 12, 5, '#b8403a'); R(g, 344, 54, 16, 5, '#2a2430'); R(g, 348, 56, 8, 3, '#ffe8a0'); R(g, 342, 92, 20, 3, '#2a2430');
+  // the sea
+  const sea = g.createLinearGradient(0, 94, 0, 158); sea.addColorStop(0, '#2a2e5c'); sea.addColorStop(1, '#0e1430');
+  g.fillStyle = sea; g.fillRect(0, 94, W, 64);
+  for (let i = 0; i < 90; i++) { g.globalAlpha = 0.35; R(g, r() * W, 96 + r() * 58, 3 + r() * 8, 1, '#3e4a86'); }
+  g.globalAlpha = 1;
+  // the village on the cliff
+  g.fillStyle = '#16121e'; g.beginPath(); g.moveTo(0, 44); g.lineTo(40, 40); g.lineTo(78, 52); g.lineTo(104, 74); g.lineTo(120, 150); g.lineTo(0, 150); g.fill();
+  [[6, 34, 22, 18], [30, 30, 18, 20], [52, 44, 20, 16], [74, 60, 18, 14], [14, 70, 26, 18], [46, 76, 22, 16], [80, 92, 20, 16]].forEach(([x, y, w, h]) => {
+    R(g, x, y, w, h, '#2e2434'); g.fillStyle = '#3a2a36'; g.beginPath(); g.moveTo(x - 2, y); g.lineTo(x + w / 2, y - 9); g.lineTo(x + w + 2, y); g.fill();
+    for (let k = 0; k < 2; k++) { R(g, x + 4 + k * (w - 10), y + 5, 4, 4, '#ffd27a'); R(g, x + 4 + k * (w - 10), y + 5, 4, 1, '#fff0b0'); }
+  });
+  // boardwalk
+  R(g, 0, 150, W, 66, '#5e4232');
+  for (let y = 152; y < H; y += 7) { R(g, 0, y, W, 1, '#4a3226'); R(g, 0, y + 1, W, 1, '#7a5840'); for (let x = (y * 13) % 40; x < W; x += 40 + (x % 23)) R(g, x, y, 1, 7, '#4a3226'); }
+  R(g, 0, 148, W, 3, '#3a2620'); R(g, 0, 146, W, 2, '#6a4a36');
+  for (let x = 8; x < W; x += 32) { R(g, x, 138, 3, 12, '#3a2620'); R(g, x, 138, 1, 12, '#5a3e2e'); }
+  R(g, 0, 138, W, 2, '#4a3026');
+  for (const x of [24, 136, 248, 360]) { R(g, x - 1, 96, 3, 54, '#2a1e1a'); R(g, x - 3, 95, 7, 2, '#2a1e1a'); }
+  return c;
+}
 function storyPrologue() {
-  const stage = new TownScene('gates', { night: true });
-  stage.npcs = []; stage.player.x = -999; stage.player.y = -999;
-  let pulse = 0;
+  const stage = new CoastStage();
+  let infected = false, dustT = 0;
+  const circle = { cx: 184, cy: 186, a: 0 };
   const steps = [
-    { music: 'story', rain: true, ambient: 'rain', fog: true, run: cs => { cs.setCam(480, 64, 1.45, true); cs.overlay = fifthDoorPulse; } },
-    { fade: 0, t: 3 },
-    { shot: [480, 100], z: 1.0, rate: 0.22 },
-    { narrate: 'Long ago, five doors rose from the earth, north of the town of Vellmoor.' },
-    { lightning: true, wait: 1.1 },
-    { shot: [224, 76], z: 1.35, rate: 0.45 },
-    { narrate: 'Four of them open every night... breathing treasure, and the Hollow: a grey sickness that eats the careless.' },
-    { shot: [480, 66], z: 1.8, rate: 0.3, run: () => { pulse = 1; } },
-    { narrate: 'The fifth has never opened. The last man who tried was Aldric, keeper of the Moonkeeper shop.' },
-    { lightning: true, wait: 0.7 },
-    { narrate: 'That was ten years ago. He never came back.' },
-    { wait: 1 },
-    { fade: 1, t: 1.8 },
-    { ambient: null, rain: false, fog: false, kicker: 'A tale of the five doors', title: GAME_TITLE, sub: 'a story of doors and debts', t: 7.5 },
-    { music: 'town', run: cs => {
-      pulse = 0; stage.night = false; cs.overlay = null;
+    { music: 'none', petals: false, run: cs => {
+      cs.add(new Actor('hero', 'hero', 170, 188, { dir: 3 }));
+      cs.add(new Actor('mother', 'person', 198, 186, { look: MOTHER_LOOK, dir: 2 }));
+      cs.add(new Actor('mira', 'person', 150, 198, { look: MIRA_LOOK, dir: 1 }));
+      [[60, 178], [94, 194], [122, 172], [236, 176], [268, 198], [312, 182], [342, 170]].forEach(([x, y], i) => {
+        const v = cs.add(new Actor('v' + i, 'person', x, y, { look: LOOKS[[2, 9, 20, 11, 25, 16, 22][i]], dir: i === 6 ? 1 : 0 })); v.dance = i !== 6; v.ph = i * 1.3;
+      });
+      cs.actor('mira').dance = true; cs.actor('mira').ph = 2;
+      cs.add(new Actor('cat', 'cat', 232, 196, { dir: 0 })).pose = 'sit';
+      cs.setCam(200, 60, 1.25, true);
+    } },
+    { narrate: 'Saltmere, by the sea. The night of the Lantern Tide.' },
+    { music: 'festival', fade: 0, t: 3 },
+    { shot: [196, 160], z: 1.1, rate: 0.28 },
+    { wait: 2.6 },
+    { shot: 'mira', z: 2.2, rate: 0.9, run: cs => { cs.actor('mira').dance = false; cs.actor('mira').dir = 1; } },
+    { wait: 0.5 },
+    { say: 'Look, look! Mine is going to float the farthest!', who: 'Mira' },
+    { sfx: 'select', run: cs => { const m = cs.actor('mira'); stage.launchLantern(m.x, m.y - 22); } },
+    { shot: [168, 150], z: 1.7, rate: 0.6 },
+    { wait: 1.2 },
+    { face: 'hero', dir: 2 },
+    { say: 'Only if you make a wish first, Mira.', who: 'Keeper', shot: [160, 184], z: 2.1, rate: 1 },
+    { say: 'Um... I wish... that we stay like this forever and ever!', who: 'Mira' },
+    { emote: 'hero', e: 'heart', wait: 1.1 },
+    { face: 'hero', dir: 3 },
+    { say: 'There you are. Even tonight, that mask stays on?', who: 'Mother' },
+    { say: 'Grandfather made me promise. Never take it off. Not even for dancing.', who: 'Keeper' },
+    { say: 'Then dance with your old mother in it, my little lantern. Just once.', who: 'Mother' },
+    { shot: [184, 176], z: 1.9, rate: 0.6, run: cs => { cs.actor('mira').dance = true; } },
+    { until: (cs, dt) => {
+      circle.a += dt * 1.6;
+      const h = cs.actor('hero'), m = cs.actor('mother');
+      h.x = circle.cx + Math.cos(circle.a) * 13; h.y = circle.cy + Math.sin(circle.a) * 5; h.dir = Math.cos(circle.a) > 0 ? 2 : 3; h.anim += dt * 8; h.moving = true;
+      m.x = circle.cx - Math.cos(circle.a) * 13; m.y = circle.cy - Math.sin(circle.a) * 5; m.dir = Math.cos(circle.a) > 0 ? 3 : 2; m.anim += dt * 8; m.moving = true;
+      if (cs.st > 6.3) { h.moving = false; m.moving = false; return true; }
+      return false;
+    } },
+    { emote: 'mother', e: 'heart', wait: 0.4 }, { emote: 'hero', e: 'heart', wait: 1.4 },
+    // the bell
+    { music: 'none', sfx: 'toll', run: cs => { stage.festive = false; for (const a of Object.values(cs.actors)) a.dance = false; }, shot: [196, 150], z: 1.15, rate: 1.4 },
+    { wait: 2.2 },
+    { sfx: 'toll', run: () => { stage.lightsOut = 0; for (const l of stage.sky) l.lit = false; } },
+    { wait: 2 },
+    { emote: 'mira', e: '?', wait: 0.9 },
+    { say: 'Mama... why did all the lanterns go out?', who: 'Mira', shot: 'mira', z: 2.2 },
+    { grade: 'hollow', fog: true, ambient: 'rain', shot: [330, 172], z: 2.1, rate: 0.7 },
+    { wait: 1.4 },
+    gommageActor('v6', 0.7),
+    { wait: 0.7 },
+    { run: cs => { ['v3', 'v4', 'v5', 'mother', 'hero', 'mira'].forEach(id => { const a = cs.actor(id); if (a) a.emote = { e: '!', t: 0 }; }); }, shot: [210, 180], z: 1.4, rate: 1.4 },
+    { wait: 0.9 },
+    { run: cs => { [['v5', 150, 196], ['v4', 110, 204], ['v3', 90, 180], ['v2', 40, 168], ['v1', 20, 200], ['v0', 10, 182]].forEach(([id, x, y], k) => cs.movers.push({ a: cs.actor(id), tx: x, ty: y, sp: 40 + k * 3 })); } },
+    { wait: 0.5 },
+    gommageActor('v5', 2.2),
+    gommageActor('v3', 2.6),
+    { wait: 0.3 },
+    gommageActor('v4', 2.4),
+    gommageActor('v2', 2.8),
+    gommageActor('v0', 3),
+    gommageActor('v1', 3),
+    { shot: 'mira', z: 2.4, rate: 1.4 },
+    { wait: 0.8 },
+    { say: 'Big sibling...? My hands feel cold...', who: 'Mira' },
+    { run: cs => { const m = cs.actor('mira'); cs.movers.push({ a: cs.actor('hero'), tx: m.x + 9, ty: m.y - 2, sp: 34 }); } },
+    gommageActor('mira', 0.55),
+    { emote: 'hero', e: '!', wait: 1.6 },
+    { shot: [180, 186], z: 2.6, rate: 0.9, run: cs => { const h = cs.actor('hero'); cs.movers.push({ a: cs.actor('mother'), tx: h.x + 10, ty: h.y + 1, sp: 30 }); } },
+    { wait: 1.2 },
+    { face: 'hero', dir: 3 }, { face: 'mother', dir: 2 },
+    { say: 'Don\'t look. Look at me. Keep the mask on... promise me.', who: 'Mother' },
+    { say: 'Mama, your hand. Your hand is grey...', who: 'Keeper', run: cs => { cs.actor('mother').grey = 0.35; } },
+    { say: 'Go to Vellmoor. Find your grandfather\'s shop. Keep the lamps lit... my little lantern.', who: 'Mother', run: cs => { cs.actor('mother').grey = 0.6; } },
+    gommageActor('mother', 0.25),
+    { run: () => { infected = true; } },
+    { wait: 2.8 },
+    { rain: true, shot: [190, 150], z: 1.0, rate: 0.12 },
+    { wait: 2.2 },
+    { run: cs => { const h = cs.actor('hero'); cs.movers.push({ a: cs.actor('cat'), tx: h.x - 11, ty: h.y + 3, sp: 16 }); } },
+    { wait: 3.4 },
+    { run: cs => { cs.actor('cat').pose = 'sit'; } },
+    { music: 'lament', narrate: 'The Hollow took Saltmere in a single night.' },
+    { narrate: 'It forgot a whole town... and missed only two.' },
+    { wait: 1.5 },
+    { fade: 1, t: 2.6 },
+    { ambient: null, rain: false, fog: false, grade: null, kicker: 'A tale of what remains', title: GAME_TITLE, sub: 'what the Hollow forgets, we remember', t: 8 },
+  ];
+  let skipAll = false;
+  return new Cutscene(stage, steps, {
+    startBlack: true, petals: false,
+    tick: (dt, cs) => {
+      stage.update(dt);
+      // grey dust keeps drifting from the Keeper's hand
+      if (infected) { dustT -= dt; const h = cs.actor('hero'); if (dustT <= 0 && h) { dustT = 0.35; const [sx, sy] = cs.w2s(h.x + 4, h.y - 9); const q = newGDust(sx, sy); q.vx = -rand(3, 8); cs.gp.push(q); } }
+    },
+    onSkip: () => { skipAll = true; },
+    next: () => skipAll ? (S.flags.prologue = true, saveGame(), new TownScene('shop')) : storyArrival(),
+  });
+}
+// three winters later: Vellmoor, and the old man who sent the letter
+function storyArrival() {
+  const stage = new TownScene('gates');
+  stage.npcs = []; stage.player.x = -999; stage.player.y = -999;
+  const steps = [
+    { music: 'none', run: cs => {
       cs.add(new Actor('elder', 'person', 228, 606, { look: NPC_LOOKS.elder, dir: 0 }));
       cs.add(new Actor('hero', 'hero', 440, 626, { dir: 2 }));
       for (let k = 0; k < 3; k++) { const b = cs.add(new Actor('bird' + k, 'bird', 60 + k * 14, 520 - k * 6)); cs.movers.push({ a: b, tx: 420 + k * 20, ty: 470 - k * 10, sp: 34 }); }
       cs.setCam(200, 560, 1.0, true);
     } },
-    { fade: 0, t: 2.2 },
+    { narrate: 'Three winters later.' },
+    { narrate: 'Your grandfather\'s shop in Vellmoor has stood empty for ten years. It is yours, if you want it. Come before the lamps forget you too.', who: 'Elder Oren', letter: true },
+    { music: 'town', fade: 0, t: 2.4 },
     { shot: [214, 590], z: 1.2, rate: 0.35 },
     { wait: 1.2 },
     { follow: 'hero', z: 1.35, rate: 1.4 },
@@ -649,9 +896,9 @@ function storyPrologue() {
     { say: 'So the letter found you. You have his walk, you know... and his stubbornness, I hope.', who: 'Elder Oren' },
     { emote: 'hero', e: '...', wait: 0.7 },
     { say: 'The mask stays on, old man. The Hollow followed me all the way from the coast.', who: 'Keeper' },
-    { say: 'Good. You will need it where you are going.', who: 'Elder Oren' },
-    { say: 'Your grandfather\'s shop is yours now. Dusty tables, an empty chest... and a debt to the whole town.', who: 'Elder Oren' },
-    { say: 'Sell what the dungeons give you. Grow strong. And perhaps one day that fifth door will answer to a Moonkeeper again.', who: 'Elder Oren' },
+    { say: 'Then you know what it does. It came from here. North of town, the Gates breathe every night.', who: 'Elder Oren' },
+    { say: 'Four lead down into the dark. The fifth has never opened... your grandfather walked through it ten years ago, and never came back.', who: 'Elder Oren' },
+    { say: 'His shop is yours now. Dusty tables, an empty chest... and a debt to the whole town. Sell what the dungeons give you. Grow strong.', who: 'Elder Oren' },
     { face: 'hero', dir: 1 },
     { shot: [200, 560], z: 1.15, rate: 0.8 },
     { wait: 0.8 },
@@ -662,13 +909,6 @@ function storyPrologue() {
     { fade: 1, t: 1.4 },
     { kicker: 'Chapter I', title: CHAPTERS[0], sub: 'where the candles still burn', t: 7 },
   ];
-  function fifthDoorPulse(cs) {
-    if (!pulse) return;
-    const x = 480 - stage.cam.x, y = 76 - stage.cam.y, a = 0.25 + Math.sin(cs.t * 2) * 0.12;
-    ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createRadialGradient(x, y, 0, x, y, 60); g.addColorStop(0, `rgba(120,255,200,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(x - 60, y - 60, 120, 120); ctx.globalCompositeOperation = 'source-over';
-  }
   return new Cutscene(stage, steps, {
     startBlack: true,
     next: () => new TownScene('shop'),
@@ -952,7 +1192,7 @@ function drawHandInsert(cs, T) {
 
 // ---------------------------------------------------------------- theater: watch the story scenes from the title screen
 class TheaterUI extends Overlay {
-  constructor() { super(); this.sel = 0; this.items = [['Prologue', 'The five doors'], ['The Last Letter', 'An interlude'], ['The Fifth Door', 'Finale']]; }
+  constructor() { super(); this.sel = 0; this.items = [['Prologue', 'The Lantern Tide'], ['The Last Letter', 'An interlude'], ['The Fifth Door', 'Finale']]; }
   play(i) {
     this.close(); sfx('confirm');
     const prev = S; Game.theater = { prev };
